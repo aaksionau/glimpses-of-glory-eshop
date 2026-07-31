@@ -1,6 +1,6 @@
 namespace GlimpsesOfGlory.Application.Cart;
 
-public sealed class RemoveCartLine(ICartStore cartStore)
+public sealed class RemoveCartLineService(ICartStore cartStore)
 {
     public async Task ExecuteAsync(string slug, CancellationToken cancellationToken)
     {

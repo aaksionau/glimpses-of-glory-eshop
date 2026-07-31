@@ -2,7 +2,7 @@ using GlimpsesOfGlory.Application.Products;
 
 namespace GlimpsesOfGlory.Application.Cart;
 
-public sealed class AddCartLine(ICartStore cartStore, IProductStore productStore)
+public sealed class AddCartLineService(ICartStore cartStore, IProductStore productStore)
 {
     public async Task ExecuteAsync(string slug, int quantity, CancellationToken cancellationToken)
     {

@@ -5,13 +5,13 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace GlimpsesOfGlory.Web.Pages.Products;
 
-public class DetailsModel(GetProductBySlug getProductBySlug, AddCartLine addCartLine) : PageModel
+public class DetailsModel(ProductDetailsService productDetailsService, AddCartLineService addCartLineService) : PageModel
 {
     public ProductDetail Product { get; private set; } = null!;
 
     public async Task<IActionResult> OnGetAsync(string slug, CancellationToken cancellationToken)
     {
-        var product = await getProductBySlug.ExecuteAsync(slug, cancellationToken);
+        var product = await productDetailsService.ExecuteAsync(slug, cancellationToken);
         if (product is null)
         {
             return NotFound();
@@ -23,7 +23,7 @@ public class DetailsModel(GetProductBySlug getProductBySlug, AddCartLine addCart
 
     public async Task<IActionResult> OnPostAsync(string slug, int quantity, CancellationToken cancellationToken)
     {
-        await addCartLine.ExecuteAsync(slug, quantity, cancellationToken);
+        await addCartLineService.ExecuteAsync(slug, quantity, cancellationToken);
         return RedirectToPage("/Cart/Index");
     }
 }
