@@ -1,11 +1,12 @@
 using GlimpsesOfGlory.Abstractions.Cart;
 using GlimpsesOfGlory.Abstractions.Orders;
+using GlimpsesOfGlory.Web.Checkout;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace GlimpsesOfGlory.Web.Pages.Checkout;
 
-public class ConfirmationModel(IOrderService orderService, ICartService cartService) : PageModel
+public class ConfirmationModel(IOrderService orderService, ICartService cartService, CheckoutSessionStore checkoutSessionStore) : PageModel
 {
     public const int MaxPollAttempts = 5;
 
@@ -32,6 +33,7 @@ public class ConfirmationModel(IOrderService orderService, ICartService cartServ
         if (Order is not null)
         {
             await cartService.ClearAsync(cancellationToken);
+            checkoutSessionStore.Clear();
         }
 
         return Page();

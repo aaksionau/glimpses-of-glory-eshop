@@ -32,6 +32,29 @@ public sealed class StripePaymentGateway : IPaymentGateway
         return new PaymentIntentSetup(paymentIntent.Id, paymentIntent.ClientSecret);
     }
 
+    public async Task<PaymentIntentSetup> UpdatePaymentIntentAsync(
+        string paymentIntentId,
+        decimal amount,
+        string? receiptEmail,
+        CancellationToken cancellationToken)
+    {
+        var options = new PaymentIntentUpdateOptions
+        {
+            Amount = ToSmallestCurrencyUnit(amount),
+            ReceiptEmail = receiptEmail,
+        };
+
+        try
+        {
+            var paymentIntent = await _paymentIntentService.UpdateAsync(paymentIntentId, options, cancellationToken: cancellationToken);
+            return new PaymentIntentSetup(paymentIntent.Id, paymentIntent.ClientSecret);
+        }
+        catch (StripeException ex)
+        {
+            throw new PaymentIntentUnavailableException($"PaymentIntent '{paymentIntentId}' can no longer be updated.", ex);
+        }
+    }
+
     public PaymentWebhookResult HandleWebhookEvent(string payload, string signatureHeader)
     {
         Event stripeEvent;

@@ -32,7 +32,8 @@ public class PaymentModel(
             return RedirectToPage("/Checkout/Index");
         }
 
-        var setup = await orderService.CreatePaymentIntentAsync(address.ToShippingAddressInfo(), cancellationToken);
+        var existingPaymentIntentId = checkoutSessionStore.GetPaymentIntentId();
+        var setup = await orderService.CreatePaymentIntentAsync(address.ToShippingAddressInfo(), existingPaymentIntentId, cancellationToken);
 
         if (setup is null)
         {
@@ -40,6 +41,7 @@ public class PaymentModel(
             return RedirectToPage("/Cart/Index");
         }
 
+        checkoutSessionStore.SavePaymentIntentId(setup.PaymentIntentId);
         PublishableKey = stripeOptions.Value.PublishableKey;
         ClientSecret = setup.ClientSecret;
         return Page();
