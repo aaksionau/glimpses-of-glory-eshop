@@ -9,6 +9,7 @@ using GlimpsesOfGlory.Core.Shipping.Services;
 using GlimpsesOfGlory.Core.Shipping.ValueObjects;
 using GlimpsesOfGlory.Core.Store.Services;
 using GlimpsesOfGlory.Web.Cart;
+using GlimpsesOfGlory.Web.Checkout;
 using GlimpsesOfGlory.Web.Configuration;
 using GlimpsesOfGlory.Web.Security;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -60,6 +61,7 @@ builder.Services.AddSession(options =>
 
 builder.Services.AddScoped<ICartStore, SessionCartStore>();
 builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<CheckoutSessionStore>();
 
 builder.Services.Configure<ShippingOptions>(builder.Configuration.GetSection("Shipping"));
 builder.Services.AddSingleton(sp =>

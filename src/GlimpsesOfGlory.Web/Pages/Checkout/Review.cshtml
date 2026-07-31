@@ -1,0 +1,69 @@
+@page "/checkout/review"
+@model GlimpsesOfGlory.Web.Pages.Checkout.ReviewModel
+@{
+    ViewData["Title"] = "Review order";
+}
+
+<div class="py-4 max-w-xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6">Checkout</h1>
+
+    <ol class="flex gap-2 text-sm mb-6 text-gray-500">
+        <li>1. Address</li>
+        <li>&rarr;</li>
+        <li class="font-semibold text-black">2. Review</li>
+    </ol>
+
+    <section class="mb-6">
+        <div class="flex items-center justify-between">
+            <h2 class="font-semibold text-lg">Shipping to</h2>
+            <a href="/checkout" class="text-sm text-blue-700 hover:underline">Edit</a>
+        </div>
+        <p class="text-gray-700 mt-1">
+            @Model.Address.FullName<br />
+            @Model.Address.AddressLine1<br />
+            @if (!string.IsNullOrWhiteSpace(Model.Address.AddressLine2))
+            {
+                @Model.Address.AddressLine2<br />
+            }
+            @Model.Address.City, @Model.Address.State @Model.Address.PostalCode<br />
+            @Model.Address.Country<br />
+            @Model.Address.Email
+        </p>
+    </section>
+
+    <section>
+        <h2 class="font-semibold text-lg mb-2">Order summary</h2>
+        <div class="flex flex-col gap-3">
+            @foreach (var line in Model.Cart.Lines)
+            {
+                <div class="flex items-center gap-4 border-b border-black/10 pb-3">
+                    @if (line.ThumbnailFileName is not null)
+                    {
+                        <img src="/product-photos/@line.ThumbnailFileName" alt="@line.ProductName" class="w-14 h-14 object-cover rounded flex-shrink-0" />
+                    }
+                    else
+                    {
+                        <div class="w-14 h-14 bg-gray-200 rounded flex-shrink-0"></div>
+                    }
+                    <div class="flex-1">
+                        <p class="font-medium">@line.ProductName</p>
+                        <p class="text-gray-600 text-sm">Qty @line.Quantity &times; @line.UnitPrice.ToString("C")</p>
+                    </div>
+                    <p class="font-medium">@((line.UnitPrice * line.Quantity).ToString("C"))</p>
+                </div>
+            }
+        </div>
+
+        <div class="mt-4 flex flex-col items-end gap-1">
+            <p>Subtotal: <span class="font-medium">@Model.Cart.Subtotal.ToString("C")</span></p>
+            <p>Shipping: <span class="font-medium">@Model.Cart.ShippingCost.ToString("C")</span></p>
+            <p class="text-lg font-bold">Total: @Model.Cart.Total.ToString("C")</p>
+        </div>
+    </section>
+
+    <button type="button" disabled
+            title="Payment is coming in a future update"
+            class="w-full bg-black/40 text-white px-6 py-3 rounded-lg font-semibold mt-6 cursor-not-allowed">
+        Continue to payment
+    </button>
+</div>
