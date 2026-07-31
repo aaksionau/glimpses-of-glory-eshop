@@ -21,6 +21,7 @@ RUN dotnet restore
 COPY src/ src/
 COPY --from=assets-build /src/wwwroot/css/site.css src/GlimpsesOfGlory.Web/wwwroot/css/site.css
 COPY --from=assets-build /src/wwwroot/js/alpine.min.js src/GlimpsesOfGlory.Web/wwwroot/js/alpine.min.js
+COPY --from=assets-build /src/wwwroot/js/htmx.min.js src/GlimpsesOfGlory.Web/wwwroot/js/htmx.min.js
 
 # Pre-deploy gate: image build fails here if compilation fails.
 RUN dotnet build -c Release --no-restore

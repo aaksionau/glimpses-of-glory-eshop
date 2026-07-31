@@ -1,11 +1,16 @@
+using GlimpsesOfGlory.Application.Cart;
 using GlimpsesOfGlory.Application.Products;
+using GlimpsesOfGlory.Domain;
 using GlimpsesOfGlory.Infrastructure;
 using GlimpsesOfGlory.Infrastructure.Products;
+using GlimpsesOfGlory.Web.Cart;
+using GlimpsesOfGlory.Web.Configuration;
 using GlimpsesOfGlory.Web.Security;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Options;
 
 if (args is ["hash-password", var passwordToHash])
 {
@@ -41,6 +46,29 @@ builder.Services.AddScoped<IProductStore, ProductStore>();
 builder.Services.AddScoped<GetProducts>();
 builder.Services.AddScoped<GetProductBySlug>();
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromDays(7);
+    options.Cookie.IsEssential = true;
+});
+
+builder.Services.AddScoped<ICartStore, SessionCartStore>();
+builder.Services.AddScoped<AddCartLine>();
+builder.Services.AddScoped<UpdateCartLineQuantity>();
+builder.Services.AddScoped<RemoveCartLine>();
+builder.Services.AddScoped<GetCartSummary>();
+
+builder.Services.Configure<ShippingOptions>(builder.Configuration.GetSection("Shipping"));
+builder.Services.AddSingleton(sp =>
+{
+    var tiers = sp.GetRequiredService<IOptions<ShippingOptions>>().Value.Tiers
+        .Select(t => new ShippingTier(t.MinQuantity, t.Amount))
+        .ToList();
+    return new ShippingCalculator(tiers);
+});
+
 var app = builder.Build();
 
 // Local-disk product photo storage. In production this path should be a
@@ -74,6 +102,8 @@ app.UseStaticFiles(new StaticFileOptions
 });
 
 app.UseRouting();
+
+app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();
