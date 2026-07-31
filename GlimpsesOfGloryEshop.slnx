@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GlimpsesOfGlory.Application/GlimpsesOfGlory.Application.csproj" />
+    <Project Path="src/GlimpsesOfGlory.Domain/GlimpsesOfGlory.Domain.csproj" />
+    <Project Path="src/GlimpsesOfGlory.Infrastructure/GlimpsesOfGlory.Infrastructure.csproj" />
+    <Project Path="src/GlimpsesOfGlory.Web/GlimpsesOfGlory.Web.csproj" />
+  </Folder>
+</Solution>
