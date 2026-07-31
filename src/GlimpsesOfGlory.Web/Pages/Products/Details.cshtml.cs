@@ -1,11 +1,11 @@
-using GlimpsesOfGlory.Application.Cart;
-using GlimpsesOfGlory.Application.Products;
+using GlimpsesOfGlory.Abstractions.Cart;
+using GlimpsesOfGlory.Abstractions.Products;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace GlimpsesOfGlory.Web.Pages.Products;
 
-public class DetailsModel(ProductCatalogService productCatalogService, CartService cartService) : PageModel
+public class DetailsModel(IProductCatalogService productCatalogService, ICartService cartService) : PageModel
 {
     public ProductDetail Product { get; private set; } = null!;
 

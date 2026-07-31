@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\GlimpsesOfGlory.Domain\GlimpsesOfGlory.Domain.csproj" />
+    <ProjectReference Include="..\..\src\GlimpsesOfGlory.Core\GlimpsesOfGlory.Core.csproj" />
   </ItemGroup>
 
 </Project>

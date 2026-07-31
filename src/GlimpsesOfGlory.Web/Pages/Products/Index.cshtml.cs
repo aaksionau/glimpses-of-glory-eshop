@@ -1,9 +1,9 @@
-using GlimpsesOfGlory.Application.Products;
+using GlimpsesOfGlory.Abstractions.Products;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace GlimpsesOfGlory.Web.Pages.Products;
 
-public class IndexModel(ProductCatalogService productCatalogService) : PageModel
+public class IndexModel(IProductCatalogService productCatalogService) : PageModel
 {
     public IReadOnlyList<ProductSummary> Products { get; private set; } = [];
 

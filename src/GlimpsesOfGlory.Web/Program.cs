@@ -1,8 +1,13 @@
-using GlimpsesOfGlory.Application.Cart;
-using GlimpsesOfGlory.Application.Products;
-using GlimpsesOfGlory.Domain;
-using GlimpsesOfGlory.Infrastructure;
-using GlimpsesOfGlory.Infrastructure.Products;
+using GlimpsesOfGlory.Abstractions.Cart;
+using GlimpsesOfGlory.Abstractions.Products;
+using GlimpsesOfGlory.Abstractions.Store;
+using GlimpsesOfGlory.Core;
+using GlimpsesOfGlory.Core.Cart.Services;
+using GlimpsesOfGlory.Core.Products.Seeding;
+using GlimpsesOfGlory.Core.Products.Services;
+using GlimpsesOfGlory.Core.Shipping.Services;
+using GlimpsesOfGlory.Core.Shipping.ValueObjects;
+using GlimpsesOfGlory.Core.Store.Services;
 using GlimpsesOfGlory.Web.Cart;
 using GlimpsesOfGlory.Web.Configuration;
 using GlimpsesOfGlory.Web.Security;
@@ -42,8 +47,8 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException("Connection string 'Default' is not configured. Set ConnectionStrings__Default.");
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
-builder.Services.AddScoped<IProductRepository, ProductRepository>();
-builder.Services.AddScoped<ProductCatalogService>();
+builder.Services.AddScoped<IProductCatalogService, ProductCatalogService>();
+builder.Services.AddScoped<IStoreStatusService, StoreStatusService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDistributedMemoryCache();
@@ -54,7 +59,7 @@ builder.Services.AddSession(options =>
 });
 
 builder.Services.AddScoped<ICartStore, SessionCartStore>();
-builder.Services.AddScoped<CartService>();
+builder.Services.AddScoped<ICartService, CartService>();
 
 builder.Services.Configure<ShippingOptions>(builder.Configuration.GetSection("Shipping"));
 builder.Services.AddSingleton(sp =>

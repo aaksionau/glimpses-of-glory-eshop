@@ -1,10 +1,10 @@
-using GlimpsesOfGlory.Application.Cart;
+using GlimpsesOfGlory.Abstractions.Cart;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace GlimpsesOfGlory.Web.Pages.Cart;
 
-public class IndexModel(CartService cartService) : PageModel
+public class IndexModel(ICartService cartService) : PageModel
 {
     public CartSummary Cart { get; private set; } = null!;
 
