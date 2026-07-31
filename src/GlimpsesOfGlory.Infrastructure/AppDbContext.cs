@@ -1,4 +1,5 @@
 using GlimpsesOfGlory.Domain;
+using GlimpsesOfGlory.Infrastructure.Products;
 using Microsoft.EntityFrameworkCore;
 
 namespace GlimpsesOfGlory.Infrastructure;
@@ -60,11 +61,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             });
 
         modelBuilder.Entity<ProductPhoto>().HasData(
-            new ProductPhoto { Id = 1, ProductId = 1, FileName = "sample-product-one-1.svg", DisplayOrder = 1 },
-            new ProductPhoto { Id = 2, ProductId = 1, FileName = "sample-product-one-2.svg", DisplayOrder = 2 },
-            new ProductPhoto { Id = 3, ProductId = 2, FileName = "sample-product-two-1.svg", DisplayOrder = 1 },
-            new ProductPhoto { Id = 4, ProductId = 2, FileName = "sample-product-two-2.svg", DisplayOrder = 2 },
-            new ProductPhoto { Id = 5, ProductId = 3, FileName = "sample-product-three-1.svg", DisplayOrder = 1 },
-            new ProductPhoto { Id = 6, ProductId = 3, FileName = "sample-product-three-2.svg", DisplayOrder = 2 });
+            new ProductPhoto { Id = 1, ProductId = 1, FileName = ProductPhotoFileNames.SampleProductOnePhoto1, DisplayOrder = 1 },
+            new ProductPhoto { Id = 2, ProductId = 1, FileName = ProductPhotoFileNames.SampleProductOnePhoto2, DisplayOrder = 2 },
+            new ProductPhoto { Id = 3, ProductId = 2, FileName = ProductPhotoFileNames.SampleProductTwoPhoto1, DisplayOrder = 1 },
+            new ProductPhoto { Id = 4, ProductId = 2, FileName = ProductPhotoFileNames.SampleProductTwoPhoto2, DisplayOrder = 2 },
+            new ProductPhoto { Id = 5, ProductId = 3, FileName = ProductPhotoFileNames.SampleProductThreePhoto1, DisplayOrder = 1 },
+            new ProductPhoto { Id = 6, ProductId = 3, FileName = ProductPhotoFileNames.SampleProductThreePhoto2, DisplayOrder = 2 });
     }
 }

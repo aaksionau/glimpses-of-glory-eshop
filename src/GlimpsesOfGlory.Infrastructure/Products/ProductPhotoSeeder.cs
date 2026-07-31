@@ -8,28 +8,30 @@ public static class ProductPhotoSeeder
 {
     private static readonly (string FileName, string Color, string Label)[] PlaceholderPhotos =
     [
-        ("sample-product-one-1.svg", "#b45309", "Sample Product One - Photo 1"),
-        ("sample-product-one-2.svg", "#92400e", "Sample Product One - Photo 2"),
-        ("sample-product-two-1.svg", "#1d4ed8", "Sample Product Two - Photo 1"),
-        ("sample-product-two-2.svg", "#1e40af", "Sample Product Two - Photo 2"),
-        ("sample-product-three-1.svg", "#15803d", "Sample Product Three - Photo 1"),
-        ("sample-product-three-2.svg", "#166534", "Sample Product Three - Photo 2"),
+        (ProductPhotoFileNames.SampleProductOnePhoto1, "#b45309", "Sample Product One - Photo 1"),
+        (ProductPhotoFileNames.SampleProductOnePhoto2, "#92400e", "Sample Product One - Photo 2"),
+        (ProductPhotoFileNames.SampleProductTwoPhoto1, "#1d4ed8", "Sample Product Two - Photo 1"),
+        (ProductPhotoFileNames.SampleProductTwoPhoto2, "#1e40af", "Sample Product Two - Photo 2"),
+        (ProductPhotoFileNames.SampleProductThreePhoto1, "#15803d", "Sample Product Three - Photo 1"),
+        (ProductPhotoFileNames.SampleProductThreePhoto2, "#166534", "Sample Product Three - Photo 2"),
     ];
 
-    public static void EnsureSeeded(string storagePath)
+    public static async Task EnsureSeededAsync(string storagePath, CancellationToken cancellationToken = default)
     {
         Directory.CreateDirectory(storagePath);
 
-        foreach (var (fileName, color, label) in PlaceholderPhotos)
-        {
-            var filePath = Path.Combine(storagePath, fileName);
-            if (File.Exists(filePath))
-            {
-                continue;
-            }
+        var existingFiles = new HashSet<string>(
+            Directory.EnumerateFiles(storagePath).Select(Path.GetFileName)!,
+            StringComparer.OrdinalIgnoreCase);
 
-            File.WriteAllText(filePath, BuildPlaceholderSvg(color, label));
-        }
+        var writes = PlaceholderPhotos
+            .Where(photo => !existingFiles.Contains(photo.FileName))
+            .Select(photo => File.WriteAllTextAsync(
+                Path.Combine(storagePath, photo.FileName),
+                BuildPlaceholderSvg(photo.Color, photo.Label),
+                cancellationToken));
+
+        await Task.WhenAll(writes);
     }
 
     private static string BuildPlaceholderSvg(string color, string label) => $"""

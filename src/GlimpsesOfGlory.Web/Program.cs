@@ -43,18 +43,19 @@ builder.Services.AddScoped<GetProductBySlug>();
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
-}
-
 // Local-disk product photo storage. In production this path should be a
 // Dokploy-mounted persistent volume (set via ProductPhotos__StoragePath),
 // separate from wwwroot so uploaded photos survive redeploys.
 var productPhotosPath = Path.GetFullPath(
     builder.Configuration["ProductPhotos:StoragePath"] ?? "App_Data/product-photos",
     app.Environment.ContentRootPath);
-ProductPhotoSeeder.EnsureSeeded(productPhotosPath);
+
+using (var scope = app.Services.CreateScope())
+{
+    var migrate = scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
+    var seedPhotos = ProductPhotoSeeder.EnsureSeededAsync(productPhotosPath);
+    await Task.WhenAll(migrate, seedPhotos);
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
