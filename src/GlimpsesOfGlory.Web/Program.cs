@@ -1,13 +1,11 @@
 using GlimpsesOfGlory.Abstractions.Cart;
 using GlimpsesOfGlory.Abstractions.Products;
-using GlimpsesOfGlory.Abstractions.Store;
 using GlimpsesOfGlory.Core;
 using GlimpsesOfGlory.Core.Cart.Services;
 using GlimpsesOfGlory.Core.Products.Seeding;
 using GlimpsesOfGlory.Core.Products.Services;
 using GlimpsesOfGlory.Core.Shipping.Services;
 using GlimpsesOfGlory.Core.Shipping.ValueObjects;
-using GlimpsesOfGlory.Core.Store.Services;
 using GlimpsesOfGlory.Web.Cart;
 using GlimpsesOfGlory.Web.Checkout;
 using GlimpsesOfGlory.Web.Configuration;
@@ -49,7 +47,6 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
 builder.Services.AddScoped<IProductCatalogService, ProductCatalogService>();
-builder.Services.AddScoped<IStoreStatusService, StoreStatusService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDistributedMemoryCache();

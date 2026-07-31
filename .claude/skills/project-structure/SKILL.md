@@ -12,13 +12,11 @@ src/
   GlimpsesOfGlory.Abstractions/    (no project references)
     Products/   IProductCatalogService, ProductSummary, ProductDetail
     Cart/       ICartService, ICartStore, Cart, CartLine, CartSummary
-    Store/      IStoreStatusService
 
   GlimpsesOfGlory.Core/            (references Abstractions only)
     Products/   Entities/ Services/ Persistence/ Seeding/
     Cart/       Services/
     Shipping/   Services/ ValueObjects/
-    Store/      Entities/ Services/ Persistence/
     AppDbContext.cs, Migrations/
 
   GlimpsesOfGlory.Web/             (references both; see boundary rule below)
@@ -29,11 +27,11 @@ Each feature folder is organized by **kind** underneath (`Entities/`, `Services/
 
 ## The boundary rule
 
-`Web` may reference `Core` types (`AppDbContext`, concrete service classes, `ShippingCalculator`, migrations) **only from `Program.cs`**, for DI wiring and EF tooling. Every `PageModel` or component injects the interfaces from `Abstractions` (`IProductCatalogService`, `ICartService`, `IStoreStatusService`) — never a concrete `Core` type, never `AppDbContext` directly.
+`Web` may reference `Core` types (`AppDbContext`, concrete service classes, `ShippingCalculator`, migrations) **only from `Program.cs`**, for DI wiring and EF tooling. Every `PageModel` or component injects the interfaces from `Abstractions` (`IProductCatalogService`, `ICartService`) — never a concrete `Core` type, never `AppDbContext` directly.
 
-This isn't compiler-enforced — .NET project references don't support per-file restriction, so nothing blocks a `PageModel` from injecting `AppDbContext` if someone writes it that way. Treat it as a review-time invariant: if you find a `PageModel` touching `Core.*` or `AppDbContext` outside `Program.cs`, that's a bug to fix (it happened once, on the home page's store-status lookup — fixed by adding `IStoreStatusService`), not a pattern to extend.
+This isn't compiler-enforced — .NET project references don't support per-file restriction, so nothing blocks a `PageModel` from injecting `AppDbContext` if someone writes it that way. Treat it as a review-time invariant: if you find a `PageModel` touching `Core.*` or `AppDbContext` outside `Program.cs`, that's a bug to fix, not a pattern to extend.
 
-`Abstractions` holds only what actually needs to cross that boundary: per-feature service interfaces, and the DTOs/entities both sides need to see (e.g. `Cart`/`CartLine` are plain data with light behavior, shared because `Web`'s `SessionCartStore` serializes them and `Core`'s `CartService` mutates them). EF entities (`Product`, `ProductPhoto`, `StoreStatus`) live in `Core` only — only their DTO projections (`ProductSummary`, `ProductDetail`) cross into `Abstractions`.
+`Abstractions` holds only what actually needs to cross that boundary: per-feature service interfaces, and the DTOs/entities both sides need to see (e.g. `Cart`/`CartLine` are plain data with light behavior, shared because `Web`'s `SessionCartStore` serializes them and `Core`'s `CartService` mutates them). EF entities (`Product`, `ProductPhoto`) live in `Core` only — only their DTO projections (`ProductSummary`, `ProductDetail`) cross into `Abstractions`.
 
 ## Why there's no repository layer
 
