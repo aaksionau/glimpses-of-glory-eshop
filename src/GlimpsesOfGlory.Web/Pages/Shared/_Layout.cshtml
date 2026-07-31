@@ -10,6 +10,7 @@
     <header class="border-b border-black">
         <nav class="container mx-auto flex gap-4 p-4">
             <a class="font-bold" asp-area="" asp-page="/Index">Glimpses of Glory</a>
+            <a asp-area="" asp-page="/Products/Index">Products</a>
             <a asp-area="" asp-page="/Privacy">Privacy</a>
         </nav>
     </header>
@@ -23,5 +24,6 @@
     </footer>
 
     @await RenderSectionAsync("Scripts", required: false)
+    <script src="~/js/alpine.min.js" defer asp-append-version="true"></script>
 </body>
 </html>

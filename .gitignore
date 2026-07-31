@@ -481,6 +481,10 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 
-# Node / Tailwind
+# Node / Tailwind / Alpine
 node_modules/
 src/GlimpsesOfGlory.Web/wwwroot/css/site.css
+src/GlimpsesOfGlory.Web/wwwroot/js/alpine.min.js
+
+# Local-disk product photo storage (mount a Dokploy volume here in production)
+src/GlimpsesOfGlory.Web/App_Data/

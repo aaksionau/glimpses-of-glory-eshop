@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "build:css": "tailwindcss -i ./assets/css/input.css -o ./wwwroot/css/site.css --minify",
-    "watch:css": "tailwindcss -i ./assets/css/input.css -o ./wwwroot/css/site.css --watch"
+    "watch:css": "tailwindcss -i ./assets/css/input.css -o ./wwwroot/css/site.css --watch",
+    "build:js": "node ./scripts/copy-alpine.js",
+    "build": "npm run build:css && npm run build:js"
   },
   "keywords": [],
   "author": "",
@@ -13,6 +15,7 @@
   "type": "commonjs",
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.3",
+    "alpinejs": "^3.15.12",
     "tailwindcss": "^4.3.3"
   }
 }

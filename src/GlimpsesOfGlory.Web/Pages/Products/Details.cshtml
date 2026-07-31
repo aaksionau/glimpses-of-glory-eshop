@@ -1,0 +1,64 @@
+@page "/products/{slug}"
+@model GlimpsesOfGlory.Web.Pages.Products.DetailsModel
+@{
+    ViewData["Title"] = Model.Product.Name;
+}
+
+<div class="py-4">
+    <a href="/products" class="text-sm text-blue-700 hover:underline">&larr; Back to products</a>
+
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-8" x-data="{ activeIndex: 0, lightboxOpen: false }">
+        <div>
+            @if (Model.Product.PhotoFileNames.Count == 0)
+            {
+                <div class="w-full aspect-[4/3] bg-gray-200 flex items-center justify-center text-gray-500">No photos</div>
+            }
+            else
+            {
+                <div class="relative w-full aspect-[4/3] bg-gray-100 rounded-lg overflow-hidden cursor-zoom-in" @@click="lightboxOpen = true">
+                    @for (var i = 0; i < Model.Product.PhotoFileNames.Count; i++)
+                    {
+                        <img src="/product-photos/@Model.Product.PhotoFileNames[i]"
+                             alt="@Model.Product.Name photo @(i + 1)"
+                             class="absolute inset-0 w-full h-full object-cover"
+                             x-show="activeIndex === @i" />
+                    }
+                </div>
+
+                @if (Model.Product.PhotoFileNames.Count > 1)
+                {
+                    <div class="flex gap-2 mt-3">
+                        @for (var i = 0; i < Model.Product.PhotoFileNames.Count; i++)
+                        {
+                            <button type="button"
+                                    class="w-16 h-16 rounded overflow-hidden border-2"
+                                    x-bind:class="activeIndex === @i ? 'border-blue-600' : 'border-transparent'"
+                                    @@click="activeIndex = @i">
+                                <img src="/product-photos/@Model.Product.PhotoFileNames[i]" alt="" class="w-full h-full object-cover" />
+                            </button>
+                        }
+                    </div>
+                }
+
+                <div x-show="lightboxOpen"
+                     x-cloak
+                     class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+                     @@click="lightboxOpen = false">
+                    @for (var i = 0; i < Model.Product.PhotoFileNames.Count; i++)
+                    {
+                        <img src="/product-photos/@Model.Product.PhotoFileNames[i]"
+                             alt="@Model.Product.Name photo @(i + 1)"
+                             class="max-w-full max-h-full object-contain"
+                             x-show="activeIndex === @i" />
+                    }
+                </div>
+            }
+        </div>
+
+        <div>
+            <h1 class="text-3xl font-bold">@Model.Product.Name</h1>
+            <p class="text-2xl mt-2">@Model.Product.Price.ToString("C")</p>
+            <p class="mt-4 whitespace-pre-line text-gray-700">@Model.Product.Description</p>
+        </div>
+    </div>
+</div>
