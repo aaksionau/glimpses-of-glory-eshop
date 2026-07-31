@@ -1,6 +1,6 @@
 namespace GlimpsesOfGlory.Application.Products;
 
-public sealed class ProductCatalogService(IProductStore productStore)
+public sealed class ProductCatalogService(IProductRepository productStore)
 {
     public Task<IReadOnlyList<ProductSummary>> GetProductsAsync(CancellationToken cancellationToken) =>
         productStore.GetProductsAsync(cancellationToken);

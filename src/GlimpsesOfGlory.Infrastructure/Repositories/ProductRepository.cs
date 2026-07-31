@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GlimpsesOfGlory.Infrastructure.Products;
 
-public sealed class ProductStore(AppDbContext db) : IProductStore
+public sealed class ProductRepository(AppDbContext db) : IProductRepository
 {
     public async Task<IReadOnlyList<ProductSummary>> GetProductsAsync(CancellationToken cancellationToken)
     {

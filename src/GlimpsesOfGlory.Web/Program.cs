@@ -42,7 +42,7 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException("Connection string 'Default' is not configured. Set ConnectionStrings__Default.");
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
-builder.Services.AddScoped<IProductStore, ProductStore>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<ProductCatalogService>();
 
 builder.Services.AddHttpContextAccessor();

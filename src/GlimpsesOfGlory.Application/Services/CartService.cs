@@ -3,7 +3,7 @@ using GlimpsesOfGlory.Domain;
 
 namespace GlimpsesOfGlory.Application.Cart;
 
-public sealed class CartService(ICartStore cartStore, IProductStore productStore, ShippingCalculator shippingCalculator)
+public sealed class CartService(ICartStore cartStore, IProductRepository productStore, ShippingCalculator shippingCalculator)
 {
     public async Task<CartSummary> GetSummaryAsync(CancellationToken cancellationToken)
     {

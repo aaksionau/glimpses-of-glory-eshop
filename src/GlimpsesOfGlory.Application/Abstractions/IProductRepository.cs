@@ -1,6 +1,6 @@
 namespace GlimpsesOfGlory.Application.Products;
 
-public interface IProductStore
+public interface IProductRepository
 {
     Task<IReadOnlyList<ProductSummary>> GetProductsAsync(CancellationToken cancellationToken);
 
