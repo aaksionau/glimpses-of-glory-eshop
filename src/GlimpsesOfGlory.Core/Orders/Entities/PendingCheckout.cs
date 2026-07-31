@@ -6,7 +6,7 @@ namespace GlimpsesOfGlory.Core.Orders.Entities;
 // confirms it". The webhook has no access to the shopper's session, so this is the
 // durable link between the PaymentIntent and what to persist as an Order once
 // payment succeeds. Consumed (deleted) by OrderService.ConfirmPaymentAsync.
-public sealed class PendingCheckout
+public sealed class PendingCheckout : ICheckoutHeader
 {
     public int Id { get; set; }
     public required string StripePaymentIntentId { get; set; }

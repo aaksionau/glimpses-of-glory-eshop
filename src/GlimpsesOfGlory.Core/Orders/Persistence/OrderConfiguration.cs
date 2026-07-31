@@ -9,11 +9,7 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
     public void Configure(EntityTypeBuilder<Order> builder)
     {
         builder.HasIndex(o => o.StripePaymentIntentId).IsUnique();
-        builder.Property(o => o.Subtotal).HasPrecision(10, 2);
-        builder.Property(o => o.ShippingCost).HasPrecision(10, 2);
-        builder.Property(o => o.Total).HasPrecision(10, 2);
-
-        builder.OwnsOne(o => o.ShippingAddress);
+        builder.ConfigureCheckoutHeader();
 
         builder.HasMany(o => o.Lines)
             .WithOne()
@@ -25,6 +21,6 @@ internal sealed class OrderLineConfiguration : IEntityTypeConfiguration<OrderLin
 {
     public void Configure(EntityTypeBuilder<OrderLine> builder)
     {
-        builder.Property(l => l.UnitPrice).HasPrecision(10, 2);
+        builder.ConfigureCheckoutLine();
     }
 }

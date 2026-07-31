@@ -3,6 +3,7 @@ using GlimpsesOfGlory.Abstractions.Products;
 using GlimpsesOfGlory.Abstractions.Shipping;
 using GlimpsesOfGlory.Core.Shipping.Services;
 using GlimpsesOfGlory.Core.Shipping.ValueObjects;
+using CartModel = GlimpsesOfGlory.Abstractions.Cart.Cart;
 
 namespace GlimpsesOfGlory.Core.Cart.Services;
 
@@ -92,7 +93,7 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
     }
 
     public Task ClearAsync(CancellationToken cancellationToken) =>
-        cartStore.SaveCartAsync(new Abstractions.Cart.Cart(), cancellationToken);
+        cartStore.SaveCartAsync(new CartModel(), cancellationToken);
 
     private static CartOperationResult? CheckStock(ProductDetail product, int requestedQuantity)
     {

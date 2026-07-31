@@ -1,6 +1,6 @@
 namespace GlimpsesOfGlory.Core.Orders.Entities;
 
-public sealed class OrderLine
+public sealed class OrderLine : ICheckoutLine
 {
     public int Id { get; set; }
     public int OrderId { get; set; }

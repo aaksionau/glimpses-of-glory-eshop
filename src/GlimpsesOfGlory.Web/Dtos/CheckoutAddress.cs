@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using GlimpsesOfGlory.Abstractions.Orders;
 
 namespace GlimpsesOfGlory.Web.Dtos;
 
@@ -35,4 +36,7 @@ public sealed class CheckoutAddress
     [Required(ErrorMessage = "Country is required.")]
     [StringLength(100)]
     public string Country { get; set; } = string.Empty;
+
+    public ShippingAddressInfo ToShippingAddressInfo() =>
+        new(Email, FullName, AddressLine1, AddressLine2, City, State, PostalCode, Country);
 }

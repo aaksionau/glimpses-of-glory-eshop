@@ -9,11 +9,7 @@ internal sealed class PendingCheckoutConfiguration : IEntityTypeConfiguration<Pe
     public void Configure(EntityTypeBuilder<PendingCheckout> builder)
     {
         builder.HasIndex(p => p.StripePaymentIntentId).IsUnique();
-        builder.Property(p => p.Subtotal).HasPrecision(10, 2);
-        builder.Property(p => p.ShippingCost).HasPrecision(10, 2);
-        builder.Property(p => p.Total).HasPrecision(10, 2);
-
-        builder.OwnsOne(p => p.ShippingAddress);
+        builder.ConfigureCheckoutHeader();
 
         builder.HasMany(p => p.Lines)
             .WithOne()
@@ -25,6 +21,6 @@ internal sealed class PendingCheckoutLineConfiguration : IEntityTypeConfiguratio
 {
     public void Configure(EntityTypeBuilder<PendingCheckoutLine> builder)
     {
-        builder.Property(l => l.UnitPrice).HasPrecision(10, 2);
+        builder.ConfigureCheckoutLine();
     }
 }

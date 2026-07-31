@@ -2,7 +2,7 @@ using GlimpsesOfGlory.Core.Orders.ValueObjects;
 
 namespace GlimpsesOfGlory.Core.Orders.Entities;
 
-public sealed class Order
+public sealed class Order : ICheckoutHeader
 {
     public int Id { get; set; }
     public required string Email { get; set; }

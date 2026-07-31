@@ -1,6 +1,6 @@
 namespace GlimpsesOfGlory.Core.Orders.Entities;
 
-public sealed class PendingCheckoutLine
+public sealed class PendingCheckoutLine : ICheckoutLine
 {
     public int Id { get; set; }
     public int PendingCheckoutId { get; set; }

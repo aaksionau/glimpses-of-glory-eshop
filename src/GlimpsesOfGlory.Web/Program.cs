@@ -6,6 +6,7 @@ using GlimpsesOfGlory.Abstractions.Products;
 using GlimpsesOfGlory.Abstractions.Shipping;
 using GlimpsesOfGlory.Core;
 using GlimpsesOfGlory.Core.Cart.Services;
+using GlimpsesOfGlory.Core.Inventory.Services;
 using GlimpsesOfGlory.Core.Orders.Services;
 using GlimpsesOfGlory.Core.Payments.Services;
 using GlimpsesOfGlory.Core.Products;

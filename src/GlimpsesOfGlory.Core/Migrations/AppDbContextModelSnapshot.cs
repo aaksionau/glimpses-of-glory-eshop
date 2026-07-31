@@ -60,7 +60,7 @@ namespace GlimpsesOfGlory.Core.Migrations
                     b.HasIndex("StripePaymentIntentId")
                         .IsUnique();
 
-                    b.ToTable("Orders");
+                    b.ToTable("Orders", (string)null);
                 });
 
             modelBuilder.Entity("GlimpsesOfGlory.Core.Orders.Entities.OrderLine", b =>
@@ -92,7 +92,7 @@ namespace GlimpsesOfGlory.Core.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("OrderLines");
+                    b.ToTable("OrderLines", (string)null);
                 });
 
             modelBuilder.Entity("GlimpsesOfGlory.Core.Orders.Entities.PendingCheckout", b =>
@@ -131,7 +131,7 @@ namespace GlimpsesOfGlory.Core.Migrations
                     b.HasIndex("StripePaymentIntentId")
                         .IsUnique();
 
-                    b.ToTable("PendingCheckouts");
+                    b.ToTable("PendingCheckouts", (string)null);
                 });
 
             modelBuilder.Entity("GlimpsesOfGlory.Core.Orders.Entities.PendingCheckoutLine", b =>
@@ -163,7 +163,7 @@ namespace GlimpsesOfGlory.Core.Migrations
 
                     b.HasIndex("PendingCheckoutId");
 
-                    b.ToTable("PendingCheckoutLines");
+                    b.ToTable("PendingCheckoutLines", (string)null);
                 });
 
             modelBuilder.Entity("GlimpsesOfGlory.Core.Products.Entities.Product", b =>
@@ -201,7 +201,7 @@ namespace GlimpsesOfGlory.Core.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Products");
+                    b.ToTable("Products", (string)null);
 
                     b.HasData(
                         new
@@ -258,7 +258,7 @@ namespace GlimpsesOfGlory.Core.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("ProductPhotos");
+                    b.ToTable("ProductPhotos", (string)null);
 
                     b.HasData(
                         new
@@ -375,7 +375,7 @@ namespace GlimpsesOfGlory.Core.Migrations
 
                             b1.HasKey("OrderId");
 
-                            b1.ToTable("Orders");
+                            b1.ToTable("Orders", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("OrderId");
@@ -430,7 +430,7 @@ namespace GlimpsesOfGlory.Core.Migrations
 
                             b1.HasKey("PendingCheckoutId");
 
-                            b1.ToTable("PendingCheckouts");
+                            b1.ToTable("PendingCheckouts", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("PendingCheckoutId");

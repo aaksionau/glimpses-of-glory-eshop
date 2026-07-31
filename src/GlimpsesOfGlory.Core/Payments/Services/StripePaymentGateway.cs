@@ -18,7 +18,6 @@ public sealed class StripePaymentGateway : IPaymentGateway
         decimal amount,
         string currency,
         string? receiptEmail,
-        IReadOnlyDictionary<string, string>? metadata,
         CancellationToken cancellationToken)
     {
         var options = new PaymentIntentCreateOptions
@@ -26,7 +25,6 @@ public sealed class StripePaymentGateway : IPaymentGateway
             Amount = ToSmallestCurrencyUnit(amount),
             Currency = currency,
             ReceiptEmail = receiptEmail,
-            Metadata = metadata is null ? null : new Dictionary<string, string>(metadata),
             AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions { Enabled = true },
         };
 

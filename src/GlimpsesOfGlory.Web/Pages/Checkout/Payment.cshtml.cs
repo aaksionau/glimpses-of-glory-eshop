@@ -32,17 +32,7 @@ public class PaymentModel(
             return RedirectToPage("/Checkout/Index");
         }
 
-        var setup = await orderService.CreatePaymentIntentAsync(
-            new ShippingAddressInfo(
-                address.Email,
-                address.FullName,
-                address.AddressLine1,
-                address.AddressLine2,
-                address.City,
-                address.State,
-                address.PostalCode,
-                address.Country),
-            cancellationToken);
+        var setup = await orderService.CreatePaymentIntentAsync(address.ToShippingAddressInfo(), cancellationToken);
 
         if (setup is null)
         {

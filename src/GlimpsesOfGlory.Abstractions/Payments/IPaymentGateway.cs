@@ -6,7 +6,6 @@ public interface IPaymentGateway
         decimal amount,
         string currency,
         string? receiptEmail,
-        IReadOnlyDictionary<string, string>? metadata,
         CancellationToken cancellationToken);
 
     // Throws PaymentSignatureVerificationException when the signature doesn't verify.

@@ -1,8 +1,7 @@
 using GlimpsesOfGlory.Abstractions.Inventory;
-using GlimpsesOfGlory.Core.Products.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace GlimpsesOfGlory.Core.Products.Services;
+namespace GlimpsesOfGlory.Core.Inventory.Services;
 
 public sealed class EfInventoryStore(AppDbContext dbContext) : IInventoryStore
 {

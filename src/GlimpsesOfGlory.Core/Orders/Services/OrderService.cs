@@ -58,13 +58,13 @@ public sealed class OrderService(
         var shippingCost = shippingCalculator.Calculate(lines.Sum(l => l.Quantity));
         var total = subtotal + shippingCost;
 
-        var paymentIntent = await paymentGateway.CreatePaymentIntentAsync(total, "usd", address.Email, metadata: null, cancellationToken);
+        var paymentIntent = await paymentGateway.CreatePaymentIntentAsync(total, "usd", address.Email, cancellationToken);
 
         dbContext.PendingCheckouts.Add(new PendingCheckout
         {
             StripePaymentIntentId = paymentIntent.PaymentIntentId,
             Email = address.Email,
-            ShippingAddress = ToShippingAddress(address),
+            ShippingAddress = ShippingAddress.FromInfo(address),
             Subtotal = subtotal,
             ShippingCost = shippingCost,
             Total = total,
@@ -108,7 +108,7 @@ public sealed class OrderService(
         dbContext.Orders.Add(new Order
         {
             Email = pendingCheckout.Email,
-            ShippingAddress = CopyShippingAddress(pendingCheckout.ShippingAddress),
+            ShippingAddress = pendingCheckout.ShippingAddress.Clone(),
             Subtotal = pendingCheckout.Subtotal,
             ShippingCost = pendingCheckout.ShippingCost,
             Total = pendingCheckout.Total,
@@ -139,41 +139,11 @@ public sealed class OrderService(
 
         return new OrderConfirmationView(
             order.Id,
-            new ShippingAddressInfo(
-                order.Email,
-                order.ShippingAddress.FullName,
-                order.ShippingAddress.AddressLine1,
-                order.ShippingAddress.AddressLine2,
-                order.ShippingAddress.City,
-                order.ShippingAddress.State,
-                order.ShippingAddress.PostalCode,
-                order.ShippingAddress.Country),
+            order.ShippingAddress.ToInfo(order.Email),
             order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity)).ToList(),
             order.Subtotal,
             order.ShippingCost,
             order.Total,
             order.CreatedAt);
     }
-
-    private static ShippingAddress ToShippingAddress(ShippingAddressInfo address) => new()
-    {
-        FullName = address.FullName,
-        AddressLine1 = address.AddressLine1,
-        AddressLine2 = address.AddressLine2,
-        City = address.City,
-        State = address.State,
-        PostalCode = address.PostalCode,
-        Country = address.Country,
-    };
-
-    private static ShippingAddress CopyShippingAddress(ShippingAddress address) => new()
-    {
-        FullName = address.FullName,
-        AddressLine1 = address.AddressLine1,
-        AddressLine2 = address.AddressLine2,
-        City = address.City,
-        State = address.State,
-        PostalCode = address.PostalCode,
-        Country = address.Country,
-    };
 }
