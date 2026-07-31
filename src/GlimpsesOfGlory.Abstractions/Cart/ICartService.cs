@@ -9,4 +9,6 @@ public interface ICartService
     Task<CartOperationResult> UpdateLineQuantityAsync(string slug, int quantity, CancellationToken cancellationToken);
 
     Task RemoveLineAsync(string slug, CancellationToken cancellationToken);
+
+    Task ClearAsync(CancellationToken cancellationToken);
 }

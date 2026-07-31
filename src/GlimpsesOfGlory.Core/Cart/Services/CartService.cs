@@ -91,6 +91,9 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
         await cartStore.SaveCartAsync(cart, cancellationToken);
     }
 
+    public Task ClearAsync(CancellationToken cancellationToken) =>
+        cartStore.SaveCartAsync(new Abstractions.Cart.Cart(), cancellationToken);
+
     private static CartOperationResult? CheckStock(ProductDetail product, int requestedQuantity)
     {
         if (product.StockQuantity <= 0)
