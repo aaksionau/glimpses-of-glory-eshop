@@ -43,8 +43,7 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
 builder.Services.AddScoped<IProductStore, ProductStore>();
-builder.Services.AddScoped<ProductListingService>();
-builder.Services.AddScoped<ProductDetailsService>();
+builder.Services.AddScoped<ProductCatalogService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDistributedMemoryCache();
@@ -55,10 +54,7 @@ builder.Services.AddSession(options =>
 });
 
 builder.Services.AddScoped<ICartStore, SessionCartStore>();
-builder.Services.AddScoped<AddCartLineService>();
-builder.Services.AddScoped<UpdateCartLineQuantityService>();
-builder.Services.AddScoped<RemoveCartLineService>();
-builder.Services.AddScoped<CartSummaryService>();
+builder.Services.AddScoped<CartService>();
 
 builder.Services.Configure<ShippingOptions>(builder.Configuration.GetSection("Shipping"));
 builder.Services.AddSingleton(sp =>
