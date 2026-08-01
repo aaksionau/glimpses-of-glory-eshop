@@ -1,5 +1,6 @@
 using GlimpsesOfGlory.Abstractions.Cart;
 using GlimpsesOfGlory.Abstractions.Inventory;
+using GlimpsesOfGlory.Abstractions.Notifications;
 using GlimpsesOfGlory.Abstractions.Orders;
 using GlimpsesOfGlory.Abstractions.Payments;
 using GlimpsesOfGlory.Abstractions.Products;
@@ -78,6 +79,10 @@ builder.Services.AddScoped<IPaymentGateway>(sp =>
 });
 builder.Services.AddScoped<IInventoryStore, EfInventoryStore>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+
+builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Smtp"));
+builder.Services.AddScoped<RazorViewToStringRenderer>();
+builder.Services.AddScoped<IEmailSender, OrderNotifier>();
 
 // Local-disk product photo storage. In production this path should be a
 // Dokploy-mounted persistent volume (set via ProductPhotos__StoragePath),
