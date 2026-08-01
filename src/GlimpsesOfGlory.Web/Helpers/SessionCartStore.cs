@@ -2,7 +2,7 @@ using System.Text.Json;
 using GlimpsesOfGlory.Abstractions.Cart;
 using CartModel = GlimpsesOfGlory.Abstractions.Cart.Cart;
 
-namespace GlimpsesOfGlory.Web.Cart;
+namespace GlimpsesOfGlory.Web.Helpers;
 
 public sealed class SessionCartStore(IHttpContextAccessor httpContextAccessor) : ICartStore
 {

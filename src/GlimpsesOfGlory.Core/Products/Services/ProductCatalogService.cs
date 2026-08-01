@@ -9,6 +9,7 @@ public sealed class ProductCatalogService(AppDbContext db) : IProductCatalogServ
     {
         return await db.Products
             .AsNoTracking()
+            .Where(p => p.IsActive)
             .OrderBy(p => p.Name)
             .Select(p => new ProductSummary(
                 p.Slug,
@@ -22,7 +23,7 @@ public sealed class ProductCatalogService(AppDbContext db) : IProductCatalogServ
     {
         return await db.Products
             .AsNoTracking()
-            .Where(p => p.Slug == slug)
+            .Where(p => p.Slug == slug && p.IsActive)
             .Select(p => new ProductDetail(
                 p.Slug,
                 p.Name,

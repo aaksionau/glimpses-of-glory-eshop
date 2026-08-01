@@ -5,9 +5,17 @@
 }
 
 <div class="py-5">
-    <div class="flex justify-between items-center mb-4">
-        <h1 class="text-2xl font-bold">Admin dashboard</h1>
-        <a asp-page="/Admin/Logout" class="border border-black px-3 py-1">Sign out</a>
+    <h1 class="text-2xl font-bold mb-4">Admin dashboard</h1>
+    <partial name="/Pages/Admin/_AdminNav.cshtml" />
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <a asp-page="/Admin/Products/Index" class="block border border-black/10 rounded-lg p-6 hover:shadow-lg transition-shadow">
+            <h2 class="text-lg font-semibold mb-1">Products</h2>
+            <p class="text-gray-700 text-sm">Add, edit, hide products and manage photos.</p>
+        </a>
+        <a asp-page="/Admin/Shipping/Index" class="block border border-black/10 rounded-lg p-6 hover:shadow-lg transition-shadow">
+            <h2 class="text-lg font-semibold mb-1">Shipping rates</h2>
+            <p class="text-gray-700 text-sm">Edit the flat-rate shipping tier amounts.</p>
+        </a>
     </div>
-    <p>Product and order management land in later slices.</p>
 </div>

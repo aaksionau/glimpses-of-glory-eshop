@@ -5,7 +5,7 @@ WORKDIR /src
 COPY src/GlimpsesOfGlory.Web/package.json src/GlimpsesOfGlory.Web/package-lock.json ./
 RUN npm ci
 COPY src/GlimpsesOfGlory.Web/scripts ./scripts
-COPY src/GlimpsesOfGlory.Web/assets ./assets
+COPY src/GlimpsesOfGlory.Web/wwwroot/assets ./wwwroot/assets
 COPY src/GlimpsesOfGlory.Web/Pages ./Pages
 RUN npm run build
 

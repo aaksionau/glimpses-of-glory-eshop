@@ -1,6 +1,7 @@
 using System.Text.Json;
+using GlimpsesOfGlory.Web.Dtos;
 
-namespace GlimpsesOfGlory.Web.Checkout;
+namespace GlimpsesOfGlory.Web.Helpers;
 
 public sealed class CheckoutSessionStore(IHttpContextAccessor httpContextAccessor)
 {

@@ -1,0 +1,15 @@
+@page "/admin/products/{id:int}/edit"
+@model GlimpsesOfGlory.Web.Pages.Admin.Products.EditModel
+@{
+    ViewData["Title"] = "Admin - Edit product";
+}
+
+<div class="py-5 max-w-2xl">
+    <h1 class="text-2xl font-bold mb-4">Admin dashboard</h1>
+    <partial name="/Pages/Admin/_AdminNav.cshtml" />
+
+    <partial name="_ProductForm" model="Model" />
+
+    <h2 class="text-xl font-semibold mb-4">Photos</h2>
+    <partial name="_PhotoList" model="new GlimpsesOfGlory.Web.Pages.Admin.Products.PhotoListViewModel(Model.Id, Model.Photos)" />
+</div>

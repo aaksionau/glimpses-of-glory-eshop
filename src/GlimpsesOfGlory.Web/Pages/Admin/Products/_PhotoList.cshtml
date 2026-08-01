@@ -1,0 +1,40 @@
+@model GlimpsesOfGlory.Web.Pages.Admin.Products.PhotoListViewModel
+
+<div id="photo-list">
+    @if (Model.Photos.Count > 0)
+    {
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+            @foreach (var photo in Model.Photos)
+            {
+                <div class="border border-black/10 rounded p-2">
+                    <img src="/product-photos/@photo.FileName" alt="Product photo" class="w-full h-32 object-cover rounded mb-2" />
+                    <div class="flex justify-between gap-1">
+                        <form hx-post="/admin/products/@Model.ProductId/edit?handler=MovePhoto" hx-target="#photo-list" hx-swap="outerHTML" asp-antiforgery="true">
+                            <input type="hidden" name="photoId" value="@photo.Id" />
+                            <input type="hidden" name="direction" value="-1" />
+                            <button type="submit" class="border border-black px-2 py-1 text-xs" aria-label="Move photo earlier">&larr;</button>
+                        </form>
+                        <form hx-post="/admin/products/@Model.ProductId/edit?handler=MovePhoto" hx-target="#photo-list" hx-swap="outerHTML" asp-antiforgery="true">
+                            <input type="hidden" name="photoId" value="@photo.Id" />
+                            <input type="hidden" name="direction" value="1" />
+                            <button type="submit" class="border border-black px-2 py-1 text-xs" aria-label="Move photo later">&rarr;</button>
+                        </form>
+                        <form hx-post="/admin/products/@Model.ProductId/edit?handler=RemovePhoto" hx-target="#photo-list" hx-swap="outerHTML" asp-antiforgery="true">
+                            <input type="hidden" name="photoId" value="@photo.Id" />
+                            <button type="submit" class="text-red-700 px-2 py-1 text-xs">Remove</button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p class="text-gray-500 mb-4">No photos yet.</p>
+    }
+
+    <form hx-post="/admin/products/@Model.ProductId/edit?handler=UploadPhoto" hx-target="#photo-list" hx-swap="outerHTML" hx-encoding="multipart/form-data" asp-antiforgery="true" class="flex flex-wrap items-center gap-2">
+        <input type="file" name="photo" accept="image/*" required class="text-sm" />
+        <button type="submit" class="border border-black px-3 py-1 text-sm">Upload photo</button>
+    </form>
+</div>
