@@ -1,0 +1,62 @@
+@page "/checkout/payment"
+@model GlimpsesOfGlory.Web.Pages.Checkout.PaymentModel
+@{
+    ViewData["Title"] = "Payment";
+}
+
+<div class="py-4 max-w-xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6">Checkout</h1>
+
+    <ol class="flex gap-2 text-sm mb-6 text-gray-500">
+        <li>1. Address</li>
+        <li>&rarr;</li>
+        <li>2. Review</li>
+        <li>&rarr;</li>
+        <li class="font-semibold text-black">3. Payment</li>
+    </ol>
+
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold text-lg">Pay by card</h2>
+        <a href="/checkout/review" class="text-sm text-blue-700 hover:underline">Back</a>
+    </div>
+
+    <div id="payment-element" class="mb-4"></div>
+    <div id="payment-error" class="text-red-600 text-sm mb-4" role="alert"></div>
+
+    <button id="submit-payment" type="button"
+            class="w-full bg-black text-white px-6 py-3 rounded-lg font-semibold disabled:bg-black/40 disabled:cursor-not-allowed">
+        Pay now
+    </button>
+</div>
+
+@section Scripts {
+    <script src="https://js.stripe.com/v3/"></script>
+    <script>
+        const stripe = Stripe(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PublishableKey)));
+        const clientSecret = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ClientSecret));
+        const elements = stripe.elements({ clientSecret });
+        const paymentElement = elements.create('payment');
+        paymentElement.mount('#payment-element');
+
+        const submitButton = document.getElementById('submit-payment');
+        const errorBox = document.getElementById('payment-error');
+
+        submitButton.addEventListener('click', async () => {
+            submitButton.disabled = true;
+            errorBox.textContent = '';
+
+            const { error, paymentIntent } = await stripe.confirmPayment({
+                elements,
+                redirect: 'if_required',
+            });
+
+            if (error) {
+                errorBox.textContent = error.message ?? 'Your payment could not be processed. Please try again.';
+                submitButton.disabled = false;
+                return;
+            }
+
+            window.location.href = '/checkout/confirmation?payment_intent=' + encodeURIComponent(paymentIntent.id);
+        });
+    </script>
+}

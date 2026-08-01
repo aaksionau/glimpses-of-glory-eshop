@@ -7,6 +7,9 @@ namespace GlimpsesOfGlory.Web.Pages.Cart;
 
 public class IndexModel(ICartService cartService) : PageModel
 {
+    [TempData]
+    public string? Error { get; set; }
+
     public CartSummary Cart { get; private set; } = null!;
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
