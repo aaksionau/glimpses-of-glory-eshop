@@ -20,10 +20,13 @@ src/
     AppDbContext.cs, Migrations/
 
   GlimpsesOfGlory.Web/             (references both; see boundary rule below)
-    Pages/, Cart/SessionCartStore.cs, Configuration/, Security/, Program.cs
+    Pages/, Helpers/ (SessionCartStore.cs, CheckoutSessionStore.cs), Dtos/ (CheckoutAddress.cs),
+    Configuration/, Security/, Program.cs
 ```
 
-Each feature folder is organized by **kind** underneath (`Entities/`, `Services/`, `Persistence/`, etc.), not by architectural layer — the top-level split is by feature, not Domain/Application/Infrastructure.
+`Core` organizes each feature folder by **kind** underneath (`Entities/`, `Services/`, `Persistence/`, etc.), not by architectural layer — the top-level split is by feature, not Domain/Application/Infrastructure.
+
+`Web` does **not** mirror that per-feature layout: it has no `Cart/` or `Checkout/` folders of its own (`Pages/Cart`, `Pages/Checkout` are just Razor Pages routing folders, not feature folders). Instead, Web-only support types are grouped by **kind** across the whole project: session stores and other helper classes go in `Helpers/`, plain data-transfer types go in `Dtos/`. Keep this flat — don't reintroduce `Web/<Feature>/` folders.
 
 ## The boundary rule
 
@@ -43,7 +46,7 @@ Entity mapping lives per-feature as `IEntityTypeConfiguration<T>` classes under 
 
 ## Naming gotcha: CS0118
 
-When a feature folder's name matches an entity's simple type name (`Cart/Cart.cs`), spelling that type out inside a file whose own namespace also has a `Cart` segment triggers `CS0118` ("'Cart' is a namespace but is used like a type"). Work around it with a type alias — see `GlimpsesOfGlory.Web/Cart/SessionCartStore.cs`'s `using CartModel = GlimpsesOfGlory.Abstractions.Cart.Cart;` — rather than renaming the feature folder.
+When a feature folder's name matches an entity's simple type name (`Cart/Cart.cs`), spelling that type out inside a file whose own namespace also has a `Cart` segment triggers `CS0118` ("'Cart' is a namespace but is used like a type"). Work around it with a type alias — see `GlimpsesOfGlory.Core/Cart/Services/CartService.cs`'s neighbors, or `GlimpsesOfGlory.Web/Helpers/SessionCartStore.cs`'s `using CartModel = GlimpsesOfGlory.Abstractions.Cart.Cart;` — rather than renaming the feature folder. This is specifically why `Web`'s Helpers/Dtos folders (flat, no `Cart` namespace segment) sidestep the issue entirely.
 
 ## Adding a new feature
 

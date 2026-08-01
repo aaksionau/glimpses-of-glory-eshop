@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build:css": "tailwindcss -i ./assets/css/input.css -o ./wwwroot/css/site.css --minify",
-    "watch:css": "tailwindcss -i ./assets/css/input.css -o ./wwwroot/css/site.css --watch",
+    "build:css": "tailwindcss -i ./wwwroot/assets/css/input.css -o ./wwwroot/css/site.css --minify",
+    "watch:css": "tailwindcss -i ./wwwroot/assets/css/input.css -o ./wwwroot/css/site.css --watch",
     "build:js": "node ./scripts/copy-alpine.js && node ./scripts/copy-htmx.js",
     "build": "npm run build:css && npm run build:js"
   },

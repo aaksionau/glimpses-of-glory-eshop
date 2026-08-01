@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace GlimpsesOfGlory.Web.Checkout;
+namespace GlimpsesOfGlory.Web.Dtos;
 
 public sealed class CheckoutAddress
 {
