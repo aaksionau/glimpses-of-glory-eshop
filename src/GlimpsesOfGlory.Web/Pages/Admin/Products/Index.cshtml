@@ -1,0 +1,17 @@
+@page "/admin/products"
+@model GlimpsesOfGlory.Web.Pages.Admin.Products.IndexModel
+@{
+    ViewData["Title"] = "Admin - Products";
+}
+
+<div class="py-5">
+    <h1 class="text-2xl font-bold mb-4">Admin dashboard</h1>
+    <partial name="/Pages/Admin/_AdminNav.cshtml" />
+
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold">Products</h2>
+        <a asp-page="/Admin/Products/New" class="bg-black text-white px-4 py-2 rounded-lg font-semibold">Add product</a>
+    </div>
+
+    <partial name="_ProductTable" model="Model.Products" />
+</div>

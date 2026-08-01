@@ -1,20 +1,19 @@
 using GlimpsesOfGlory.Abstractions.Cart;
 using GlimpsesOfGlory.Abstractions.Products;
+using GlimpsesOfGlory.Abstractions.Shipping;
 using GlimpsesOfGlory.Core;
 using GlimpsesOfGlory.Core.Cart.Services;
+using GlimpsesOfGlory.Core.Products;
 using GlimpsesOfGlory.Core.Products.Seeding;
 using GlimpsesOfGlory.Core.Products.Services;
 using GlimpsesOfGlory.Core.Shipping.Services;
-using GlimpsesOfGlory.Core.Shipping.ValueObjects;
 using GlimpsesOfGlory.Web.Cart;
 using GlimpsesOfGlory.Web.Checkout;
-using GlimpsesOfGlory.Web.Configuration;
 using GlimpsesOfGlory.Web.Security;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Options;
 
 if (args is ["hash-password", var passwordToHash])
 {
@@ -47,6 +46,8 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
 builder.Services.AddScoped<IProductCatalogService, ProductCatalogService>();
+builder.Services.AddScoped<IAdminProductService, AdminProductService>();
+builder.Services.AddScoped<ProductPhotoStorage>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDistributedMemoryCache();
@@ -60,23 +61,17 @@ builder.Services.AddScoped<ICartStore, SessionCartStore>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<CheckoutSessionStore>();
 
-builder.Services.Configure<ShippingOptions>(builder.Configuration.GetSection("Shipping"));
-builder.Services.AddSingleton(sp =>
-{
-    var tiers = sp.GetRequiredService<IOptions<ShippingOptions>>().Value.Tiers
-        .Select(t => new ShippingTier(t.MinQuantity, t.Amount))
-        .ToList();
-    return new ShippingCalculator(tiers);
-});
-
-var app = builder.Build();
+builder.Services.AddScoped<IShippingSettingsService, ShippingSettingsService>();
 
 // Local-disk product photo storage. In production this path should be a
 // Dokploy-mounted persistent volume (set via ProductPhotos__StoragePath),
 // separate from wwwroot so uploaded photos survive redeploys.
 var productPhotosPath = Path.GetFullPath(
     builder.Configuration["ProductPhotos:StoragePath"] ?? "App_Data/product-photos",
-    app.Environment.ContentRootPath);
+    builder.Environment.ContentRootPath);
+builder.Services.AddSingleton(new ProductPhotoStorageOptions { StoragePath = productPhotosPath });
+
+var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {

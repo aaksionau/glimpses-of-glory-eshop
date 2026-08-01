@@ -1,0 +1,64 @@
+@model IReadOnlyList<GlimpsesOfGlory.Abstractions.Products.AdminProductSummary>
+
+<div id="product-table" class="overflow-x-auto">
+    @if (Model.Count == 0)
+    {
+        <p>No products yet.</p>
+    }
+    else
+    {
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="border-b border-black/20 text-sm text-gray-500">
+                    <th class="py-2 pr-2">Photo</th>
+                    <th class="py-2 pr-2">Name</th>
+                    <th class="py-2 pr-2">Price</th>
+                    <th class="py-2 pr-2">Stock</th>
+                    <th class="py-2 pr-2">Status</th>
+                    <th class="py-2 pr-2"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var product in Model)
+                {
+                    <tr class="border-b border-black/10">
+                        <td class="py-2 pr-2">
+                            @if (product.ThumbnailFileName is not null)
+                            {
+                                <img src="/product-photos/@product.ThumbnailFileName" alt="@product.Name" class="w-12 h-12 object-cover rounded" />
+                            }
+                            else
+                            {
+                                <div class="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-500 text-xs">No photo</div>
+                            }
+                        </td>
+                        <td class="py-2 pr-2 font-medium">@product.Name</td>
+                        <td class="py-2 pr-2">@product.Price.ToString("C")</td>
+                        <td class="py-2 pr-2">@product.StockQuantity</td>
+                        <td class="py-2 pr-2">
+                            @if (product.IsActive)
+                            {
+                                <span class="text-green-700">Visible</span>
+                            }
+                            else
+                            {
+                                <span class="text-gray-500">Hidden</span>
+                            }
+                        </td>
+                        <td class="py-2 pr-2">
+                            <div class="flex flex-wrap gap-2">
+                                <a asp-page="/Admin/Products/Edit" asp-route-id="@product.Id" class="border border-black px-3 py-1 text-sm">Edit</a>
+                                <form hx-post="/admin/products?handler=ToggleActive" hx-target="#product-table" hx-swap="outerHTML" asp-antiforgery="true">
+                                    <input type="hidden" name="id" value="@product.Id" />
+                                    <button type="submit" class="border border-black px-3 py-1 text-sm">
+                                        @(product.IsActive ? "Hide" : "Unhide")
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>

@@ -1,10 +1,12 @@
 using GlimpsesOfGlory.Abstractions.Cart;
 using GlimpsesOfGlory.Abstractions.Products;
+using GlimpsesOfGlory.Abstractions.Shipping;
 using GlimpsesOfGlory.Core.Shipping.Services;
+using GlimpsesOfGlory.Core.Shipping.ValueObjects;
 
 namespace GlimpsesOfGlory.Core.Cart.Services;
 
-public sealed class CartService(ICartStore cartStore, IProductCatalogService productCatalogService, ShippingCalculator shippingCalculator) : ICartService
+public sealed class CartService(ICartStore cartStore, IProductCatalogService productCatalogService, IShippingSettingsService shippingSettingsService) : ICartService
 {
     public async Task<CartSummary> GetSummaryAsync(CancellationToken cancellationToken)
     {
@@ -13,6 +15,12 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
         var lines = cart.Lines
             .Select(l => new CartLineView(l.ProductSlug, l.ProductName, l.ThumbnailFileName, l.UnitPrice, l.Quantity))
             .ToList();
+
+        // Built per call (not injected as a singleton) so admin edits to shipping
+        // tiers (#11) take effect immediately without a redeploy.
+        var tiers = await shippingSettingsService.GetTiersAsync(cancellationToken);
+        var shippingCalculator = new ShippingCalculator(
+            tiers.Select(t => new ShippingTier(t.MinQuantity, t.Amount)).ToList());
         var shippingCost = shippingCalculator.Calculate(cart.TotalQuantity);
 
         return new CartSummary(lines, cart.Subtotal, shippingCost, cart.Subtotal + shippingCost);
