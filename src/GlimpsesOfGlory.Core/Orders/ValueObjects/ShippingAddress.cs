@@ -29,14 +29,5 @@ public sealed class ShippingAddress
     // EF owned entities can only belong to one owner, so copying a ShippingAddress from
     // one entity onto another (PendingCheckout -> Order) needs a fresh instance rather
     // than reusing the same tracked object.
-    public ShippingAddress Clone() => new()
-    {
-        FullName = FullName,
-        AddressLine1 = AddressLine1,
-        AddressLine2 = AddressLine2,
-        City = City,
-        State = State,
-        PostalCode = PostalCode,
-        Country = Country,
-    };
+    public ShippingAddress Clone() => (ShippingAddress)MemberwiseClone();
 }

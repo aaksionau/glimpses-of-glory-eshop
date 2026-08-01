@@ -55,14 +55,11 @@ namespace GlimpsesOfGlory.Core.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
 
-                    b.Property<decimal>("Total")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("StripePaymentIntentId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("IX_Orders_StripePaymentIntentId");
 
                     b.ToTable("Orders");
                 });
@@ -123,10 +120,6 @@ namespace GlimpsesOfGlory.Core.Migrations
                         .HasColumnType("text");
 
                     b.Property<decimal>("Subtotal")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<decimal>("Total")
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
 

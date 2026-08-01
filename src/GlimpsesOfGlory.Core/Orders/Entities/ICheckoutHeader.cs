@@ -11,5 +11,5 @@ internal interface ICheckoutHeader
     ShippingAddress ShippingAddress { get; set; }
     decimal Subtotal { get; set; }
     decimal ShippingCost { get; set; }
-    decimal Total { get; set; }
+    decimal Total { get; }
 }

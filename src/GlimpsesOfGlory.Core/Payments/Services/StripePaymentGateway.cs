@@ -5,6 +5,9 @@ namespace GlimpsesOfGlory.Core.Payments.Services;
 
 public sealed class StripePaymentGateway : IPaymentGateway
 {
+    // The store only sells in USD; there's no per-order currency selection to plumb through.
+    private const string Currency = "usd";
+
     private readonly PaymentIntentService _paymentIntentService;
     private readonly string _webhookSecret;
 
@@ -16,14 +19,13 @@ public sealed class StripePaymentGateway : IPaymentGateway
 
     public async Task<PaymentIntentSetup> CreatePaymentIntentAsync(
         decimal amount,
-        string currency,
         string? receiptEmail,
         CancellationToken cancellationToken)
     {
         var options = new PaymentIntentCreateOptions
         {
             Amount = ToSmallestCurrencyUnit(amount),
-            Currency = currency,
+            Currency = Currency,
             ReceiptEmail = receiptEmail,
             AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions { Enabled = true },
         };

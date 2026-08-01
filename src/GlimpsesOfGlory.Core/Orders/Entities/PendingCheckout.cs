@@ -14,7 +14,7 @@ public sealed class PendingCheckout : ICheckoutHeader
     public required ShippingAddress ShippingAddress { get; set; }
     public decimal Subtotal { get; set; }
     public decimal ShippingCost { get; set; }
-    public decimal Total { get; set; }
+    public decimal Total => Subtotal + ShippingCost;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public List<PendingCheckoutLine> Lines { get; set; } = [];
 }

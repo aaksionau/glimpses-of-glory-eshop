@@ -4,7 +4,6 @@ public interface IPaymentGateway
 {
     Task<PaymentIntentSetup> CreatePaymentIntentAsync(
         decimal amount,
-        string currency,
         string? receiptEmail,
         CancellationToken cancellationToken);
 

@@ -12,7 +12,7 @@ internal static class CheckoutEntityConfigurationExtensions
     {
         builder.Property(e => e.Subtotal).HasPrecision(10, 2);
         builder.Property(e => e.ShippingCost).HasPrecision(10, 2);
-        builder.Property(e => e.Total).HasPrecision(10, 2);
+        builder.Ignore(e => e.Total);
         builder.OwnsOne(e => e.ShippingAddress);
     }
 

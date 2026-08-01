@@ -28,7 +28,6 @@ namespace GlimpsesOfGlory.Core.Migrations
                     ShippingAddress_Country = table.Column<string>(type: "text", nullable: false),
                     Subtotal = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false),
                     ShippingCost = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false),
-                    Total = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false),
                     Status = table.Column<int>(type: "integer", nullable: false),
                     StripePaymentIntentId = table.Column<string>(type: "text", nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
@@ -55,7 +54,6 @@ namespace GlimpsesOfGlory.Core.Migrations
                     ShippingAddress_Country = table.Column<string>(type: "text", nullable: false),
                     Subtotal = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false),
                     ShippingCost = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false),
-                    Total = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>

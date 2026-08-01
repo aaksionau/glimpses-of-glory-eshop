@@ -9,7 +9,7 @@ public sealed class Order : ICheckoutHeader
     public required ShippingAddress ShippingAddress { get; set; }
     public decimal Subtotal { get; set; }
     public decimal ShippingCost { get; set; }
-    public decimal Total { get; set; }
+    public decimal Total => Subtotal + ShippingCost;
     public OrderStatus Status { get; set; } = OrderStatus.New;
     public required string StripePaymentIntentId { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;

@@ -2,13 +2,10 @@ using GlimpsesOfGlory.Abstractions.Cart;
 using GlimpsesOfGlory.Abstractions.Inventory;
 using GlimpsesOfGlory.Abstractions.Orders;
 using GlimpsesOfGlory.Abstractions.Payments;
-using GlimpsesOfGlory.Abstractions.Shipping;
 using GlimpsesOfGlory.Core.Orders.Entities;
+using GlimpsesOfGlory.Core.Orders.Persistence;
 using GlimpsesOfGlory.Core.Orders.ValueObjects;
-using GlimpsesOfGlory.Core.Shipping.Services;
-using GlimpsesOfGlory.Core.Shipping.ValueObjects;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace GlimpsesOfGlory.Core.Orders.Services;
 
@@ -16,8 +13,7 @@ public sealed class OrderService(
     AppDbContext dbContext,
     ICartService cartService,
     IPaymentGateway paymentGateway,
-    IInventoryStore inventoryStore,
-    IShippingSettingsService shippingSettingsService) : IOrderService
+    IInventoryStore inventoryStore) : IOrderService
 {
     public async Task<PaymentIntentSetup?> CreatePaymentIntentAsync(ShippingAddressInfo address, string? existingPaymentIntentId, CancellationToken cancellationToken)
     {
@@ -51,12 +47,11 @@ public sealed class OrderService(
             });
         }
 
-        var tiers = await shippingSettingsService.GetTiersAsync(cancellationToken);
-        var shippingCalculator = new ShippingCalculator(
-            tiers.Select(t => new ShippingTier(t.MinQuantity, t.Amount)).ToList());
-
+        // Shipping only depends on item quantity, which the session-cached cart already
+        // has correct (only prices/stock need re-deriving from the DB above), so reuse
+        // cart.ShippingCost instead of re-fetching tiers and recalculating it here.
         var subtotal = lines.Sum(l => l.UnitPrice * l.Quantity);
-        var shippingCost = shippingCalculator.Calculate(lines.Sum(l => l.Quantity));
+        var shippingCost = cart.ShippingCost;
         var total = subtotal + shippingCost;
 
         var existingPendingCheckout = existingPaymentIntentId is null
@@ -75,7 +70,6 @@ public sealed class OrderService(
                 existingPendingCheckout.ShippingAddress = ShippingAddress.FromInfo(address);
                 existingPendingCheckout.Subtotal = subtotal;
                 existingPendingCheckout.ShippingCost = shippingCost;
-                existingPendingCheckout.Total = total;
                 dbContext.PendingCheckoutLines.RemoveRange(existingPendingCheckout.Lines);
                 existingPendingCheckout.Lines = lines;
 
@@ -90,7 +84,7 @@ public sealed class OrderService(
             }
         }
 
-        var paymentIntent = await paymentGateway.CreatePaymentIntentAsync(total, "usd", address.Email, cancellationToken);
+        var paymentIntent = await paymentGateway.CreatePaymentIntentAsync(total, address.Email, cancellationToken);
 
         dbContext.PendingCheckouts.Add(new PendingCheckout
         {
@@ -99,7 +93,6 @@ public sealed class OrderService(
             ShippingAddress = ShippingAddress.FromInfo(address),
             Subtotal = subtotal,
             ShippingCost = shippingCost,
-            Total = total,
             Lines = lines,
         });
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -143,7 +136,6 @@ public sealed class OrderService(
             ShippingAddress = pendingCheckout.ShippingAddress.Clone(),
             Subtotal = pendingCheckout.Subtotal,
             ShippingCost = pendingCheckout.ShippingCost,
-            Total = pendingCheckout.Total,
             StripePaymentIntentId = pendingCheckout.StripePaymentIntentId,
             Lines = pendingCheckout.Lines.Select(l => new OrderLine
             {
@@ -159,23 +151,17 @@ public sealed class OrderService(
         {
             await dbContext.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateException ex) when (IsDuplicatePaymentIntentViolation(ex))
+        catch (DbUpdateException ex) when (ex.IsDuplicateStripePaymentIntentId())
         {
-            // Stripe redelivers webhooks (e.g. on timeout), so a concurrent delivery for the
-            // same PaymentIntent can win this race and insert the Order first. The unique
-            // index catches it here; roll back this attempt's stock reservation - the
-            // winner's decrement is the only one that should stand - and treat it as the
-            // idempotent no-op it is.
+            // Lost the race to a concurrent webhook delivery for the same PaymentIntent - roll
+            // back this attempt's stock reservation (the winner's decrement is the only one
+            // that should stand) and treat it as the idempotent no-op it is.
             await transaction.RollbackAsync(cancellationToken);
             return;
         }
 
         await transaction.CommitAsync(cancellationToken);
     }
-
-    private static bool IsDuplicatePaymentIntentViolation(DbUpdateException ex) =>
-        ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg
-        && pg.ConstraintName == "IX_Orders_StripePaymentIntentId";
 
     public async Task<OrderConfirmationView?> GetOrderConfirmationAsync(string paymentIntentId, CancellationToken cancellationToken)
     {
