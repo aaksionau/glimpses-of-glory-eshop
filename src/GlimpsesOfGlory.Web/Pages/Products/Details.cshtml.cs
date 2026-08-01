@@ -31,13 +31,12 @@ public class DetailsModel(IProductCatalogService productCatalogService, ICartSer
             return RedirectToPage("/Cart/Index");
         }
 
-        var product = await productCatalogService.GetProductBySlugAsync(slug, cancellationToken);
-        if (product is null)
+        if (result.Product is null)
         {
             return NotFound();
         }
 
-        Product = product;
+        Product = result.Product;
         ErrorMessage = result.ErrorMessage;
         return Page();
     }

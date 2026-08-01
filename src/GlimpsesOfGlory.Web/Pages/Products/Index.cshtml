@@ -19,7 +19,7 @@
                 <a href="/products/@product.Slug" class="relative block border border-black/10 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
                     @if (product.StockQuantity <= 0)
                     {
-                        <span class="absolute top-2 right-2 z-10 bg-gray-800 text-white text-xs font-semibold px-2 py-1 rounded">Out of stock</span>
+                        <partial name="_OutOfStockBadge" model="@("absolute top-2 right-2 z-10")" />
                     }
                     @if (product.ThumbnailFileName is not null)
                     {

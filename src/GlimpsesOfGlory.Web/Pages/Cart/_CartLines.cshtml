@@ -42,9 +42,9 @@
                         <button type="submit" class="text-red-700 hover:underline px-2 py-3">Remove</button>
                     </form>
 
-                    @if (Model.QuantityErrorSlug == line.ProductSlug)
+                    @if (Model.QuantityError?.ProductSlug == line.ProductSlug)
                     {
-                        <p class="w-full text-red-600 text-sm">@Model.QuantityErrorMessage</p>
+                        <p class="w-full text-red-600 text-sm">@Model.QuantityError.Message</p>
                     }
                 </div>
             }

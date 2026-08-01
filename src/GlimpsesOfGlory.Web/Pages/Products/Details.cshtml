@@ -61,7 +61,7 @@
 
             @if (Model.Product.StockQuantity <= 0)
             {
-                <span class="inline-block mt-2 bg-gray-800 text-white text-xs font-semibold px-2 py-1 rounded">Out of stock</span>
+                <partial name="_OutOfStockBadge" model="@("inline-block mt-2")" />
             }
 
             <p class="mt-4 whitespace-pre-line text-gray-700">@Model.Product.Description</p>

@@ -39,18 +39,14 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
             return CartOperationResult.Failed("This product is no longer available.");
         }
 
-        if (product.StockQuantity <= 0)
-        {
-            return CartOperationResult.Failed($"{product.Name} is out of stock.");
-        }
-
         var cart = await cartStore.GetCartAsync(cancellationToken);
         var currentQuantity = cart.Lines.FirstOrDefault(l => l.ProductSlug == slug)?.Quantity ?? 0;
         var newQuantity = currentQuantity + quantity;
 
-        if (newQuantity > product.StockQuantity)
+        var stockError = CheckStock(product, newQuantity);
+        if (stockError is not null)
         {
-            return CartOperationResult.Failed($"Only {product.StockQuantity} of {product.Name} available.");
+            return stockError;
         }
 
         cart.SetLineQuantity(slug, product.Name, product.Price, product.PhotoFileNames.FirstOrDefault(), newQuantity);
@@ -77,9 +73,10 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
             return CartOperationResult.Failed("This product is no longer available.");
         }
 
-        if (quantity > product.StockQuantity)
+        var stockError = CheckStock(product, quantity);
+        if (stockError is not null)
         {
-            return CartOperationResult.Failed($"Only {product.StockQuantity} of {product.Name} available.");
+            return stockError;
         }
 
         cart.SetLineQuantity(slug, product.Name, product.Price, product.PhotoFileNames.FirstOrDefault(), quantity);
@@ -92,5 +89,20 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
         var cart = await cartStore.GetCartAsync(cancellationToken);
         cart.RemoveLine(slug);
         await cartStore.SaveCartAsync(cart, cancellationToken);
+    }
+
+    private static CartOperationResult? CheckStock(ProductDetail product, int requestedQuantity)
+    {
+        if (product.StockQuantity <= 0)
+        {
+            return CartOperationResult.Failed($"{product.Name} is out of stock.", product);
+        }
+
+        if (requestedQuantity > product.StockQuantity)
+        {
+            return CartOperationResult.Failed($"Only {product.StockQuantity} of {product.Name} available.", product);
+        }
+
+        return null;
     }
 }

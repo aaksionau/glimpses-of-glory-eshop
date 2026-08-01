@@ -19,14 +19,14 @@ public class IndexModel(ICartService cartService) : PageModel
         var result = await cartService.UpdateLineQuantityAsync(slug, quantity, cancellationToken);
         Cart = await cartService.GetSummaryAsync(cancellationToken);
 
-        var errorSlug = result.Success ? null : slug;
-        return Partial("_CartLines", new CartLinesView(Cart, errorSlug, result.ErrorMessage));
+        var error = result.Success ? null : new CartLineError(slug, result.ErrorMessage!);
+        return Partial("_CartLines", new CartLinesView(Cart, error));
     }
 
     public async Task<IActionResult> OnPostRemoveAsync(string slug, CancellationToken cancellationToken)
     {
         await cartService.RemoveLineAsync(slug, cancellationToken);
         Cart = await cartService.GetSummaryAsync(cancellationToken);
-        return Partial("_CartLines", new CartLinesView(Cart, null, null));
+        return Partial("_CartLines", new CartLinesView(Cart, null));
     }
 }
