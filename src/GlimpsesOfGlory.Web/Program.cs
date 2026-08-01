@@ -13,6 +13,7 @@ using GlimpsesOfGlory.Core.Products;
 using GlimpsesOfGlory.Core.Products.Seeding;
 using GlimpsesOfGlory.Core.Products.Services;
 using GlimpsesOfGlory.Core.Shipping.Services;
+using GlimpsesOfGlory.Web.Configuration;
 using GlimpsesOfGlory.Web.Helpers;
 using GlimpsesOfGlory.Web.Security;
 using Microsoft.AspNetCore.Authentication.Cookies;

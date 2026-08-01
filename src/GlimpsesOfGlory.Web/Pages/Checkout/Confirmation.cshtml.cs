@@ -1,6 +1,6 @@
 using GlimpsesOfGlory.Abstractions.Cart;
 using GlimpsesOfGlory.Abstractions.Orders;
-using GlimpsesOfGlory.Web.Checkout;
+using GlimpsesOfGlory.Web.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
