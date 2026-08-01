@@ -33,4 +33,27 @@ public sealed class OrderNotifier(
 
         await client.SendMailAsync(message, cancellationToken);
     }
+
+    public async Task SendShippedNotificationAsync(OrderShippedView order, CancellationToken cancellationToken)
+    {
+        var html = await viewRenderer.RenderAsync("~/Emails/OrderShipped.cshtml", order);
+        var options = smtpOptions.Value;
+
+        using var message = new MailMessage
+        {
+            From = new MailAddress(options.FromAddress),
+            Subject = $"Your order #{order.OrderId} has shipped",
+            Body = html,
+            IsBodyHtml = true,
+        };
+        message.To.Add(order.Address.Email);
+
+        using var client = new SmtpClient(options.Host, options.Port)
+        {
+            Credentials = new NetworkCredential(options.Username, options.Password),
+            EnableSsl = true,
+        };
+
+        await client.SendMailAsync(message, cancellationToken);
+    }
 }

@@ -77,4 +77,44 @@ public class RazorViewToStringRendererTests
         Assert.Contains("123 Main St", html);
         Assert.Contains("$30.00", html);
     }
+
+    // OrderNotifier.SendShippedNotificationAsync renders this same template before sending
+    // over SMTP, so exercising it directly (as above for OrderConfirmation) covers the
+    // order/tracking details without needing a real mailbox.
+    [Fact]
+    public async Task RenderAsync_RendersOrderShippedTemplate_WithTrackingNumber()
+    {
+        var renderer = CreateRenderer();
+        var order = new OrderShippedView(
+            OrderId: 42,
+            Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
+            Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2)],
+            Total: 30.00m,
+            TrackingNumber: "1Z999AA10123456784");
+
+        var html = await renderer.RenderAsync("~/Emails/OrderShipped.cshtml", order);
+
+        Assert.Contains("Order #42", html);
+        Assert.Contains("Jane Shopper", html);
+        Assert.Contains("Ceramic Mug", html);
+        Assert.Contains("1Z999AA10123456784", html);
+        Assert.Contains("$30.00", html);
+    }
+
+    [Fact]
+    public async Task RenderAsync_RendersOrderShippedTemplate_WithoutTrackingNumber()
+    {
+        var renderer = CreateRenderer();
+        var order = new OrderShippedView(
+            OrderId: 43,
+            Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
+            Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 1)],
+            Total: 17.50m,
+            TrackingNumber: null);
+
+        var html = await renderer.RenderAsync("~/Emails/OrderShipped.cshtml", order);
+
+        Assert.Contains("Order #43", html);
+        Assert.DoesNotContain("Tracking number", html);
+    }
 }

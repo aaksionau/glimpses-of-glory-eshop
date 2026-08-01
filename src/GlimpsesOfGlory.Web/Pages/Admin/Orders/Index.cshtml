@@ -1,0 +1,49 @@
+@page "/admin/orders"
+@model GlimpsesOfGlory.Web.Pages.Admin.Orders.IndexModel
+@{
+    ViewData["Title"] = "Admin - Orders";
+}
+
+<div class="py-5">
+    <h1 class="text-2xl font-bold mb-4">Admin dashboard</h1>
+    <partial name="/Pages/Admin/_AdminNav.cshtml" />
+
+    <h2 class="text-xl font-semibold mb-4">Orders</h2>
+
+    <div class="overflow-x-auto">
+        @if (Model.Orders.Count == 0)
+        {
+            <p>No orders yet.</p>
+        }
+        else
+        {
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-black/20 text-sm text-gray-500">
+                        <th class="py-2 pr-2">Order</th>
+                        <th class="py-2 pr-2">Customer</th>
+                        <th class="py-2 pr-2">Items</th>
+                        <th class="py-2 pr-2">Total</th>
+                        <th class="py-2 pr-2">Status</th>
+                        <th class="py-2 pr-2">Placed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in Model.Orders)
+                    {
+                        <tr class="border-b border-black/10">
+                            <td class="py-2 pr-2">
+                                <a asp-page="/Admin/Orders/Details" asp-route-id="@order.Id" class="font-medium hover:underline">#@order.Id</a>
+                            </td>
+                            <td class="py-2 pr-2">@order.Email</td>
+                            <td class="py-2 pr-2">@order.ItemCount</td>
+                            <td class="py-2 pr-2">@order.Total.ToString("C")</td>
+                            <td class="py-2 pr-2">@order.Status</td>
+                            <td class="py-2 pr-2">@order.CreatedAt.ToString("MMM d, yyyy")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

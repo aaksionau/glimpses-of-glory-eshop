@@ -79,6 +79,7 @@ builder.Services.AddScoped<IPaymentGateway>(sp =>
 });
 builder.Services.AddScoped<IInventoryStore, EfInventoryStore>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IAdminOrderService, AdminOrderService>();
 
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Smtp"));
 builder.Services.AddScoped<RazorViewToStringRenderer>();

@@ -1,4 +1,4 @@
-namespace GlimpsesOfGlory.Core.Orders.Entities;
+namespace GlimpsesOfGlory.Abstractions.Orders;
 
 public enum OrderStatus
 {
