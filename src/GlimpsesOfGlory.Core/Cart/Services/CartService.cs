@@ -26,50 +26,62 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
         return new CartSummary(lines, cart.Subtotal, shippingCost, cart.Subtotal + shippingCost);
     }
 
-    public async Task AddLineAsync(string slug, int quantity, CancellationToken cancellationToken)
+    public async Task<CartOperationResult> AddLineAsync(string slug, int quantity, CancellationToken cancellationToken)
     {
         if (quantity <= 0)
         {
-            return;
+            return CartOperationResult.Ok();
         }
 
         var product = await productCatalogService.GetProductBySlugAsync(slug, cancellationToken);
         if (product is null)
         {
-            return;
+            return CartOperationResult.Failed("This product is no longer available.");
         }
 
         var cart = await cartStore.GetCartAsync(cancellationToken);
         var currentQuantity = cart.Lines.FirstOrDefault(l => l.ProductSlug == slug)?.Quantity ?? 0;
-        var newQuantity = Math.Min(currentQuantity + quantity, product.StockQuantity);
+        var newQuantity = currentQuantity + quantity;
+
+        var stockError = CheckStock(product, newQuantity);
+        if (stockError is not null)
+        {
+            return stockError;
+        }
 
         cart.SetLineQuantity(slug, product.Name, product.Price, product.PhotoFileNames.FirstOrDefault(), newQuantity);
         await cartStore.SaveCartAsync(cart, cancellationToken);
+        return CartOperationResult.Ok();
     }
 
-    public async Task UpdateLineQuantityAsync(string slug, int quantity, CancellationToken cancellationToken)
+    public async Task<CartOperationResult> UpdateLineQuantityAsync(string slug, int quantity, CancellationToken cancellationToken)
     {
         var cart = await cartStore.GetCartAsync(cancellationToken);
 
         if (quantity <= 0)
         {
             cart.RemoveLine(slug);
-        }
-        else
-        {
-            var product = await productCatalogService.GetProductBySlugAsync(slug, cancellationToken);
-            if (product is null)
-            {
-                cart.RemoveLine(slug);
-            }
-            else
-            {
-                var clampedQuantity = Math.Min(quantity, product.StockQuantity);
-                cart.SetLineQuantity(slug, product.Name, product.Price, product.PhotoFileNames.FirstOrDefault(), clampedQuantity);
-            }
+            await cartStore.SaveCartAsync(cart, cancellationToken);
+            return CartOperationResult.Ok();
         }
 
+        var product = await productCatalogService.GetProductBySlugAsync(slug, cancellationToken);
+        if (product is null)
+        {
+            cart.RemoveLine(slug);
+            await cartStore.SaveCartAsync(cart, cancellationToken);
+            return CartOperationResult.Failed("This product is no longer available.");
+        }
+
+        var stockError = CheckStock(product, quantity);
+        if (stockError is not null)
+        {
+            return stockError;
+        }
+
+        cart.SetLineQuantity(slug, product.Name, product.Price, product.PhotoFileNames.FirstOrDefault(), quantity);
         await cartStore.SaveCartAsync(cart, cancellationToken);
+        return CartOperationResult.Ok();
     }
 
     public async Task RemoveLineAsync(string slug, CancellationToken cancellationToken)
@@ -77,5 +89,20 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
         var cart = await cartStore.GetCartAsync(cancellationToken);
         cart.RemoveLine(slug);
         await cartStore.SaveCartAsync(cart, cancellationToken);
+    }
+
+    private static CartOperationResult? CheckStock(ProductDetail product, int requestedQuantity)
+    {
+        if (product.StockQuantity <= 0)
+        {
+            return CartOperationResult.Failed($"{product.Name} is out of stock.", product);
+        }
+
+        if (requestedQuantity > product.StockQuantity)
+        {
+            return CartOperationResult.Failed($"Only {product.StockQuantity} of {product.Name} available.", product);
+        }
+
+        return null;
     }
 }
