@@ -15,7 +15,8 @@ public sealed class ProductCatalogService(AppDbContext db) : IProductCatalogServ
                 p.Slug,
                 p.Name,
                 p.Price,
-                p.Photos.OrderBy(photo => photo.DisplayOrder).Select(photo => photo.FileName).FirstOrDefault()))
+                p.Photos.OrderBy(photo => photo.DisplayOrder).Select(photo => photo.FileName).FirstOrDefault(),
+                p.StockQuantity))
             .ToListAsync(cancellationToken);
     }
 

@@ -1,14 +1,17 @@
-@model GlimpsesOfGlory.Abstractions.Cart.CartSummary
+@model GlimpsesOfGlory.Web.Dtos.CartLinesView
+@{
+    var cart = Model.Cart;
+}
 
 <div id="cart-lines">
-    @if (Model.Lines.Count == 0)
+    @if (cart.Lines.Count == 0)
     {
         <p>Your cart is empty. <a href="/products" class="text-blue-700 hover:underline">Browse products</a>.</p>
     }
     else
     {
         <div class="flex flex-col gap-4">
-            @foreach (var line in Model.Lines)
+            @foreach (var line in cart.Lines)
             {
                 <div class="flex flex-wrap items-center gap-4 border-b border-black/10 pb-4">
                     @if (line.ThumbnailFileName is not null)
@@ -38,14 +41,19 @@
                         <input type="hidden" name="slug" value="@line.ProductSlug" />
                         <button type="submit" class="text-red-700 hover:underline px-2 py-3">Remove</button>
                     </form>
+
+                    @if (Model.QuantityErrorSlug == line.ProductSlug)
+                    {
+                        <p class="w-full text-red-600 text-sm">@Model.QuantityErrorMessage</p>
+                    }
                 </div>
             }
         </div>
 
         <div class="mt-6 flex flex-col items-end gap-1">
-            <p>Subtotal: <span class="font-medium">@Model.Subtotal.ToString("C")</span></p>
-            <p>Shipping: <span class="font-medium">@Model.ShippingCost.ToString("C")</span></p>
-            <p class="text-lg font-bold">Total: @Model.Total.ToString("C")</p>
+            <p>Subtotal: <span class="font-medium">@cart.Subtotal.ToString("C")</span></p>
+            <p>Shipping: <span class="font-medium">@cart.ShippingCost.ToString("C")</span></p>
+            <p class="text-lg font-bold">Total: @cart.Total.ToString("C")</p>
             <a href="/checkout" class="bg-black text-white px-6 py-3 rounded-lg font-semibold mt-2">Proceed to checkout</a>
         </div>
     }

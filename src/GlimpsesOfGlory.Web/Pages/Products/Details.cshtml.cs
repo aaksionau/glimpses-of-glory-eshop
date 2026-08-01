@@ -9,6 +9,8 @@ public class DetailsModel(IProductCatalogService productCatalogService, ICartSer
 {
     public ProductDetail Product { get; private set; } = null!;
 
+    public string? ErrorMessage { get; private set; }
+
     public async Task<IActionResult> OnGetAsync(string slug, CancellationToken cancellationToken)
     {
         var product = await productCatalogService.GetProductBySlugAsync(slug, cancellationToken);
@@ -23,7 +25,20 @@ public class DetailsModel(IProductCatalogService productCatalogService, ICartSer
 
     public async Task<IActionResult> OnPostAsync(string slug, int quantity, CancellationToken cancellationToken)
     {
-        await cartService.AddLineAsync(slug, quantity, cancellationToken);
-        return RedirectToPage("/Cart/Index");
+        var result = await cartService.AddLineAsync(slug, quantity, cancellationToken);
+        if (result.Success)
+        {
+            return RedirectToPage("/Cart/Index");
+        }
+
+        var product = await productCatalogService.GetProductBySlugAsync(slug, cancellationToken);
+        if (product is null)
+        {
+            return NotFound();
+        }
+
+        Product = product;
+        ErrorMessage = result.ErrorMessage;
+        return Page();
     }
 }
