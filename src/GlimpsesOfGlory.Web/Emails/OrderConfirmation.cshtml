@@ -1,0 +1,50 @@
+@model GlimpsesOfGlory.Abstractions.Orders.OrderConfirmationView
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Order Confirmation</title>
+</head>
+<body style="font-family: sans-serif; color: #1f2937;">
+    <h1>Thanks for your order, @Model.Address.FullName!</h1>
+    <p>Order #@Model.OrderId &middot; placed @Model.CreatedAt.ToString("MMMM d, yyyy")</p>
+
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr>
+                <th style="text-align: left; border-bottom: 1px solid #d1d5db;">Item</th>
+                <th style="text-align: right; border-bottom: 1px solid #d1d5db;">Qty</th>
+                <th style="text-align: right; border-bottom: 1px solid #d1d5db;">Price</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var line in Model.Lines)
+            {
+                <tr>
+                    <td>@line.ProductName</td>
+                    <td style="text-align: right;">@line.Quantity</td>
+                    <td style="text-align: right;">@line.UnitPrice.ToString("C")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <p style="text-align: right; margin-top: 1rem;">
+        Subtotal: @Model.Subtotal.ToString("C")<br />
+        Shipping: @Model.ShippingCost.ToString("C")<br />
+        <strong>Total: @Model.Total.ToString("C")</strong>
+    </p>
+
+    <h2>Shipping to</h2>
+    <p>
+        @Model.Address.FullName<br />
+        @Model.Address.AddressLine1<br />
+        @if (!string.IsNullOrWhiteSpace(Model.Address.AddressLine2))
+        {
+            @Model.Address.AddressLine2<text><br /></text>
+        }
+        @Model.Address.City, @Model.Address.State @Model.Address.PostalCode<br />
+        @Model.Address.Country
+    </p>
+</body>
+</html>

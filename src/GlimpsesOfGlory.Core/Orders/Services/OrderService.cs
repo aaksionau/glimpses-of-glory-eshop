@@ -1,11 +1,13 @@
 using GlimpsesOfGlory.Abstractions.Cart;
 using GlimpsesOfGlory.Abstractions.Inventory;
+using GlimpsesOfGlory.Abstractions.Notifications;
 using GlimpsesOfGlory.Abstractions.Orders;
 using GlimpsesOfGlory.Abstractions.Payments;
 using GlimpsesOfGlory.Core.Orders.Entities;
 using GlimpsesOfGlory.Core.Orders.Persistence;
 using GlimpsesOfGlory.Core.Orders.ValueObjects;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace GlimpsesOfGlory.Core.Orders.Services;
 
@@ -13,7 +15,9 @@ public sealed class OrderService(
     AppDbContext dbContext,
     ICartService cartService,
     IPaymentGateway paymentGateway,
-    IInventoryStore inventoryStore) : IOrderService
+    IInventoryStore inventoryStore,
+    IEmailSender emailSender,
+    ILogger<OrderService> logger) : IOrderService
 {
     public async Task<PaymentIntentSetup?> CreatePaymentIntentAsync(ShippingAddressInfo address, string? existingPaymentIntentId, CancellationToken cancellationToken)
     {
@@ -130,7 +134,7 @@ public sealed class OrderService(
             }
         }
 
-        dbContext.Orders.Add(new Order
+        var order = new Order
         {
             Email = pendingCheckout.Email,
             ShippingAddress = pendingCheckout.ShippingAddress.Clone(),
@@ -144,7 +148,8 @@ public sealed class OrderService(
                 UnitPrice = l.UnitPrice,
                 Quantity = l.Quantity,
             }).ToList(),
-        });
+        };
+        dbContext.Orders.Add(order);
         dbContext.PendingCheckouts.Remove(pendingCheckout);
 
         try
@@ -161,6 +166,21 @@ public sealed class OrderService(
         }
 
         await transaction.CommitAsync(cancellationToken);
+
+        var confirmation = ToConfirmationView(order);
+
+        try
+        {
+            await emailSender.SendOrderConfirmationAsync(confirmation, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            // The order is already committed and stock already decremented - a failed
+            // confirmation email shouldn't fail the webhook (Stripe would retry, but the
+            // idempotency check above means the retry would just no-op and never resend
+            // the email anyway). Log for manual follow-up instead.
+            logger.LogError(ex, "Failed to send order confirmation email for order {OrderId}", order.Id);
+        }
     }
 
     public async Task<OrderConfirmationView?> GetOrderConfirmationAsync(string paymentIntentId, CancellationToken cancellationToken)
@@ -173,13 +193,15 @@ public sealed class OrderService(
             return null;
         }
 
-        return new OrderConfirmationView(
-            order.Id,
-            order.ShippingAddress.ToInfo(order.Email),
-            order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity)).ToList(),
-            order.Subtotal,
-            order.ShippingCost,
-            order.Total,
-            order.CreatedAt);
+        return ToConfirmationView(order);
     }
+
+    private static OrderConfirmationView ToConfirmationView(Order order) => new(
+        order.Id,
+        order.ShippingAddress.ToInfo(order.Email),
+        order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity)).ToList(),
+        order.Subtotal,
+        order.ShippingCost,
+        order.Total,
+        order.CreatedAt);
 }
