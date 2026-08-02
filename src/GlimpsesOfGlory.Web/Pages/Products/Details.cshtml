@@ -11,18 +11,18 @@
     }
 }
 
-<div class="py-4">
-    <a href="/products" class="text-sm text-blue-700 hover:underline">&larr; Back to products</a>
+<div class="container mx-auto px-4 py-10 md:py-16">
+    <a href="/products" class="text-sm text-gold-dark hover:underline">&larr; Back to products</a>
 
-    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-8" x-data="{ activeIndex: 0, lightboxOpen: false }">
-        <div>
+    <div class="mt-4 grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,360px)_1fr]" x-data="{ activeIndex: 0, lightboxOpen: false }">
+        <div class="mx-auto w-full max-w-xs md:max-w-none">
             @if (Model.Product.PhotoFileNames.Count == 0)
             {
-                <div class="w-full aspect-[4/3] bg-gray-200 flex items-center justify-center text-gray-500">No photos</div>
+                <div class="w-full aspect-[3/4] bg-cream-dark flex items-center justify-center text-ink-light">No photos</div>
             }
             else
             {
-                <div class="relative w-full aspect-[4/3] bg-gray-100 rounded-lg overflow-hidden cursor-zoom-in" @@click="lightboxOpen = true">
+                <div class="relative w-full aspect-[3/4] bg-cream-dark rounded-2xl overflow-hidden cursor-zoom-in" @@click="lightboxOpen = true">
                     @for (var i = 0; i < Model.Product.PhotoFileNames.Count; i++)
                     {
                         <img src="/product-photos/@Model.Product.PhotoFileNames[i]"
@@ -39,7 +39,7 @@
                         {
                             <button type="button"
                                     class="w-16 h-16 rounded overflow-hidden border-2"
-                                    x-bind:class="activeIndex === @i ? 'border-blue-600' : 'border-transparent'"
+                                    x-bind:class="activeIndex === @i ? 'border-gold' : 'border-transparent'"
                                     @@click="activeIndex = @i">
                                 <img src="/product-photos/@Model.Product.PhotoFileNames[i]" alt="" class="w-full h-full object-cover" />
                             </button>
@@ -64,14 +64,14 @@
 
         <div>
             <h1 class="text-3xl font-bold">@Model.Product.Name</h1>
-            <p class="text-2xl mt-2">@Model.Product.Price.ToString("C")</p>
+            <p class="text-2xl mt-2 text-gold-dark font-medium">@Model.Product.Price.ToString("C")</p>
 
             @if (Model.Product.StockQuantity <= 0)
             {
                 <partial name="_OutOfStockBadge" model="@("inline-block mt-2")" />
             }
 
-            <p class="mt-4 whitespace-pre-line text-gray-700">@Model.Product.Description</p>
+            <p class="mt-4 whitespace-pre-line text-ink-light">@Model.Product.Description</p>
 
             @if (Model.ErrorMessage is not null)
             {
@@ -83,8 +83,8 @@
                 <form method="post" asp-antiforgery="true" class="mt-6 flex items-center gap-3">
                     <label for="quantity" class="sr-only">Quantity</label>
                     <input type="number" id="quantity" name="quantity" value="1" min="1" max="@Model.Product.StockQuantity"
-                           class="w-20 border border-black/20 rounded px-3 py-3 text-center" />
-                    <button type="submit" class="bg-black text-white px-6 py-3 rounded-lg font-semibold">Add to cart</button>
+                           class="w-20 border border-ink/20 rounded px-3 py-3 text-center" />
+                    <button type="submit" class="bg-gold hover:bg-gold-dark transition-colors text-white px-6 py-3 rounded-full font-semibold">Add to cart</button>
                 </form>
             }
         </div>

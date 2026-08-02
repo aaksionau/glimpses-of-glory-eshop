@@ -5,36 +5,22 @@
     ViewData["MetaDescription"] = "Browse all products currently available at Glimpses of Glory.";
 }
 
-<div class="py-4">
-    <h1 class="text-3xl font-bold mb-6">Products</h1>
+<div class="container mx-auto px-4 py-10 md:py-16">
+    <div class="mb-10 text-center">
+        <p class="mb-3 text-sm font-semibold uppercase tracking-widest text-gold-dark">Shop</p>
+        <h1 class="text-3xl font-bold md:text-4xl">All products</h1>
+    </div>
 
     @if (Model.Products.Count == 0)
     {
-        <p>No products available right now.</p>
+        <p class="text-center text-ink-light">No products available right now.</p>
     }
     else
     {
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
             @foreach (var product in Model.Products)
             {
-                <a href="/products/@product.Slug" class="relative block border border-black/10 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-                    @if (product.StockQuantity <= 0)
-                    {
-                        <partial name="_OutOfStockBadge" model="@("absolute top-2 right-2 z-10")" />
-                    }
-                    @if (product.ThumbnailFileName is not null)
-                    {
-                        <img src="/product-photos/@product.ThumbnailFileName" alt="@product.Name" class="w-full h-48 object-cover @(product.StockQuantity <= 0 ? "opacity-50" : "")" />
-                    }
-                    else
-                    {
-                        <div class="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-500">No photo</div>
-                    }
-                    <div class="p-4">
-                        <h2 class="font-semibold text-lg">@product.Name</h2>
-                        <p class="text-gray-700">@product.Price.ToString("C")</p>
-                    </div>
-                </a>
+                <partial name="_ProductCard" model="product" />
             }
         </div>
     }

@@ -1,5 +1,33 @@
 @import "tailwindcss";
 
+@theme {
+  --font-display: "Playfair Display", ui-serif, Georgia, serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --color-cream: #fbf7f0;
+  --color-cream-dark: #f2ead9;
+  --color-ink: #2c2a26;
+  --color-ink-light: #605c54;
+  --color-gold: #b9862f;
+  --color-gold-dark: #93691f;
+  --color-gold-light: #f4e6c8;
+  --color-sky: #3d5f7c;
+  --color-sky-dark: #294156;
+}
+
 [x-cloak] {
   display: none !important;
+}
+
+.full-bleed {
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
 }

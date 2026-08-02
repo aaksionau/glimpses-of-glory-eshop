@@ -5,26 +5,26 @@
 }
 
 <div class="py-4 max-w-xl mx-auto">
-    <h1 class="text-3xl font-bold mb-6">Checkout</h1>
+    <h1 class="text-3xl font-bold mb-6 font-display">Checkout</h1>
 
-    <ol class="flex gap-2 text-sm mb-6 text-gray-500">
+    <ol class="flex gap-2 text-sm mb-6 text-ink-light">
         <li>1. Address</li>
         <li>&rarr;</li>
         <li>2. Review</li>
         <li>&rarr;</li>
-        <li class="font-semibold text-black">3. Payment</li>
+        <li class="font-semibold text-ink">3. Payment</li>
     </ol>
 
     <div class="flex items-center justify-between mb-4">
         <h2 class="font-semibold text-lg">Pay by card</h2>
-        <a href="/checkout/review" class="text-sm text-blue-700 hover:underline">Back</a>
+        <a href="/checkout/review" class="text-sm text-gold-dark hover:underline">Back</a>
     </div>
 
     <div id="payment-element" class="mb-4"></div>
     <div id="payment-error" class="text-red-600 text-sm mb-4" role="alert"></div>
 
     <button id="submit-payment" type="button"
-            class="w-full bg-black text-white px-6 py-3 rounded-lg font-semibold disabled:bg-black/40 disabled:cursor-not-allowed">
+            class="w-full bg-gold hover:bg-gold-dark transition-colors text-white px-6 py-3 rounded-full font-semibold disabled:bg-gold/40 disabled:cursor-not-allowed">
         Pay now
     </button>
 </div>

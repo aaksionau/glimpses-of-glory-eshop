@@ -6,33 +6,33 @@
 <div id="cart-lines">
     @if (cart.Lines.Count == 0)
     {
-        <p>Your cart is empty. <a href="/products" class="text-blue-700 hover:underline">Browse products</a>.</p>
+        <p>Your cart is empty. <a href="/products" class="text-gold-dark hover:underline">Browse products</a>.</p>
     }
     else
     {
         <div class="flex flex-col gap-4">
             @foreach (var line in cart.Lines)
             {
-                <div class="flex flex-wrap items-center gap-4 border-b border-black/10 pb-4">
+                <div class="flex flex-wrap items-center gap-4 border-b border-ink/10 pb-4">
                     @if (line.ThumbnailFileName is not null)
                     {
-                        <img src="/product-photos/@line.ThumbnailFileName" alt="@line.ProductName" class="w-16 h-16 object-cover rounded flex-shrink-0" />
+                        <img src="/product-photos/@line.ThumbnailFileName" alt="@line.ProductName" class="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
                     }
                     else
                     {
-                        <div class="w-16 h-16 bg-gray-200 rounded flex items-center justify-center text-gray-500 text-xs flex-shrink-0">No photo</div>
+                        <div class="w-16 h-16 bg-cream-dark rounded-lg flex items-center justify-center text-ink-light text-xs flex-shrink-0">No photo</div>
                     }
 
                     <div class="flex-1 min-w-[8rem]">
                         <p class="font-semibold">@line.ProductName</p>
-                        <p class="text-gray-700 text-sm">@line.UnitPrice.ToString("C") each</p>
+                        <p class="text-ink-light text-sm">@line.UnitPrice.ToString("C") each</p>
                     </div>
 
                     <form hx-post="/cart?handler=UpdateQuantity" hx-target="#cart-lines" hx-swap="outerHTML" hx-trigger="change" asp-antiforgery="true">
                         <input type="hidden" name="slug" value="@line.ProductSlug" />
                         <label for="qty-@line.ProductSlug" class="sr-only">Quantity for @line.ProductName</label>
                         <input type="number" id="qty-@line.ProductSlug" name="quantity" value="@line.Quantity" min="1"
-                               class="w-16 border border-black/20 rounded px-2 py-3 text-center" />
+                               class="w-16 border border-ink/20 rounded px-2 py-3 text-center" />
                     </form>
 
                     <p class="w-24 text-right font-medium">@((line.UnitPrice * line.Quantity).ToString("C"))</p>
@@ -54,7 +54,7 @@
             <p>Subtotal: <span class="font-medium">@cart.Subtotal.ToString("C")</span></p>
             <p>Shipping: <span class="font-medium">@cart.ShippingCost.ToString("C")</span></p>
             <p class="text-lg font-bold">Total: @cart.Total.ToString("C")</p>
-            <a href="/checkout" class="bg-black text-white px-6 py-3 rounded-lg font-semibold mt-2">Proceed to checkout</a>
+            <a href="/checkout" class="bg-gold hover:bg-gold-dark transition-colors text-white px-6 py-3 rounded-full font-semibold mt-2">Proceed to checkout</a>
         </div>
     }
 </div>

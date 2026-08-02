@@ -2,10 +2,91 @@
 @model IndexModel
 @{
     ViewData["Title"] = "Home";
-    ViewData["MetaDescription"] = "Glimpses of Glory - shop our small curated collection online, with fast checkout and shipping.";
+    ViewData["MetaDescription"] = "Nature photography and inspirational calendars by Amy Aksionova. Shop the 2026 'Rejoice, My Soul' calendar, with proceeds supporting ministry in Ukraine.";
+    ViewData["OgImage"] = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}/images/header-photo.jpg";
 }
 
-<div class="text-center py-5">
-    <h1 class="text-3xl font-bold mb-3">Glimpses of Glory</h1>
-    <a asp-page="/Products/Index" class="text-lg">Browse the catalog</a>
-</div>
+<section class="full-bleed relative flex min-h-[420px] items-center justify-center overflow-hidden md:min-h-[560px]">
+    <img src="/images/header-photo.jpg" alt="Sunlight breaking through storm clouds" class="absolute inset-0 h-full w-full object-cover" />
+    <div class="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/40 to-ink/20"></div>
+    <div class="relative px-4 text-center text-white">
+        <p class="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-gold-light">Nature Photography &amp; Inspiration</p>
+        <h1 class="font-display text-4xl font-bold drop-shadow-sm md:text-6xl">Glimpses of Glory</h1>
+        <p class="mx-auto mt-4 max-w-xl text-base text-cream/90 md:text-lg">
+            Finding the wonder hidden in plain view &mdash; and turning it into calendars, wall art, and keepsakes worth rejoicing over.
+        </p>
+        <a asp-page="/Products/Index" class="mt-8 inline-block rounded-full bg-gold px-8 py-3 font-semibold text-white transition-colors hover:bg-gold-dark">
+            Shop the Collection
+        </a>
+    </div>
+</section>
+
+<section id="about" class="container mx-auto max-w-2xl px-4 py-16 text-center md:py-24">
+    <img src="/images/amy-aksionova.jpg" alt="Portrait of Amy Aksionova"
+         class="mx-auto mb-6 h-28 w-28 rounded-full object-cover shadow-lg ring-4 ring-white md:h-32 md:w-32" />
+    <p class="mb-3 text-sm font-semibold uppercase tracking-widest text-gold-dark">About the artist</p>
+    <h2 class="mb-4 text-3xl font-bold md:text-4xl">Amy Aksionova</h2>
+    <p class="mb-4 leading-relaxed text-ink-light">
+        Amy's love of nature photography began as a teenager, chasing Minnesota sunsets and unusual clouds
+        across the sky. What started as a hobby became a way of seeing &mdash; noticing the everyday wonders
+        of creation that are &ldquo;hidden in plain view,&rdquo; and capturing them before they pass.
+    </p>
+    <p class="leading-relaxed text-ink-light">
+        Her husband lends his technical and moral support along the way, even contributing flowers from
+        their own garden to some of her photographs.
+    </p>
+</section>
+
+<section class="bg-cream-dark py-16 md:py-24">
+    <div class="container mx-auto grid grid-cols-1 gap-10 px-4 md:grid-cols-3">
+        <div>
+            <h3 class="font-display mb-2 text-xl font-bold">Rejoice, My Soul</h3>
+            <p class="text-sm leading-relaxed text-ink-light">
+                The 2026 calendar centers on rejoicing &mdash; a word found more than 250 times in Scripture &mdash;
+                paired with photography that points to the wonder found in creation, month by month.
+            </p>
+        </div>
+        <div>
+            <h3 class="font-display mb-2 text-xl font-bold">Wall Art &amp; Keepsakes</h3>
+            <p class="text-sm leading-relaxed text-ink-light">
+                Each calendar page does double duty: a functional planning tool today, and a piece of wall art or a
+                note card to keep once the month is through.
+            </p>
+        </div>
+        <div>
+            <h3 class="font-display mb-2 text-xl font-bold">Giving Back</h3>
+            <p class="text-sm leading-relaxed text-ink-light">
+                A portion of every sale helps support a pastor in Ukraine who ministers to people recovering from
+                addiction &mdash; glory glimpsed, shared forward.
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="container mx-auto px-4 py-16 md:py-24">
+    <div class="mb-10 text-center">
+        <p class="mb-3 text-sm font-semibold uppercase tracking-widest text-gold-dark">Shop</p>
+        <h2 class="text-3xl font-bold md:text-4xl">Featured pieces</h2>
+    </div>
+
+    @if (Model.FeaturedProducts.Count == 0)
+    {
+        <p class="text-center text-ink-light">New pieces are on their way &mdash; check back soon.</p>
+    }
+    else
+    {
+        <div class="flex flex-wrap justify-center gap-6">
+            @foreach (var product in Model.FeaturedProducts)
+            {
+                <div class="w-[calc(50%-0.75rem)] sm:w-[calc(33.333%-1rem)] lg:w-[calc(25%-1.125rem)]">
+                    <partial name="_ProductCard" model="product" />
+                </div>
+            }
+        </div>
+        <div class="mt-10 text-center">
+            <a asp-page="/Products/Index" class="inline-block rounded-full border border-ink px-6 py-3 font-semibold transition-colors hover:bg-ink hover:text-white">
+                View all products
+            </a>
+        </div>
+    }
+</section>
