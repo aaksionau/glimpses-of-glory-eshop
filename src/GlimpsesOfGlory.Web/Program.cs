@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
+using System.Xml.Linq;
 
 if (args is ["hash-password", var passwordToHash])
 {
@@ -128,6 +129,40 @@ app.UseAuthorization();
 app.MapStaticAssets();
 app.MapRazorPages()
    .WithStaticAssets();
+
+app.MapGet("/robots.txt", (HttpRequest request) =>
+{
+    var baseUrl = $"{request.Scheme}://{request.Host}";
+    var content = $"""
+        User-agent: *
+        Allow: /
+        Disallow: /admin
+        Disallow: /cart
+        Disallow: /checkout
+
+        Sitemap: {baseUrl}/sitemap.xml
+        """;
+    return Results.Text(content, "text/plain");
+});
+
+app.MapGet("/sitemap.xml", async (
+    HttpRequest request,
+    IProductCatalogService productCatalogService,
+    CancellationToken cancellationToken) =>
+{
+    var baseUrl = $"{request.Scheme}://{request.Host}";
+    var products = await productCatalogService.GetProductsAsync(cancellationToken);
+
+    var urls = new List<string> { $"{baseUrl}/", $"{baseUrl}/products" };
+    urls.AddRange(products.Select(p => $"{baseUrl}/products/{p.Slug}"));
+
+    XNamespace ns = "http://www.sitemaps.org/schemas/sitemap/0.9";
+    var document = new XDocument(
+        new XDeclaration("1.0", "utf-8", null),
+        new XElement(ns + "urlset", urls.Select(url => new XElement(ns + "url", new XElement(ns + "loc", url)))));
+
+    return Results.Text(document.ToString(), "application/xml");
+});
 
 app.MapPost("/webhooks/stripe", async (
     HttpRequest request,
