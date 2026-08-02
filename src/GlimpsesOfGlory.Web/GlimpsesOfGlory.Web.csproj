@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
     <ProjectReference Include="..\GlimpsesOfGlory.Core\GlimpsesOfGlory.Core.csproj" />
@@ -22,6 +22,7 @@
          the current SDK (net10.0 preview). Disabling avoids that until it's fixed
          upstream; a reverse proxy in front of Dokploy can still gzip responses. -->
     <CompressionEnabled>false</CompressionEnabled>
+    <UserSecretsId>d7bd5f58-ad7e-433e-b103-a66519702b50</UserSecretsId>
   </PropertyGroup>
 
 </Project>
