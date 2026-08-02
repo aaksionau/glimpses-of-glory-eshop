@@ -1,9 +1,48 @@
+@{
+    var request = Context.Request;
+    var path = request.Path.Value ?? "";
+    var isUserFlowPage = path.StartsWith("/admin", StringComparison.OrdinalIgnoreCase)
+        || path.StartsWith("/cart", StringComparison.OrdinalIgnoreCase)
+        || path.StartsWith("/checkout", StringComparison.OrdinalIgnoreCase);
+    var metaDescription = ViewData["MetaDescription"] as string;
+    var canonicalUrl = ViewData["Canonical"] as string ?? $"{request.Scheme}://{request.Host}{request.Path}";
+    var ogType = ViewData["OgType"] as string ?? "website";
+    var ogTitle = ViewData["OgTitle"] as string ?? ViewData["Title"] as string;
+    var ogDescription = ViewData["OgDescription"] as string ?? metaDescription;
+    var ogImage = ViewData["OgImage"] as string;
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Glimpses of Glory</title>
+    @if (isUserFlowPage)
+    {
+        <meta name="robots" content="noindex, nofollow" />
+    }
+    else
+    {
+        @if (metaDescription is not null)
+        {
+            <meta name="description" content="@metaDescription" />
+        }
+        <link rel="canonical" href="@canonicalUrl" />
+        <meta property="og:type" content="@ogType" />
+        @if (ogTitle is not null)
+        {
+            <meta property="og:title" content="@ogTitle" />
+        }
+        @if (ogDescription is not null)
+        {
+            <meta property="og:description" content="@ogDescription" />
+        }
+        @if (ogImage is not null)
+        {
+            <meta property="og:image" content="@ogImage" />
+        }
+        <meta property="og:url" content="@canonicalUrl" />
+    }
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body class="min-h-screen bg-white text-black">

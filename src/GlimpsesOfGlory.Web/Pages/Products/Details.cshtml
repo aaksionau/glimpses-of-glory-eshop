@@ -1,7 +1,14 @@
 @page "/products/{slug}"
 @model GlimpsesOfGlory.Web.Pages.Products.DetailsModel
+@using GlimpsesOfGlory.Web.Helpers
 @{
     ViewData["Title"] = Model.Product.Name;
+    ViewData["MetaDescription"] = SeoText.Truncate(Model.Product.Description, 160);
+    ViewData["OgType"] = "product";
+    if (Model.Product.PhotoFileNames.Count > 0)
+    {
+        ViewData["OgImage"] = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}/product-photos/{Model.Product.PhotoFileNames[0]}";
+    }
 }
 
 <div class="py-4">
