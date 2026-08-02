@@ -11,7 +11,6 @@ using GlimpsesOfGlory.Core.Inventory.Services;
 using GlimpsesOfGlory.Core.Orders.Services;
 using GlimpsesOfGlory.Core.Payments.Services;
 using GlimpsesOfGlory.Core.Products;
-using GlimpsesOfGlory.Core.Products.Seeding;
 using GlimpsesOfGlory.Core.Products.Services;
 using GlimpsesOfGlory.Core.Shipping.Services;
 using GlimpsesOfGlory.Web.Configuration;
@@ -89,8 +88,9 @@ builder.Services.AddScoped<IEmailSender, OrderNotifier>();
 // Local-disk product photo storage. In production this path should be a
 // Dokploy-mounted persistent volume (set via ProductPhotos__StoragePath),
 // separate from wwwroot so uploaded photos survive redeploys.
+var configuredPhotosPath = builder.Configuration["ProductPhotos:StoragePath"];
 var productPhotosPath = Path.GetFullPath(
-    builder.Configuration["ProductPhotos:StoragePath"] ?? "App_Data/product-photos",
+    string.IsNullOrEmpty(configuredPhotosPath) ? "App_Data/product-photos" : configuredPhotosPath,
     builder.Environment.ContentRootPath);
 builder.Services.AddSingleton(new ProductPhotoStorageOptions { StoragePath = productPhotosPath });
 
@@ -98,9 +98,7 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var migrate = scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
-    var seedPhotos = ProductPhotoSeeder.EnsureSeededAsync(productPhotosPath);
-    await Task.WhenAll(migrate, seedPhotos);
+    await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
 }
 
 // Configure the HTTP request pipeline.
