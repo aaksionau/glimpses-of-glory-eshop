@@ -5,4 +5,6 @@ namespace GlimpsesOfGlory.Abstractions.Notifications;
 public interface IEmailSender
 {
     Task SendOrderConfirmationAsync(OrderConfirmationView order, CancellationToken cancellationToken);
+
+    Task SendShippedNotificationAsync(OrderShippedView order, CancellationToken cancellationToken);
 }
