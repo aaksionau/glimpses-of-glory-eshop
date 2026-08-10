@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 using System.Xml.Linq;
 
 if (args is ["hash-password", var passwordToHash])
@@ -28,6 +29,13 @@ if (args is ["hash-password", var passwordToHash])
     Console.WriteLine(PasswordHasher.Hash(passwordToHash));
     return;
 }
+
+// The store only sells in USD; pin the culture explicitly rather than relying on the
+// container's locale environment (unset LANG/LC_ALL resolves to invariant culture,
+// which renders currency as "¤" instead of "$").
+var defaultCulture = new CultureInfo("en-US");
+CultureInfo.DefaultThreadCurrentCulture = defaultCulture;
+CultureInfo.DefaultThreadCurrentUICulture = defaultCulture;
 
 var builder = WebApplication.CreateBuilder(args);
 

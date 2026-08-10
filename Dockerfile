@@ -26,7 +26,8 @@ RUN dotnet build src/GlimpsesOfGlory.Web/GlimpsesOfGlory.Web.csproj -c Release -
 RUN dotnet publish src/GlimpsesOfGlory.Web/GlimpsesOfGlory.Web.csproj -c Release --no-restore -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
-RUN apk add --no-cache krb5-libs
+RUN apk add --no-cache krb5-libs icu-libs
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 WORKDIR /app
 COPY --from=build /app/publish .
 ENV ASPNETCORE_URLS=http://+:8080
