@@ -100,9 +100,12 @@
                     A portion of every sale helps support a pastor in Ukraine who ministers to those recovering
                     from addiction.
                 </p>
-                <a href="mailto:amy.aksionova@proton.me" class="mt-2 block text-sm text-gold-light hover:text-white">
-                    amy.aksionova@proton.me
-                </a>
+                <a
+                    x-data="{ user: 'support', domain: 'glimpsesofglory.art' }"
+                    :href="'mailto:' + user + '@@' + domain"
+                    x-text="user + '@@' + domain"
+                    class="mt-2 block text-sm text-gold-light hover:text-white"
+                >Email us</a>
             </div>
         </div>
         <div class="border-t border-cream/10">
