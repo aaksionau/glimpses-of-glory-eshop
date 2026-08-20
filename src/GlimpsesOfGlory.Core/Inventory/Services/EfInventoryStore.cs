@@ -13,4 +13,11 @@ public sealed class EfInventoryStore(AppDbContext dbContext) : IInventoryStore
 
         return rowsAffected > 0;
     }
+
+    public async Task ReservePreorderAsync(int productId, int quantity, CancellationToken cancellationToken)
+    {
+        await dbContext.Products
+            .Where(p => p.Id == productId)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.PreorderedQuantity, p => p.PreorderedQuantity + quantity), cancellationToken);
+    }
 }

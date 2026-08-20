@@ -17,4 +17,8 @@ public sealed class ProductFormInput
 
     [Range(0, 100000, ErrorMessage = "Stock quantity can't be negative.")]
     public int StockQuantity { get; set; }
+
+    public bool IsPreorder { get; set; }
+
+    public DateOnly? ExpectedAvailabilityDate { get; set; }
 }

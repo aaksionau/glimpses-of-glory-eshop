@@ -35,7 +35,7 @@ public class CartServiceTests
     }
 
     private static ProductDetail CreateProduct(int stockQuantity) =>
-        new("widget", "Widget", "A widget", 10.00m, stockQuantity, []);
+        new("widget", "Widget", "A widget", 10.00m, stockQuantity, false, null, []);
 
     private static CartService CreateService(FakeCartStore cartStore, ProductDetail? product) =>
         new(cartStore, new FakeProductCatalogService(product), new FakeShippingSettingsService());

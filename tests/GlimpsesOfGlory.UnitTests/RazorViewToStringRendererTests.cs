@@ -63,7 +63,7 @@ public class RazorViewToStringRendererTests
         var order = new OrderConfirmationView(
             OrderId: 42,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
-            Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2)],
+            Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
             Subtotal: 25.00m,
             ShippingCost: 5.00m,
             Total: 30.00m,
@@ -88,7 +88,7 @@ public class RazorViewToStringRendererTests
         var order = new OrderShippedView(
             OrderId: 42,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
-            Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2)],
+            Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
             Total: 30.00m,
             TrackingNumber: "1Z999AA10123456784");
 
@@ -108,7 +108,7 @@ public class RazorViewToStringRendererTests
         var order = new OrderShippedView(
             OrderId: 43,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
-            Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 1)],
+            Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 1, false, null)],
             Total: 17.50m,
             TrackingNumber: null);
 

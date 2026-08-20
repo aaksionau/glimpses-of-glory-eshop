@@ -18,6 +18,7 @@ public sealed class AdminProductService(AppDbContext db, ProductPhotoStorage pho
                 p.Price,
                 p.StockQuantity,
                 p.IsActive,
+                p.IsPreorder,
                 p.Photos.OrderBy(photo => photo.DisplayOrder).Select(photo => photo.FileName).FirstOrDefault()))
             .ToListAsync(cancellationToken);
     }
@@ -35,6 +36,9 @@ public sealed class AdminProductService(AppDbContext db, ProductPhotoStorage pho
                 p.Price,
                 p.StockQuantity,
                 p.IsActive,
+                p.IsPreorder,
+                p.ExpectedAvailabilityDate,
+                p.PreorderedQuantity,
                 p.Photos
                     .OrderBy(photo => photo.DisplayOrder)
                     .Select(photo => new AdminProductPhoto(photo.Id, photo.FileName, photo.DisplayOrder))
@@ -54,6 +58,8 @@ public sealed class AdminProductService(AppDbContext db, ProductPhotoStorage pho
             Description = request.Description,
             Price = request.Price,
             StockQuantity = request.StockQuantity,
+            IsPreorder = request.IsPreorder,
+            ExpectedAvailabilityDate = request.ExpectedAvailabilityDate,
         };
 
         db.Products.Add(product);
@@ -71,7 +77,9 @@ public sealed class AdminProductService(AppDbContext db, ProductPhotoStorage pho
                     .SetProperty(p => p.Name, request.Name)
                     .SetProperty(p => p.Description, request.Description)
                     .SetProperty(p => p.Price, request.Price)
-                    .SetProperty(p => p.StockQuantity, request.StockQuantity),
+                    .SetProperty(p => p.StockQuantity, request.StockQuantity)
+                    .SetProperty(p => p.IsPreorder, request.IsPreorder)
+                    .SetProperty(p => p.ExpectedAvailabilityDate, request.ExpectedAvailabilityDate),
                 cancellationToken);
 
         return rows > 0;
@@ -82,6 +90,28 @@ public sealed class AdminProductService(AppDbContext db, ProductPhotoStorage pho
         var rows = await db.Products
             .Where(p => p.Id == id)
             .ExecuteUpdateAsync(setters => setters.SetProperty(p => p.IsActive, isActive), cancellationToken);
+
+        return rows > 0;
+    }
+
+    public async Task<bool> ReceiveStockAsync(int id, int quantityReceived, CancellationToken cancellationToken)
+    {
+        var product = await db.Products.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+        if (product is null || !product.IsPreorder)
+        {
+            return false;
+        }
+
+        var reconciledStock = PreorderStockReconciler.Reconcile(quantityReceived, product.PreorderedQuantity);
+
+        var rows = await db.Products
+            .Where(p => p.Id == id)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(p => p.StockQuantity, reconciledStock)
+                    .SetProperty(p => p.PreorderedQuantity, 0)
+                    .SetProperty(p => p.IsPreorder, false),
+                cancellationToken);
 
         return rows > 0;
     }

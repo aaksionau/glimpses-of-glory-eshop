@@ -34,6 +34,12 @@
                         <div>
                             <p class="font-medium">@line.ProductName</p>
                             <p class="text-ink-light text-sm">Qty @line.Quantity &times; @line.UnitPrice.ToString("C")</p>
+                            @if (line.IsPreorder)
+                            {
+                                <p class="text-gold-dark text-sm font-medium">
+                                    Preorder@(line.ExpectedAvailabilityDate is { } date ? $" — ships approx. {date:MMM d, yyyy}" : "")
+                                </p>
+                            }
                         </div>
                         <p class="font-medium">@((line.UnitPrice * line.Quantity).ToString("C"))</p>
                     </div>

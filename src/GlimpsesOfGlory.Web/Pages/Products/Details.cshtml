@@ -66,7 +66,11 @@
             <h1 class="text-3xl font-bold">@Model.Product.Name</h1>
             <p class="text-2xl mt-2 text-gold-dark font-medium">@Model.Product.Price.ToString("C")</p>
 
-            @if (Model.Product.StockQuantity <= 0)
+            @if (Model.Product.IsPreorder)
+            {
+                <partial name="_PreorderBadge" model="@(("inline-block mt-2", Model.Product.ExpectedAvailabilityDate))" />
+            }
+            else if (Model.Product.StockQuantity <= 0)
             {
                 <partial name="_OutOfStockBadge" model="@("inline-block mt-2")" />
             }
@@ -78,13 +82,16 @@
                 <p class="mt-4 text-red-600 font-medium">@Model.ErrorMessage</p>
             }
 
-            @if (Model.Product.StockQuantity > 0)
+            @if (Model.Product.IsPreorder || Model.Product.StockQuantity > 0)
             {
+                var maxQuantity = Model.Product.IsPreorder ? 20 : Model.Product.StockQuantity;
                 <form method="post" asp-antiforgery="true" class="mt-6 flex items-center gap-3">
                     <label for="quantity" class="sr-only">Quantity</label>
-                    <input type="number" id="quantity" name="quantity" value="1" min="1" max="@Model.Product.StockQuantity"
+                    <input type="number" id="quantity" name="quantity" value="1" min="1" max="@maxQuantity"
                            class="w-20 border border-ink/20 rounded px-3 py-3 text-center" />
-                    <button type="submit" class="bg-gold hover:bg-gold-dark transition-colors text-white px-6 py-3 rounded-full font-semibold">Add to cart</button>
+                    <button type="submit" class="bg-gold hover:bg-gold-dark transition-colors text-white px-6 py-3 rounded-full font-semibold">
+                        @(Model.Product.IsPreorder ? "Preorder" : "Add to cart")
+                    </button>
                 </form>
             }
         </div>

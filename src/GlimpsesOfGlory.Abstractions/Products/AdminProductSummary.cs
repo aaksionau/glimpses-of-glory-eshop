@@ -7,4 +7,5 @@ public sealed record AdminProductSummary(
     decimal Price,
     int StockQuantity,
     bool IsActive,
+    bool IsPreorder,
     string? ThumbnailFileName);

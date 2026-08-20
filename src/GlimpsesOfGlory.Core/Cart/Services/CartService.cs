@@ -14,7 +14,7 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
         var cart = await cartStore.GetCartAsync(cancellationToken);
 
         var lines = cart.Lines
-            .Select(l => new CartLineView(l.ProductSlug, l.ProductName, l.ThumbnailFileName, l.UnitPrice, l.Quantity))
+            .Select(l => new CartLineView(l.ProductSlug, l.ProductName, l.ThumbnailFileName, l.UnitPrice, l.Quantity, l.IsPreorder, l.ExpectedAvailabilityDate))
             .ToList();
 
         // Built per call (not injected as a singleton) so admin edits to shipping
@@ -50,7 +50,7 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
             return stockError;
         }
 
-        cart.SetLineQuantity(slug, product.Name, product.Price, product.PhotoFileNames.FirstOrDefault(), newQuantity);
+        cart.SetLineQuantity(slug, product.Name, product.Price, product.PhotoFileNames.FirstOrDefault(), newQuantity, product.IsPreorder, product.ExpectedAvailabilityDate);
         await cartStore.SaveCartAsync(cart, cancellationToken);
         return CartOperationResult.Ok();
     }
@@ -80,7 +80,7 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
             return stockError;
         }
 
-        cart.SetLineQuantity(slug, product.Name, product.Price, product.PhotoFileNames.FirstOrDefault(), quantity);
+        cart.SetLineQuantity(slug, product.Name, product.Price, product.PhotoFileNames.FirstOrDefault(), quantity, product.IsPreorder, product.ExpectedAvailabilityDate);
         await cartStore.SaveCartAsync(cart, cancellationToken);
         return CartOperationResult.Ok();
     }
@@ -95,8 +95,22 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
     public Task ClearAsync(CancellationToken cancellationToken) =>
         cartStore.SaveCartAsync(new CartModel(), cancellationToken);
 
+    // Fixed abuse guard, not a configurable business setting - preorder stock has no
+    // real ceiling, but an unbounded quantity per line would be exploitable.
+    private const int MaxPreorderQuantityPerLine = 20;
+
     private static CartOperationResult? CheckStock(ProductDetail product, int requestedQuantity)
     {
+        if (product.IsPreorder)
+        {
+            if (requestedQuantity > MaxPreorderQuantityPerLine)
+            {
+                return CartOperationResult.Failed($"Only up to {MaxPreorderQuantityPerLine} of {product.Name} can be preordered.", product);
+            }
+
+            return null;
+        }
+
         if (product.StockQuantity <= 0)
         {
             return CartOperationResult.Failed($"{product.Name} is out of stock.", product);

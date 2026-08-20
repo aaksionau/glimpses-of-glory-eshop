@@ -34,7 +34,13 @@
                         </td>
                         <td class="py-2 pr-2 font-medium">@product.Name</td>
                         <td class="py-2 pr-2">@product.Price.ToString("C")</td>
-                        <td class="py-2 pr-2">@product.StockQuantity</td>
+                        <td class="py-2 pr-2">
+                            @product.StockQuantity
+                            @if (product.IsPreorder)
+                            {
+                                <span class="ml-1 bg-black text-white text-xs font-semibold px-2 py-1 rounded-full">Preorder</span>
+                            }
+                        </td>
                         <td class="py-2 pr-2">
                             @if (product.IsActive)
                             {

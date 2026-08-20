@@ -16,7 +16,9 @@ public sealed class ProductCatalogService(AppDbContext db) : IProductCatalogServ
                 p.Name,
                 p.Price,
                 p.Photos.OrderBy(photo => photo.DisplayOrder).Select(photo => photo.FileName).FirstOrDefault(),
-                p.StockQuantity))
+                p.StockQuantity,
+                p.IsPreorder,
+                p.ExpectedAvailabilityDate))
             .ToListAsync(cancellationToken);
     }
 
@@ -31,6 +33,8 @@ public sealed class ProductCatalogService(AppDbContext db) : IProductCatalogServ
                 p.Description,
                 p.Price,
                 p.StockQuantity,
+                p.IsPreorder,
+                p.ExpectedAvailabilityDate,
                 p.Photos.OrderBy(photo => photo.DisplayOrder).Select(photo => photo.FileName).ToList()))
             .FirstOrDefaultAsync(cancellationToken);
     }

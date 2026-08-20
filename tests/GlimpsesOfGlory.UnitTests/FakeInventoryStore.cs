@@ -8,6 +8,7 @@ namespace GlimpsesOfGlory.UnitTests;
 public sealed class FakeInventoryStore(IDictionary<int, int> initialStock) : IInventoryStore
 {
     private readonly Dictionary<int, int> _stock = new(initialStock);
+    private readonly Dictionary<int, int> _preordered = [];
     private readonly Lock _gate = new();
 
     public Task<bool> TryReserveStockAsync(int productId, int quantity, CancellationToken cancellationToken)
@@ -24,5 +25,16 @@ public sealed class FakeInventoryStore(IDictionary<int, int> initialStock) : IIn
         }
     }
 
+    public Task ReservePreorderAsync(int productId, int quantity, CancellationToken cancellationToken)
+    {
+        lock (_gate)
+        {
+            _preordered[productId] = _preordered.GetValueOrDefault(productId) + quantity;
+            return Task.CompletedTask;
+        }
+    }
+
     public int GetStock(int productId) => _stock[productId];
+
+    public int GetPreordered(int productId) => _preordered.GetValueOrDefault(productId);
 }

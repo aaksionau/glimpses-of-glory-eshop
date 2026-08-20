@@ -21,7 +21,16 @@
             @foreach (var line in Model.Lines)
             {
                 <tr>
-                    <td>@line.ProductName</td>
+                    <td>
+                        @line.ProductName
+                        @if (line.IsPreorder)
+                        {
+                            <br />
+                            <span style="color: #92400e; font-size: 0.85em;">
+                                Preorder@(line.ExpectedAvailabilityDate is { } date ? $" — ships approx. {date:MMM d, yyyy}" : "")
+                            </span>
+                        }
+                    </td>
                     <td style="text-align: right;">@line.Quantity</td>
                     <td style="text-align: right;">@line.UnitPrice.ToString("C")</td>
                 </tr>

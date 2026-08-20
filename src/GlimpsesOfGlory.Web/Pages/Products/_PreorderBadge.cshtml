@@ -1,0 +1,4 @@
+@model (string CssClass, DateOnly? ExpectedAvailabilityDate)
+<span class="@Model.CssClass bg-gold-dark text-white text-xs font-semibold px-2 py-1 rounded-full">
+    Preorder@(Model.ExpectedAvailabilityDate is { } date ? $" — ships approx. {date:MMM d, yyyy}" : "")
+</span>

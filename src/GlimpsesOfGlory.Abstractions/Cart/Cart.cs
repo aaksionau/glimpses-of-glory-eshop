@@ -8,7 +8,14 @@ public sealed class Cart
 
     public decimal Subtotal => Lines.Sum(l => l.UnitPrice * l.Quantity);
 
-    public void SetLineQuantity(string productSlug, string productName, decimal unitPrice, string? thumbnailFileName, int quantity)
+    public void SetLineQuantity(
+        string productSlug,
+        string productName,
+        decimal unitPrice,
+        string? thumbnailFileName,
+        int quantity,
+        bool isPreorder,
+        DateOnly? expectedAvailabilityDate)
     {
         var existing = Lines.FirstOrDefault(l => l.ProductSlug == productSlug);
 
@@ -28,6 +35,8 @@ public sealed class Cart
             existing.UnitPrice = unitPrice;
             existing.ThumbnailFileName = thumbnailFileName;
             existing.Quantity = quantity;
+            existing.IsPreorder = isPreorder;
+            existing.ExpectedAvailabilityDate = expectedAvailabilityDate;
         }
         else
         {
@@ -38,6 +47,8 @@ public sealed class Cart
                 UnitPrice = unitPrice,
                 ThumbnailFileName = thumbnailFileName,
                 Quantity = quantity,
+                IsPreorder = isPreorder,
+                ExpectedAvailabilityDate = expectedAvailabilityDate,
             });
         }
     }

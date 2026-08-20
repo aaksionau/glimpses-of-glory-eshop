@@ -17,6 +17,8 @@ public class EditModel(IAdminProductService adminProductService) : PageModel
 
     public IReadOnlyList<AdminProductPhoto> Photos { get; private set; } = [];
 
+    public int PreorderedQuantity { get; private set; }
+
     public string? SavedMessage { get; private set; }
 
     public async Task<IActionResult> OnGetAsync(int id, CancellationToken cancellationToken)
@@ -46,10 +48,11 @@ public class EditModel(IAdminProductService adminProductService) : PageModel
             Id = invalidProduct.Id;
             IsActive = invalidProduct.IsActive;
             Photos = invalidProduct.Photos;
+            PreorderedQuantity = invalidProduct.PreorderedQuantity;
             return Partial("_ProductForm", this);
         }
 
-        var request = new ProductEditRequest(Input.Name, Input.Description, Input.Price, Input.StockQuantity);
+        var request = new ProductEditRequest(Input.Name, Input.Description, Input.Price, Input.StockQuantity, Input.IsPreorder, Input.ExpectedAvailabilityDate);
         var updated = await adminProductService.UpdateProductAsync(id, request, cancellationToken);
         if (!updated)
         {
@@ -87,6 +90,21 @@ public class EditModel(IAdminProductService adminProductService) : PageModel
         return Partial("_ProductForm", this);
     }
 
+    public async Task<IActionResult> OnPostReceiveStockAsync(int id, int quantityReceived, CancellationToken cancellationToken)
+    {
+        await adminProductService.ReceiveStockAsync(id, quantityReceived, cancellationToken);
+
+        var product = await adminProductService.GetProductAsync(id, cancellationToken);
+        if (product is null)
+        {
+            return NotFound();
+        }
+
+        LoadFrom(product);
+        SavedMessage = "Stock received.";
+        return Partial("_ProductForm", this);
+    }
+
     public async Task<IActionResult> OnPostUploadPhotoAsync(int id, IFormFile? photo, CancellationToken cancellationToken)
     {
         if (photo is { Length: > 0 })
@@ -115,12 +133,15 @@ public class EditModel(IAdminProductService adminProductService) : PageModel
         Id = product.Id;
         IsActive = product.IsActive;
         Photos = product.Photos;
+        PreorderedQuantity = product.PreorderedQuantity;
         Input = new ProductFormInput
         {
             Name = product.Name,
             Description = product.Description,
             Price = product.Price,
             StockQuantity = product.StockQuantity,
+            IsPreorder = product.IsPreorder,
+            ExpectedAvailabilityDate = product.ExpectedAvailabilityDate,
         };
     }
 
