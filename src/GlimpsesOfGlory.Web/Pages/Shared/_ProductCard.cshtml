@@ -3,7 +3,7 @@
 <a href="/products/@Model.Slug" class="group relative block overflow-hidden rounded-2xl border border-ink/5 bg-white shadow-sm transition-shadow hover:shadow-lg">
     @if (Model.IsPreorder)
     {
-        <partial name="/Pages/Products/_PreorderBadge.cshtml" model="@(("absolute top-3 right-3 z-10", Model.ExpectedAvailabilityDate))" />
+        <partial name="/Pages/Products/_PreorderBadge.cshtml" model="@("absolute top-3 right-3 z-10")" />
     }
     else if (Model.StockQuantity <= 0)
     {

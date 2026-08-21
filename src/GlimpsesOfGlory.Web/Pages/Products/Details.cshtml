@@ -68,7 +68,11 @@
 
             @if (Model.Product.IsPreorder)
             {
-                <partial name="_PreorderBadge" model="@(("inline-block mt-2", Model.Product.ExpectedAvailabilityDate))" />
+                <partial name="_PreorderBadge" model="@("inline-block mt-2")" />
+                @if (Model.Product.ExpectedAvailabilityDate is { } date)
+                {
+                    <p class="text-ink-light text-sm mt-1">Ships approx. @date.ToString("MMM d, yyyy")</p>
+                }
             }
             else if (Model.Product.StockQuantity <= 0)
             {
