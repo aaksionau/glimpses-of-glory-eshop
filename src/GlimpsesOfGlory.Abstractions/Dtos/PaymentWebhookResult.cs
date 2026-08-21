@@ -1,10 +1,5 @@
-namespace GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Enums;
 
-public enum PaymentEventOutcome
-{
-    Succeeded,
-    Failed,
-    Irrelevant,
-}
+namespace GlimpsesOfGlory.Abstractions.Dtos;
 
 public sealed record PaymentWebhookResult(PaymentEventOutcome Outcome, string? PaymentIntentId, string? FailureMessage);
