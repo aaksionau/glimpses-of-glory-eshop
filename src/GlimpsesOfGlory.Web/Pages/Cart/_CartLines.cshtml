@@ -1,4 +1,6 @@
 @model GlimpsesOfGlory.Web.Dtos.CartLinesView
+@using GlimpsesOfGlory.Abstractions.Products
+@using GlimpsesOfGlory.Web.Helpers
 @{
     var cart = Model.Cart;
 }
@@ -26,18 +28,16 @@
                     <div class="flex-1 min-w-[8rem]">
                         <p class="font-semibold">@line.ProductName</p>
                         <p class="text-ink-light text-sm">@line.UnitPrice.ToString("C") each</p>
-                        @if (line.IsPreorder)
+                        @if (PreorderNoteFormatter.Format(line.IsPreorder, line.ExpectedAvailabilityDate) is { } note)
                         {
-                            <p class="text-gold-dark text-sm font-medium">
-                                Preorder@(line.ExpectedAvailabilityDate is { } date ? $" — ships approx. {date:MMM d, yyyy}" : "")
-                            </p>
+                            <p class="text-gold-dark text-sm font-medium">@note</p>
                         }
                     </div>
 
                     <form hx-post="/cart?handler=UpdateQuantity" hx-target="#cart-lines" hx-swap="outerHTML" hx-trigger="change" asp-antiforgery="true">
                         <input type="hidden" name="slug" value="@line.ProductSlug" />
                         <label for="qty-@line.ProductSlug" class="sr-only">Quantity for @line.ProductName</label>
-                        <input type="number" id="qty-@line.ProductSlug" name="quantity" value="@line.Quantity" min="1" max="@(line.IsPreorder ? 20 : (int?)null)"
+                        <input type="number" id="qty-@line.ProductSlug" name="quantity" value="@line.Quantity" min="1" max="@(line.IsPreorder ? PreorderPolicy.MaxQuantityPerLine : (int?)null)"
                                class="w-16 border border-ink/20 rounded px-2 py-3 text-center" />
                     </form>
 

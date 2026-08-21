@@ -95,17 +95,13 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
     public Task ClearAsync(CancellationToken cancellationToken) =>
         cartStore.SaveCartAsync(new CartModel(), cancellationToken);
 
-    // Fixed abuse guard, not a configurable business setting - preorder stock has no
-    // real ceiling, but an unbounded quantity per line would be exploitable.
-    private const int MaxPreorderQuantityPerLine = 20;
-
     private static CartOperationResult? CheckStock(ProductDetail product, int requestedQuantity)
     {
         if (product.IsPreorder)
         {
-            if (requestedQuantity > MaxPreorderQuantityPerLine)
+            if (requestedQuantity > PreorderPolicy.MaxQuantityPerLine)
             {
-                return CartOperationResult.Failed($"Only up to {MaxPreorderQuantityPerLine} of {product.Name} can be preordered.", product);
+                return CartOperationResult.Failed($"Only up to {PreorderPolicy.MaxQuantityPerLine} of {product.Name} can be preordered.", product);
             }
 
             return null;

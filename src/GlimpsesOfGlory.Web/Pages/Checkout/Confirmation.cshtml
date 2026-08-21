@@ -1,5 +1,6 @@
 @page "/checkout/confirmation"
 @model GlimpsesOfGlory.Web.Pages.Checkout.ConfirmationModel
+@using GlimpsesOfGlory.Web.Helpers
 @{
     ViewData["Title"] = "Order confirmation";
 }
@@ -34,11 +35,9 @@
                         <div>
                             <p class="font-medium">@line.ProductName</p>
                             <p class="text-ink-light text-sm">Qty @line.Quantity &times; @line.UnitPrice.ToString("C")</p>
-                            @if (line.IsPreorder)
+                            @if (PreorderNoteFormatter.Format(line.IsPreorder, line.ExpectedAvailabilityDate) is { } note)
                             {
-                                <p class="text-gold-dark text-sm font-medium">
-                                    Preorder@(line.ExpectedAvailabilityDate is { } date ? $" — ships approx. {date:MMM d, yyyy}" : "")
-                                </p>
+                                <p class="text-gold-dark text-sm font-medium">@note</p>
                             }
                         </div>
                         <p class="font-medium">@((line.UnitPrice * line.Quantity).ToString("C"))</p>

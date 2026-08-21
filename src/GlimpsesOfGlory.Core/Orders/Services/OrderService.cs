@@ -37,7 +37,7 @@ public sealed class OrderService(
         var lines = new List<PendingCheckoutLine>();
         foreach (var line in cart.Lines)
         {
-            if (!products.TryGetValue(line.ProductSlug, out var product) || (!product.IsPreorder && product.StockQuantity < line.Quantity))
+            if (!products.TryGetValue(line.ProductSlug, out var product) || !product.CanFulfill(line.Quantity))
             {
                 return null;
             }

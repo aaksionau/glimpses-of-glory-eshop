@@ -1,6 +1,7 @@
 @page "/products/{slug}"
 @model GlimpsesOfGlory.Web.Pages.Products.DetailsModel
 @using GlimpsesOfGlory.Web.Helpers
+@using GlimpsesOfGlory.Abstractions.Products
 @{
     ViewData["Title"] = Model.Product.Name;
     ViewData["MetaDescription"] = SeoText.Truncate(Model.Product.Description, 160);
@@ -88,7 +89,7 @@
 
             @if (Model.Product.IsPreorder || Model.Product.StockQuantity > 0)
             {
-                var maxQuantity = Model.Product.IsPreorder ? 20 : Model.Product.StockQuantity;
+                var maxQuantity = Model.Product.IsPreorder ? PreorderPolicy.MaxQuantityPerLine : Model.Product.StockQuantity;
                 <form method="post" asp-antiforgery="true" class="mt-6 flex items-center gap-3">
                     <label for="quantity" class="sr-only">Quantity</label>
                     <input type="number" id="quantity" name="quantity" value="1" min="1" max="@maxQuantity"

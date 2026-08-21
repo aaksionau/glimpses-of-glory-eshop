@@ -13,4 +13,7 @@ public sealed class Product
     public DateOnly? ExpectedAvailabilityDate { get; set; }
     public int PreorderedQuantity { get; set; }
     public List<ProductPhoto> Photos { get; set; } = [];
+
+    // Preorder lines have no stock ceiling to check against.
+    public bool CanFulfill(int quantity) => IsPreorder || StockQuantity >= quantity;
 }
