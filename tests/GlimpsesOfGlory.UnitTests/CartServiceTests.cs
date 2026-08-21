@@ -1,7 +1,6 @@
-using GlimpsesOfGlory.Abstractions.Cart;
-using GlimpsesOfGlory.Abstractions.Products;
-using GlimpsesOfGlory.Abstractions.Shipping;
-using GlimpsesOfGlory.Core.Cart.Services;
+using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Services;
+using GlimpsesOfGlory.Core.Services;
 
 namespace GlimpsesOfGlory.UnitTests;
 

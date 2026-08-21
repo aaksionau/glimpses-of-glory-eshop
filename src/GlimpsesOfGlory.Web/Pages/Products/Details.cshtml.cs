@@ -1,5 +1,5 @@
-using GlimpsesOfGlory.Abstractions.Cart;
-using GlimpsesOfGlory.Abstractions.Products;
+using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 

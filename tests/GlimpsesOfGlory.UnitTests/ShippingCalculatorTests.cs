@@ -1,5 +1,5 @@
-using GlimpsesOfGlory.Core.Shipping.Services;
-using GlimpsesOfGlory.Core.Shipping.ValueObjects;
+using GlimpsesOfGlory.Core.Services;
+using GlimpsesOfGlory.Core.ValueObjects;
 
 namespace GlimpsesOfGlory.UnitTests;
 

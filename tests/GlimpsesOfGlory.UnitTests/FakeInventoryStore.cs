@@ -1,4 +1,4 @@
-using GlimpsesOfGlory.Abstractions.Inventory;
+using GlimpsesOfGlory.Abstractions.Services;
 
 namespace GlimpsesOfGlory.UnitTests;
 

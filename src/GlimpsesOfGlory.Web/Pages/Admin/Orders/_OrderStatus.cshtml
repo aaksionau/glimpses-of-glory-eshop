@@ -1,5 +1,6 @@
 @model GlimpsesOfGlory.Web.Pages.Admin.Orders.DetailsModel
-@using GlimpsesOfGlory.Abstractions.Orders
+@using GlimpsesOfGlory.Abstractions.Dtos
+@using GlimpsesOfGlory.Abstractions.Enums
 
 <div id="order-status" class="border border-black/10 rounded p-4">
     @if (!string.IsNullOrEmpty(Model.StatusMessage))

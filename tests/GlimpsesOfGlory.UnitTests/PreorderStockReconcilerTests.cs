@@ -1,4 +1,4 @@
-using GlimpsesOfGlory.Core.Products.Services;
+using GlimpsesOfGlory.Core.Services;
 
 namespace GlimpsesOfGlory.UnitTests;
 

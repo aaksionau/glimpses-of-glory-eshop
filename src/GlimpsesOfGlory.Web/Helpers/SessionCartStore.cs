@@ -1,6 +1,6 @@
 using System.Text.Json;
-using GlimpsesOfGlory.Abstractions.Cart;
-using CartModel = GlimpsesOfGlory.Abstractions.Cart.Cart;
+using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Services;
 
 namespace GlimpsesOfGlory.Web.Helpers;
 
@@ -8,14 +8,14 @@ public sealed class SessionCartStore(IHttpContextAccessor httpContextAccessor) :
 {
     private const string SessionKey = "Cart";
 
-    public Task<CartModel> GetCartAsync(CancellationToken cancellationToken)
+    public Task<Cart> GetCartAsync(CancellationToken cancellationToken)
     {
         var json = Session.GetString(SessionKey);
-        var cart = json is null ? new CartModel() : JsonSerializer.Deserialize<CartModel>(json) ?? new CartModel();
+        var cart = json is null ? new Cart() : JsonSerializer.Deserialize<Cart>(json) ?? new Cart();
         return Task.FromResult(cart);
     }
 
-    public Task SaveCartAsync(CartModel cart, CancellationToken cancellationToken)
+    public Task SaveCartAsync(Cart cart, CancellationToken cancellationToken)
     {
         Session.SetString(SessionKey, JsonSerializer.Serialize(cart));
         return Task.CompletedTask;

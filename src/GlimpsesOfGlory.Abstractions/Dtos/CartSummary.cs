@@ -1,0 +1,12 @@
+namespace GlimpsesOfGlory.Abstractions.Dtos;
+
+public sealed record CartLineView(
+    string ProductSlug,
+    string ProductName,
+    string? ThumbnailFileName,
+    decimal UnitPrice,
+    int Quantity,
+    bool IsPreorder,
+    DateOnly? ExpectedAvailabilityDate);
+
+public sealed record CartSummary(IReadOnlyList<CartLineView> Lines, decimal Subtotal, decimal ShippingCost, decimal Total);
