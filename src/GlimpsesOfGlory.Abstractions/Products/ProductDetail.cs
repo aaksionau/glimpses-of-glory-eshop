@@ -6,4 +6,6 @@ public sealed record ProductDetail(
     string Description,
     decimal Price,
     int StockQuantity,
+    bool IsPreorder,
+    DateOnly? ExpectedAvailabilityDate,
     IReadOnlyList<string> PhotoFileNames);

@@ -1,6 +1,11 @@
 namespace GlimpsesOfGlory.Abstractions.Orders;
 
-public sealed record OrderConfirmationLine(string ProductName, decimal UnitPrice, int Quantity);
+public sealed record OrderConfirmationLine(
+    string ProductName,
+    decimal UnitPrice,
+    int Quantity,
+    bool IsPreorder,
+    DateOnly? ExpectedAvailabilityDate);
 
 public sealed record OrderConfirmationView(
     int OrderId,

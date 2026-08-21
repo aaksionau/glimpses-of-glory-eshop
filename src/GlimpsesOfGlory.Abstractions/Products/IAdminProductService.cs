@@ -12,6 +12,8 @@ public interface IAdminProductService
 
     Task<bool> SetActiveAsync(int id, bool isActive, CancellationToken cancellationToken);
 
+    Task<bool> ReceiveStockAsync(int id, int quantityReceived, CancellationToken cancellationToken);
+
     Task<AdminProductPhoto?> AddPhotoAsync(int productId, Stream content, string originalFileName, CancellationToken cancellationToken);
 
     Task<bool> RemovePhotoAsync(int productId, int photoId, CancellationToken cancellationToken);

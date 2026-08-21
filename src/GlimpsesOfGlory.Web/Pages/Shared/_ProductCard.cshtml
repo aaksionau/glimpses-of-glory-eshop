@@ -1,7 +1,11 @@
 @model GlimpsesOfGlory.Abstractions.Products.ProductSummary
 
 <a href="/products/@Model.Slug" class="group relative block overflow-hidden rounded-2xl border border-ink/5 bg-white shadow-sm transition-shadow hover:shadow-lg">
-    @if (Model.StockQuantity <= 0)
+    @if (Model.IsPreorder)
+    {
+        <partial name="/Pages/Products/_PreorderBadge.cshtml" model="@("absolute top-3 right-3 z-10")" />
+    }
+    else if (Model.StockQuantity <= 0)
     {
         <partial name="/Pages/Products/_OutOfStockBadge.cshtml" model="@("absolute top-3 right-3 z-10")" />
     }
@@ -9,7 +13,7 @@
         @if (Model.ThumbnailFileName is not null)
         {
             <img src="/product-photos/@Model.ThumbnailFileName" alt="@Model.Name"
-                 class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 @(Model.StockQuantity <= 0 ? "opacity-50" : "")" />
+                 class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 @(!Model.IsPreorder && Model.StockQuantity <= 0 ? "opacity-50" : "")" />
         }
         else
         {

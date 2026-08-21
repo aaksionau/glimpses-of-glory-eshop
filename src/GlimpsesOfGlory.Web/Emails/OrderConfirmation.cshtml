@@ -1,4 +1,5 @@
 @model GlimpsesOfGlory.Abstractions.Orders.OrderConfirmationView
+@using GlimpsesOfGlory.Web.Helpers
 <!DOCTYPE html>
 <html>
 <head>
@@ -21,7 +22,14 @@
             @foreach (var line in Model.Lines)
             {
                 <tr>
-                    <td>@line.ProductName</td>
+                    <td>
+                        @line.ProductName
+                        @if (PreorderNoteFormatter.Format(line.IsPreorder, line.ExpectedAvailabilityDate) is { } note)
+                        {
+                            <br />
+                            <span style="color: #92400e; font-size: 0.85em;">@note</span>
+                        }
+                    </td>
                     <td style="text-align: right;">@line.Quantity</td>
                     <td style="text-align: right;">@line.UnitPrice.ToString("C")</td>
                 </tr>

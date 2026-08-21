@@ -7,4 +7,6 @@ internal interface ICheckoutLine
     string ProductName { get; set; }
     decimal UnitPrice { get; set; }
     int Quantity { get; set; }
+    bool IsPreorder { get; set; }
+    DateOnly? ExpectedAvailabilityDate { get; set; }
 }

@@ -1,3 +1,10 @@
 namespace GlimpsesOfGlory.Abstractions.Products;
 
-public sealed record ProductSummary(string Slug, string Name, decimal Price, string? ThumbnailFileName, int StockQuantity);
+public sealed record ProductSummary(
+    string Slug,
+    string Name,
+    decimal Price,
+    string? ThumbnailFileName,
+    int StockQuantity,
+    bool IsPreorder,
+    DateOnly? ExpectedAvailabilityDate);

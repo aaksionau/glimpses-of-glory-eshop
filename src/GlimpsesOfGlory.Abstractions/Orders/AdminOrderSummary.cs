@@ -6,4 +6,5 @@ public sealed record AdminOrderSummary(
     int ItemCount,
     decimal Total,
     OrderStatus Status,
+    bool HasPreorderLines,
     DateTimeOffset CreatedAt);

@@ -7,4 +7,6 @@ public sealed class CartLine
     public decimal UnitPrice { get; set; }
     public string? ThumbnailFileName { get; set; }
     public int Quantity { get; set; }
+    public bool IsPreorder { get; set; }
+    public DateOnly? ExpectedAvailabilityDate { get; set; }
 }

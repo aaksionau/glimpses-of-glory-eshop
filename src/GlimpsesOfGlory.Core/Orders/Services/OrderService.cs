@@ -37,7 +37,7 @@ public sealed class OrderService(
         var lines = new List<PendingCheckoutLine>();
         foreach (var line in cart.Lines)
         {
-            if (!products.TryGetValue(line.ProductSlug, out var product) || product.StockQuantity < line.Quantity)
+            if (!products.TryGetValue(line.ProductSlug, out var product) || !product.CanFulfill(line.Quantity))
             {
                 return null;
             }
@@ -48,6 +48,8 @@ public sealed class OrderService(
                 ProductName = product.Name,
                 UnitPrice = product.Price,
                 Quantity = line.Quantity,
+                IsPreorder = product.IsPreorder,
+                ExpectedAvailabilityDate = product.ExpectedAvailabilityDate,
             });
         }
 
@@ -124,6 +126,12 @@ public sealed class OrderService(
 
         foreach (var line in pendingCheckout.Lines)
         {
+            if (line.IsPreorder)
+            {
+                await inventoryStore.ReservePreorderAsync(line.ProductId, line.Quantity, cancellationToken);
+                continue;
+            }
+
             if (!await inventoryStore.TryReserveStockAsync(line.ProductId, line.Quantity, cancellationToken))
             {
                 await transaction.RollbackAsync(cancellationToken);
@@ -147,6 +155,8 @@ public sealed class OrderService(
                 ProductName = l.ProductName,
                 UnitPrice = l.UnitPrice,
                 Quantity = l.Quantity,
+                IsPreorder = l.IsPreorder,
+                ExpectedAvailabilityDate = l.ExpectedAvailabilityDate,
             }).ToList(),
         };
         dbContext.Orders.Add(order);
@@ -199,7 +209,7 @@ public sealed class OrderService(
     private static OrderConfirmationView ToConfirmationView(Order order) => new(
         order.Id,
         order.ShippingAddress.ToInfo(order.Email),
-        order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity)).ToList(),
+        order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity, l.IsPreorder, l.ExpectedAvailabilityDate)).ToList(),
         order.Subtotal,
         order.ShippingCost,
         order.Total,
