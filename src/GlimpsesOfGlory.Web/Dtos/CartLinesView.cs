@@ -1,4 +1,4 @@
-using GlimpsesOfGlory.Abstractions.Cart;
+using GlimpsesOfGlory.Abstractions.Dtos;
 
 namespace GlimpsesOfGlory.Web.Dtos;
 

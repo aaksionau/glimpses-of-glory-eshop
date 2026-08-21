@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Mail;
-using GlimpsesOfGlory.Abstractions.Notifications;
-using GlimpsesOfGlory.Abstractions.Orders;
+using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Web.Configuration;
 using Microsoft.Extensions.Options;
 

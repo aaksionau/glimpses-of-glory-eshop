@@ -1,0 +1,42 @@
+using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Services;
+using Microsoft.EntityFrameworkCore;
+
+namespace GlimpsesOfGlory.Core.Services;
+
+public sealed class ProductCatalogService(AppDbContext db) : IProductCatalogService
+{
+    public async Task<IReadOnlyList<ProductSummary>> GetProductsAsync(CancellationToken cancellationToken)
+    {
+        return await db.Products
+            .AsNoTracking()
+            .Where(p => p.IsActive)
+            .OrderBy(p => p.Name)
+            .Select(p => new ProductSummary(
+                p.Slug,
+                p.Name,
+                p.Price,
+                p.Photos.OrderBy(photo => photo.DisplayOrder).Select(photo => photo.FileName).FirstOrDefault(),
+                p.StockQuantity,
+                p.IsPreorder,
+                p.ExpectedAvailabilityDate))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<ProductDetail?> GetProductBySlugAsync(string slug, CancellationToken cancellationToken)
+    {
+        return await db.Products
+            .AsNoTracking()
+            .Where(p => p.Slug == slug && p.IsActive)
+            .Select(p => new ProductDetail(
+                p.Slug,
+                p.Name,
+                p.Description,
+                p.Price,
+                p.StockQuantity,
+                p.IsPreorder,
+                p.ExpectedAvailabilityDate,
+                p.Photos.OrderBy(photo => photo.DisplayOrder).Select(photo => photo.FileName).ToList()))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+}

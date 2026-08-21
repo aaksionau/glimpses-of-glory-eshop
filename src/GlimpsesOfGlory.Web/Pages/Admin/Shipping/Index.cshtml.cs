@@ -1,4 +1,4 @@
-using GlimpsesOfGlory.Abstractions.Shipping;
+using GlimpsesOfGlory.Abstractions.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 

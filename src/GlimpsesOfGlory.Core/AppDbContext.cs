@@ -1,6 +1,4 @@
-using GlimpsesOfGlory.Core.Orders.Entities;
-using GlimpsesOfGlory.Core.Products.Entities;
-using GlimpsesOfGlory.Core.Shipping.Entities;
+using GlimpsesOfGlory.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace GlimpsesOfGlory.Core;

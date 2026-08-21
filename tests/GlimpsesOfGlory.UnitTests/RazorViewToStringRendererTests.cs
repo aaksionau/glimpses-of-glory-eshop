@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using GlimpsesOfGlory.Abstractions.Orders;
+using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Web.Helpers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;

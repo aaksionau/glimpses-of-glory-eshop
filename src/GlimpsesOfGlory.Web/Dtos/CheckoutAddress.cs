@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using GlimpsesOfGlory.Abstractions.Orders;
+using GlimpsesOfGlory.Abstractions.Dtos;
 
 namespace GlimpsesOfGlory.Web.Dtos;
 
