@@ -81,9 +81,10 @@ builder.Services.AddScoped<IInventoryStore, EfInventoryStore>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IAdminOrderService, AdminOrderService>();
 
-builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Smtp"));
+builder.Services.Configure<ResendOptions>(builder.Configuration.GetSection("Resend"));
 builder.Services.AddScoped<RazorViewToStringRenderer>();
-builder.Services.AddScoped<IEmailSender, OrderNotifier>();
+builder.Services.AddHttpClient<IEmailSender, OrderNotifier>(client =>
+    client.BaseAddress = new Uri("https://api.resend.com/"));
 
 // Local-disk product photo storage. In production this path should be a
 // Dokploy-mounted persistent volume (set via ProductPhotos__StoragePath),
