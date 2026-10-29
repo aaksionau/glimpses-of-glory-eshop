@@ -79,7 +79,7 @@ public class RazorViewToStringRendererTests
     }
 
     // OrderNotifier.SendShippedNotificationAsync renders this same template before sending
-    // over SMTP, so exercising it directly (as above for OrderConfirmation) covers the
+    // via Resend, so exercising it directly (as above for OrderConfirmation) covers the
     // order/tracking details without needing a real mailbox.
     [Fact]
     public async Task RenderAsync_RendersOrderShippedTemplate_WithTrackingNumber()

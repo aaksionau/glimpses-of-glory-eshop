@@ -1,5 +1,5 @@
-using System.Net;
-using System.Net.Mail;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Web.Configuration;
@@ -7,53 +7,40 @@ using Microsoft.Extensions.Options;
 
 namespace GlimpsesOfGlory.Web.Helpers;
 
+// Sends order emails through Resend's HTTP API (https://resend.com/docs/api-reference/emails/send-email).
 public sealed class OrderNotifier(
+    HttpClient httpClient,
     RazorViewToStringRenderer viewRenderer,
-    IOptions<SmtpOptions> smtpOptions) : IEmailSender
+    IOptions<ResendOptions> resendOptions) : IEmailSender
 {
     public async Task SendOrderConfirmationAsync(OrderConfirmationView order, CancellationToken cancellationToken)
     {
         var html = await viewRenderer.RenderAsync("~/Emails/OrderConfirmation.cshtml", order);
-        var options = smtpOptions.Value;
-
-        using var message = new MailMessage
-        {
-            From = new MailAddress(options.FromAddress),
-            Subject = $"Order confirmation #{order.OrderId}",
-            Body = html,
-            IsBodyHtml = true,
-        };
-        message.To.Add(order.Address.Email);
-
-        using var client = new SmtpClient(options.Host, options.Port)
-        {
-            Credentials = new NetworkCredential(options.Username, options.Password),
-            EnableSsl = true,
-        };
-
-        await client.SendMailAsync(message, cancellationToken);
+        await SendAsync(order.Address.Email, $"Order confirmation #{order.OrderId}", html, cancellationToken);
     }
 
     public async Task SendShippedNotificationAsync(OrderShippedView order, CancellationToken cancellationToken)
     {
         var html = await viewRenderer.RenderAsync("~/Emails/OrderShipped.cshtml", order);
-        var options = smtpOptions.Value;
+        await SendAsync(order.Address.Email, $"Your order #{order.OrderId} has shipped", html, cancellationToken);
+    }
 
-        using var message = new MailMessage
+    private async Task SendAsync(string to, string subject, string html, CancellationToken cancellationToken)
+    {
+        var options = resendOptions.Value;
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "emails")
         {
-            From = new MailAddress(options.FromAddress),
-            Subject = $"Your order #{order.OrderId} has shipped",
-            Body = html,
-            IsBodyHtml = true,
+            Content = JsonContent.Create(new { from = options.FromAddress, to = new[] { to }, subject, html }),
         };
-        message.To.Add(order.Address.Email);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
 
-        using var client = new SmtpClient(options.Host, options.Port)
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
         {
-            Credentials = new NetworkCredential(options.Username, options.Password),
-            EnableSsl = true,
-        };
-
-        await client.SendMailAsync(message, cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new HttpRequestException(
+                $"Resend rejected email ({(int)response.StatusCode}): {body}", null, response.StatusCode);
+        }
     }
 }
