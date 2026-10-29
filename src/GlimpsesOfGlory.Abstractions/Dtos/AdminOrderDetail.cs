@@ -16,6 +16,11 @@ public sealed record AdminOrderDetail(
     OrderStatus Status,
     string? TrackingNumber,
     DateTimeOffset CreatedAt,
+    // Null when the step hasn't happened - or happened before step timestamps were recorded.
+    DateTimeOffset? PaidAt,
+    DateTimeOffset? ShippedAt,
+    DateTimeOffset? PickedUpAt,
+    DateTimeOffset? CancelledAt,
     bool CanMarkShipped,
     bool CanMarkPickedUp,
     bool CanMarkPaid,

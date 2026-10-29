@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace GlimpsesOfGlory.Core.Services;
 
-public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventoryStore, IPaymentGateway paymentGateway, IEmailSender emailSender, ILogger<AdminOrderService> logger) : IAdminOrderService
+public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventoryStore, IPaymentGateway paymentGateway, IEmailSender emailSender, TimeProvider timeProvider, ILogger<AdminOrderService> logger) : IAdminOrderService
 {
     public async Task<IReadOnlyList<AdminOrderSummary>> GetAllOrdersAsync(CancellationToken cancellationToken)
     {
@@ -60,9 +60,11 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         // Guarded on the status we just checked, so a double-click (or two admins at once)
         // only ships - and emails the buyer - once.
         var tracking = string.IsNullOrWhiteSpace(trackingNumber) ? null : trackingNumber;
+        var now = timeProvider.GetUtcNow();
         var result = await UpdateIfStatusAsync(id, order.Status, setters => setters
             .SetProperty(o => o.Status, OrderStatus.Shipped)
-            .SetProperty(o => o.TrackingNumber, tracking), cancellationToken);
+            .SetProperty(o => o.TrackingNumber, tracking)
+            .SetProperty(o => o.ShippedAt, o => o.ShippedAt ?? now), cancellationToken);
         if (result != OrderUpdateResult.Updated)
         {
             return result;
@@ -96,8 +98,10 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
             return OrderUpdateResult.InvalidTransition;
         }
 
+        var now = timeProvider.GetUtcNow();
         return await UpdateIfStatusAsync(id, state.Status, setters => setters
-            .SetProperty(o => o.Status, OrderStatus.PickedUp), cancellationToken);
+            .SetProperty(o => o.Status, OrderStatus.PickedUp)
+            .SetProperty(o => o.PickedUpAt, o => o.PickedUpAt ?? now), cancellationToken);
     }
 
     public async Task<OrderUpdateResult> MarkPaidAsync(int id, CancellationToken cancellationToken)
@@ -113,8 +117,9 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         }
 
         // Coalesced so a concurrent repeat click doesn't move the recorded payment date.
+        var now = timeProvider.GetUtcNow();
         return await UpdateIfStatusAsync(id, state.Status, setters => setters
-            .SetProperty(o => o.PaidAt, o => o.PaidAt ?? DateTimeOffset.UtcNow), cancellationToken);
+            .SetProperty(o => o.PaidAt, o => o.PaidAt ?? now), cancellationToken);
     }
 
     public async Task<OrderUpdateResult> MarkCancelledAsync(int id, CancellationToken cancellationToken)
@@ -133,8 +138,10 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         // loses the guard can't restock a second time, and a failed restock leaves the order New.
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
+        var now = timeProvider.GetUtcNow();
         var result = await UpdateIfStatusAsync(id, state.Status, setters => setters
-            .SetProperty(o => o.Status, OrderStatus.Cancelled), cancellationToken);
+            .SetProperty(o => o.Status, OrderStatus.Cancelled)
+            .SetProperty(o => o.CancelledAt, o => o.CancelledAt ?? now), cancellationToken);
         if (result != OrderUpdateResult.Updated)
         {
             await transaction.RollbackAsync(cancellationToken);
@@ -158,7 +165,8 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
             .FirstOrDefaultAsync(cancellationToken);
 
     // Only applies if the order is still in the status the caller checked the policy against,
-    // so a concurrent change (another tab, another admin) can't be overridden.
+    // so a concurrent change (another tab, another admin) can't be overridden. Step timestamps are
+    // set as "existing value ?? now" so a repeat call never moves one that's already recorded.
     private async Task<OrderUpdateResult> UpdateIfStatusAsync(int id, OrderStatus expectedStatus, Action<UpdateSettersBuilder<Order>> setters, CancellationToken cancellationToken)
     {
         var rows = await db.Orders
@@ -182,6 +190,10 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         order.Status,
         order.TrackingNumber,
         order.CreatedAt,
+        order.PaidAt,
+        order.ShippedAt,
+        order.PickedUpAt,
+        order.CancelledAt,
         OrderTransitionPolicy.CanMarkShipped(order.Status),
         OrderTransitionPolicy.CanMarkPickedUp(order.Status, order.FulfillmentMethod),
         OrderTransitionPolicy.CanMarkPaid(order.Status, order.IsPaid),

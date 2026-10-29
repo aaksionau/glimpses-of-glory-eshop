@@ -17,6 +17,7 @@ public sealed class OrderService(
     IPaymentGateway paymentGateway,
     IInventoryStore inventoryStore,
     IEmailSender emailSender,
+    TimeProvider timeProvider,
     ILogger<OrderService> logger) : IOrderService
 {
     public async Task<PaymentIntentSetup?> CreatePaymentIntentAsync(FulfillmentMethod fulfillmentMethod, ShippingAddressInfo address, string? existingPaymentIntentId, CancellationToken cancellationToken)
@@ -103,6 +104,8 @@ public sealed class OrderService(
             return;
         }
 
+        // One clock reading, so a card order's Placed and Paid steps share the same instant.
+        var now = timeProvider.GetUtcNow();
         var order = new Order
         {
             Email = pendingCheckout.Email,
@@ -111,7 +114,8 @@ public sealed class OrderService(
             Subtotal = pendingCheckout.Subtotal,
             ShippingCost = pendingCheckout.ShippingCost,
             PaymentMethod = PaymentMethod.Card,
-            PaidAt = DateTimeOffset.UtcNow,
+            CreatedAt = now,
+            PaidAt = now,
             StripePaymentIntentId = pendingCheckout.StripePaymentIntentId,
             Lines = pendingCheckout.Lines.Select(ToOrderLine).ToList(),
         };
@@ -162,6 +166,7 @@ public sealed class OrderService(
             Subtotal = subtotal,
             ShippingCost = shippingCost,
             PaymentMethod = PaymentMethod.Cash,
+            CreatedAt = timeProvider.GetUtcNow(),
             Lines = lines.Select(ToOrderLine).ToList(),
         };
         dbContext.Orders.Add(order);

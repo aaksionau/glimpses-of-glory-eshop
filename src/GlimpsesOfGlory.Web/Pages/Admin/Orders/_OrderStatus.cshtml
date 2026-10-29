@@ -64,10 +64,11 @@
 
 @if (Model.IsHtmxUpdate)
 {
-    @* Out-of-band swaps: keep the header badges and the other cards in sync with the new status.
+    @* Out-of-band swaps: keep the header badges, the other cards and the timeline in sync with the new status.
        Full paths: short names only resolve via the page's route, which the view-engine lookup for this
        fragment (handler PartialViewResult, string rendering) can't rely on. *@
     <partial name="/Pages/Admin/Orders/_OrderHeaderBadges.cshtml" model="Model" />
     <partial name="/Pages/Admin/Orders/_OrderFulfillmentCard.cshtml" model="Model" />
     <partial name="/Pages/Admin/Orders/_OrderPaymentCard.cshtml" model="Model" />
+    <partial name="/Pages/Admin/Orders/_OrderTimeline.cshtml" model="Model" />
 }

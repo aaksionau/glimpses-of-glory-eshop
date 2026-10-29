@@ -1,0 +1,26 @@
+@model GlimpsesOfGlory.Web.Pages.Admin.Orders.DetailsModel
+@using GlimpsesOfGlory.Web.Helpers
+
+@* Re-sent out-of-band after each htmx action: every action completes a step. *@
+<section id="order-timeline" class="rounded-lg border border-black/10 bg-white p-4" aria-labelledby="order-timeline-heading" hx-swap-oob="@Model.OutOfBandSwap">
+    <h2 id="order-timeline-heading" class="font-semibold mb-2">Timeline</h2>
+    <ol class="flex flex-col gap-3">
+        @foreach (var step in OrderTimeline.Steps(Model.Order))
+        {
+            <li class="flex items-start gap-3 @(step.IsComplete ? "" : "text-gray-400")" data-timeline-step="@step.Label" data-complete="@(step.IsComplete ? "true" : "false")">
+                <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full @(step.IsComplete ? "bg-black" : "border border-gray-300 bg-white")" aria-hidden="true"></span>
+                <div>
+                    <p class="@(step.IsComplete ? "font-semibold" : "")">@step.Label</p>
+                    @if (step.At is { } at)
+                    {
+                        <time datetime="@at.ToString("o")" class="text-sm text-gray-500">@OrderTimeline.Timestamp(step)</time>
+                    }
+                    else
+                    {
+                        <p class="text-sm @(step.IsComplete ? "text-gray-500" : "")">@OrderTimeline.Timestamp(step)</p>
+                    }
+                </div>
+            </li>
+        }
+    </ol>
+</section>

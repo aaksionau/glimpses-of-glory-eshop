@@ -30,6 +30,9 @@ namespace GlimpsesOfGlory.Core.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -45,6 +48,12 @@ namespace GlimpsesOfGlory.Core.Migrations
 
                     b.Property<int>("PaymentMethod")
                         .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("PickedUpAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ShippedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("ShippingCost")
                         .HasPrecision(10, 2)

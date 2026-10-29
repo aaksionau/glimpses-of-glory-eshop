@@ -79,6 +79,7 @@ builder.Services.AddScoped<IPaymentGateway>(sp =>
 });
 builder.Services.AddScoped<IInventoryStore, EfInventoryStore>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IAdminOrderService, AdminOrderService>();
 
 builder.Services.Configure<ResendOptions>(builder.Configuration.GetSection("Resend"));
