@@ -106,4 +106,15 @@ public class StripePaymentGatewayTests
         Assert.Throws<PaymentSignatureVerificationException>(
             () => gateway.HandleWebhookEvent(payload, "t=1,v1=deadbeef"));
     }
+
+    [Theory]
+    [InlineData("sk_live_abc", "https://dashboard.stripe.com/payments/pi_123")]
+    [InlineData("sk_test_abc", "https://dashboard.stripe.com/test/payments/pi_123")]
+    [InlineData("rk_test_abc", "https://dashboard.stripe.com/test/payments/pi_123")]
+    public void GetPaymentDashboardUrl_PointsAtLiveOrTestDashboardBySecretKey(string secretKey, string expected)
+    {
+        var gateway = new StripePaymentGateway(secretKey, WebhookSecret);
+
+        Assert.Equal(expected, gateway.GetPaymentDashboardUrl("pi_123"));
+    }
 }

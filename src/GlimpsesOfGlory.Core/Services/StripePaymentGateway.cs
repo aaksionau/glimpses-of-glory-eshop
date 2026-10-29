@@ -13,11 +13,14 @@ public sealed class StripePaymentGateway : IPaymentGateway
 
     private readonly PaymentIntentService _paymentIntentService;
     private readonly string _webhookSecret;
+    private readonly bool _isTestMode;
 
     public StripePaymentGateway(string secretKey, string webhookSecret)
     {
         _paymentIntentService = new PaymentIntentService(new StripeClient(secretKey));
         _webhookSecret = webhookSecret;
+        // Test-mode objects live under a separate path in the Stripe dashboard.
+        _isTestMode = secretKey.StartsWith("sk_test_", StringComparison.Ordinal) || secretKey.StartsWith("rk_test_", StringComparison.Ordinal);
     }
 
     public async Task<PaymentIntentSetup> CreatePaymentIntentAsync(
@@ -90,6 +93,9 @@ public sealed class StripePaymentGateway : IPaymentGateway
             _ => new PaymentWebhookResult(PaymentEventOutcome.Irrelevant, null, null),
         };
     }
+
+    public string GetPaymentDashboardUrl(string paymentIntentId) =>
+        $"https://dashboard.stripe.com/{(_isTestMode ? "test/" : "")}payments/{Uri.EscapeDataString(paymentIntentId)}";
 
     private static long ToSmallestCurrencyUnit(decimal amount) =>
         (long)Math.Round(amount * 100m, MidpointRounding.AwayFromZero);
