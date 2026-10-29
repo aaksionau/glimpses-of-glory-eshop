@@ -21,4 +21,8 @@ public static class OrderTransitionPolicy
     // Cash is settled in person and is out of scope.
     public static bool NeedsRefund(OrderStatus status, PaymentMethod paymentMethod, bool isPaid) =>
         status == OrderStatus.Cancelled && paymentMethod == PaymentMethod.Card && isPaid;
+
+    // Highlighted in the admin orders list: still to be fulfilled, or money still to be collected.
+    public static bool NeedsAction(OrderStatus status, bool isPaid) =>
+        status == OrderStatus.New || (!isPaid && status != OrderStatus.Cancelled);
 }

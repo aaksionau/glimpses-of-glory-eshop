@@ -56,7 +56,7 @@
                         @line.ProductName
                         @if (line.IsPreorder)
                         {
-                            <span class="ml-1 bg-black text-white text-xs font-semibold px-2 py-1 rounded-full">Preorder</span>
+                            <span class="ml-1"><partial name="_Badge" model="OrderBadges.Preorder" /></span>
                         }
                     </td>
                     <td class="py-2 pr-2">@line.Quantity</td>
