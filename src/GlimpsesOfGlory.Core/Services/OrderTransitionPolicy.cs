@@ -6,7 +6,7 @@ namespace GlimpsesOfGlory.Core.Services;
 // CanMark* flags on AdminOrderDetail, and AdminOrderService enforces it so a crafted POST can't skip it.
 public static class OrderTransitionPolicy
 {
-    // Shipped/ready-for-pickup can only be reached from New; past that, only a pickup order moves on (to picked up).
+    // Shipped/ready-for-pickup can only be reached from New.
     public static bool CanMarkShipped(OrderStatus status) => status == OrderStatus.New;
 
     // Shipped means "ready for pickup" for pickup orders; shipping orders have no further step.

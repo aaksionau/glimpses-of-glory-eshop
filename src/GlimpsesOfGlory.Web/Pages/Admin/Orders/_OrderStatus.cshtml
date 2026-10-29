@@ -18,7 +18,7 @@
 
     <p class="mb-4">
         Status:
-        <span class="font-semibold @(Model.Order.Status == OrderStatus.Cancelled ? "text-red-600" : Model.Order.Status is OrderStatus.Shipped or OrderStatus.PickedUp ? "text-green-700" : "text-gray-700")">
+        <span class="font-semibold @(Model.Order.Status switch { OrderStatus.Cancelled => "text-red-600", OrderStatus.Shipped or OrderStatus.PickedUp => "text-green-700", _ => "text-gray-700" })">
             @FulfillmentLabels.Status(Model.Order.Status, Model.Order.FulfillmentMethod)
         </span>
         @if (!string.IsNullOrWhiteSpace(Model.Order.TrackingNumber))
