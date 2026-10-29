@@ -1,5 +1,6 @@
 @model GlimpsesOfGlory.Abstractions.Dtos.OrderShippedView
 @using GlimpsesOfGlory.Abstractions.Enums
+@using GlimpsesOfGlory.Web.Helpers
 @{
     var isPickup = Model.FulfillmentMethod == FulfillmentMethod.Pickup;
 }
@@ -14,6 +15,10 @@
     {
         <h1>Your order is ready for pickup, @Model.Address.FullName!</h1>
         <p>Order #@Model.OrderId is ready to collect.</p>
+        @if (!Model.IsPaid)
+        {
+            <p><strong>@PaymentLabels.CashDueNote(Model.Total)</strong></p>
+        }
     }
     else
     {

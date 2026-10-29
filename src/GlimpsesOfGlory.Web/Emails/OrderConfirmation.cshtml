@@ -48,6 +48,10 @@
     {
         <h2>Local pickup</h2>
         <p>We'll email you when your order is ready to collect.</p>
+        @if (!Model.IsPaid)
+        {
+            <p><strong>@PaymentLabels.CashDueNote(Model.Total)</strong></p>
+        }
     }
     else
     {

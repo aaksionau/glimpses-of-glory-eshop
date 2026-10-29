@@ -17,6 +17,7 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.HasIndex(o => o.StripePaymentIntentId)
             .IsUnique()
             .HasDatabaseName(StripePaymentIntentIdIndexName);
+        builder.Ignore(o => o.IsPaid);
         builder.ConfigureCheckoutHeader();
 
         builder.HasMany(o => o.Lines)

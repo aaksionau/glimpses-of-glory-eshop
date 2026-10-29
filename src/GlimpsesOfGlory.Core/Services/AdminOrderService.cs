@@ -21,6 +21,7 @@ public sealed class AdminOrderService(AppDbContext db, IEmailSender emailSender,
                 o.Total,
                 o.Status,
                 o.FulfillmentMethod,
+                o.PaidAt != null,
                 o.Lines.Any(l => l.IsPreorder),
                 o.CreatedAt))
             .ToListAsync(cancellationToken);
@@ -64,6 +65,16 @@ public sealed class AdminOrderService(AppDbContext db, IEmailSender emailSender,
         return true;
     }
 
+    public async Task<bool> MarkPaidAsync(int id, CancellationToken cancellationToken)
+    {
+        // Only stamps the first time, so a repeat click doesn't move the recorded payment date.
+        var rows = await db.Orders
+            .Where(o => o.Id == id)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(o => o.PaidAt, o => o.PaidAt ?? DateTimeOffset.UtcNow), cancellationToken);
+
+        return rows > 0;
+    }
+
     public async Task<bool> MarkCancelledAsync(int id, CancellationToken cancellationToken)
     {
         var rows = await db.Orders
@@ -76,6 +87,8 @@ public sealed class AdminOrderService(AppDbContext db, IEmailSender emailSender,
     private static AdminOrderDetail ToDetail(Order order) => new(
         order.Id,
         order.FulfillmentMethod,
+        order.PaymentMethod,
+        order.IsPaid,
         order.ShippingAddress.ToInfo(order.Email),
         order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity, l.IsPreorder, l.ExpectedAvailabilityDate)).ToList(),
         order.Subtotal,
@@ -88,6 +101,7 @@ public sealed class AdminOrderService(AppDbContext db, IEmailSender emailSender,
     private static OrderShippedView ToShippedView(Order order) => new(
         order.Id,
         order.FulfillmentMethod,
+        order.IsPaid,
         order.ShippingAddress.ToInfo(order.Email),
         order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity, l.IsPreorder, l.ExpectedAvailabilityDate)).ToList(),
         order.Total,

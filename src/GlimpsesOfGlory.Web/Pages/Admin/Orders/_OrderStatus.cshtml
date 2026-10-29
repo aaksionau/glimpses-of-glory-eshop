@@ -21,6 +21,11 @@
         {
             <text> &middot; Tracking: <strong>@Model.Order.TrackingNumber</strong></text>
         }
+        <br />
+        Payment:
+        <span class="font-semibold @(Model.Order.IsPaid ? "text-green-700" : "text-red-600")">
+            @PaymentLabels.Status(Model.Order.PaymentMethod, Model.Order.IsPaid)
+        </span>
     </p>
 
     <div class="flex flex-wrap gap-4">
@@ -36,6 +41,13 @@
             }
             <button type="submit" class="bg-black text-white px-4 py-2 rounded-lg font-semibold">Mark @FulfillmentLabels.ShippedStatus(Model.Order.FulfillmentMethod).ToLowerInvariant()</button>
         </form>
+
+        @if (!Model.Order.IsPaid)
+        {
+            <form hx-post="/admin/orders/@Model.Order.Id?handler=MarkPaid" hx-target="#order-status" hx-swap="outerHTML" asp-antiforgery="true">
+                <button type="submit" class="bg-black text-white px-4 py-2 rounded-lg font-semibold">Mark as paid</button>
+            </form>
+        }
 
         <form hx-post="/admin/orders/@Model.Order.Id?handler=MarkCancelled" hx-target="#order-status" hx-swap="outerHTML" asp-antiforgery="true">
             <button type="submit" class="border border-black px-4 py-2 rounded-lg font-semibold">Mark cancelled</button>

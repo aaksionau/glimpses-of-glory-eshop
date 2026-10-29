@@ -12,6 +12,7 @@ public sealed record OrderConfirmationLine(
 public sealed record OrderConfirmationView(
     int OrderId,
     FulfillmentMethod FulfillmentMethod,
+    bool IsPaid,
     ShippingAddressInfo Address,
     IReadOnlyList<OrderConfirmationLine> Lines,
     decimal Subtotal,

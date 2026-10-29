@@ -46,6 +46,17 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
             cancellationToken);
     }
 
+    public async Task<IActionResult> OnPostMarkPaidAsync(int id, CancellationToken cancellationToken)
+    {
+        var updated = await adminOrderService.MarkPaidAsync(id, cancellationToken);
+        if (!updated)
+        {
+            return NotFound();
+        }
+
+        return await OrderStatusPartialAsync(id, _ => "Order marked as paid.", cancellationToken);
+    }
+
     public async Task<IActionResult> OnPostMarkCancelledAsync(int id, CancellationToken cancellationToken)
     {
         var updated = await adminOrderService.MarkCancelledAsync(id, cancellationToken);
