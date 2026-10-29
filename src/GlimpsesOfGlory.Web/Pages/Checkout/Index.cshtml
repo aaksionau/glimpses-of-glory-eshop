@@ -8,11 +8,7 @@
 <div class="py-4 max-w-xl mx-auto">
     <h1 class="text-3xl font-bold mb-6 font-display">Checkout</h1>
 
-    <ol class="flex gap-2 text-sm mb-6 text-ink-light">
-        <li class="font-semibold text-ink">1. Details</li>
-        <li>&rarr;</li>
-        <li>2. Review</li>
-    </ol>
+    <partial name="_CheckoutSteps" model="1" />
 
     <form method="post" asp-antiforgery="true" class="flex flex-col gap-4"
           x-data="{ method: '@Model.Address.FulfillmentMethod' }">

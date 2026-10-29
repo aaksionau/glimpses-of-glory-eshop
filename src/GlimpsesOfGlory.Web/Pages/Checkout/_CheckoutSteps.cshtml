@@ -1,0 +1,53 @@
+@model int
+@{
+    // Model is the 1-based number of the current step. Completed steps link back so shoppers can revisit them.
+    var steps = new[]
+    {
+        (Label: "Details", Href: "/checkout"),
+        (Label: "Review", Href: "/checkout/review"),
+        (Label: "Payment", Href: "/checkout/payment"),
+    };
+}
+
+<nav aria-label="Checkout progress" class="mb-8">
+    <ol class="flex items-center">
+        @for (var i = 0; i < steps.Length; i++)
+        {
+            var number = i + 1;
+            var isDone = number < Model;
+            var isCurrent = number == Model;
+            var circleClass = isDone
+                ? "bg-gold text-white border-gold"
+                : isCurrent
+                    ? "bg-gold-light text-gold-dark border-gold"
+                    : "bg-white text-ink-light border-ink/20";
+            var labelClass = isCurrent ? "font-semibold text-ink" : isDone ? "text-ink" : "text-ink-light";
+
+            <li class="flex items-center @(number < steps.Length ? "flex-1" : "")" aria-current="@(isCurrent ? "step" : null)">
+                @if (isDone)
+                {
+                    <a href="@steps[i].Href" class="group flex items-center gap-2 text-sm">
+                        <span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2 font-semibold transition-colors group-hover:bg-gold-dark group-hover:border-gold-dark @circleClass">
+                            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L8 12.6l7.3-7.3a1 1 0 0 1 1.4 0Z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="sr-only">Step @number completed:</span>
+                        </span>
+                        <span class="group-hover:underline @labelClass">@steps[i].Label</span>
+                    </a>
+                }
+                else
+                {
+                    <span class="flex items-center gap-2 text-sm">
+                        <span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2 font-semibold @circleClass">@number</span>
+                        <span class="@labelClass">@steps[i].Label</span>
+                    </span>
+                }
+                @if (number < steps.Length)
+                {
+                    <span class="mx-3 h-0.5 flex-1 rounded-full @(isDone ? "bg-gold" : "bg-ink/15")" aria-hidden="true"></span>
+                }
+            </li>
+        }
+    </ol>
+</nav>
