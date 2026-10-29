@@ -157,8 +157,9 @@ public sealed class AdminOrderServiceTests : IDisposable
         await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Shipped, paidAt: T1);
         await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Cancelled);
 
-        var all = await Service().GetOrdersAsync(AdminOrderTab.All, CancellationToken.None);
-        var needsAction = await IdsAsync(Service(), AdminOrderTab.NeedsAction);
+        var service = Service();
+        var all = await service.GetOrdersAsync(AdminOrderTab.All, CancellationToken.None);
+        var needsAction = await IdsAsync(service, AdminOrderTab.NeedsAction);
 
         Assert.Equal(all.Where(o => o.NeedsAction).Select(o => o.Id).Order(), needsAction);
     }
