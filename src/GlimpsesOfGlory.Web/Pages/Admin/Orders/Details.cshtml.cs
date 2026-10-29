@@ -2,15 +2,13 @@ using System.ComponentModel.DataAnnotations;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
-using GlimpsesOfGlory.Web.Configuration;
 using GlimpsesOfGlory.Web.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Options;
 
 namespace GlimpsesOfGlory.Web.Pages.Admin.Orders;
 
-public class DetailsModel(IAdminOrderService adminOrderService, IOptions<StripeOptions> stripeOptions) : PageModel
+public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
 {
     [BindProperty]
     [StringLength(200)]
@@ -21,10 +19,6 @@ public class DetailsModel(IAdminOrderService adminOrderService, IOptions<StripeO
     public string? StatusMessage { get; private set; }
 
     public string? ErrorMessage { get; private set; }
-
-    public string? StripePaymentUrl => Order.StripePaymentIntentId is { } paymentIntentId
-        ? StripeDashboardLinks.Payment(paymentIntentId, stripeOptions.Value.IsTestMode)
-        : null;
 
     public async Task<IActionResult> OnGetAsync(int id, CancellationToken cancellationToken)
     {

@@ -38,9 +38,9 @@
             <p class="font-semibold text-red-600">Refund required</p>
             <p class="text-sm">
                 This paid card order was cancelled, but the payment isn't refunded automatically. Refund @Model.Order.Total.ToString("C") in Stripe.
-                @if (Model.StripePaymentUrl is not null)
+                @if (Model.Order.PaymentDashboardUrl is not null)
                 {
-                    <a href="@Model.StripePaymentUrl" target="_blank" rel="noopener noreferrer" class="font-semibold underline">Open payment in Stripe</a>
+                    <a href="@Model.Order.PaymentDashboardUrl" target="_blank" rel="noopener noreferrer" class="font-semibold underline">Open payment in Stripe</a>
                 }
             </p>
         </div>

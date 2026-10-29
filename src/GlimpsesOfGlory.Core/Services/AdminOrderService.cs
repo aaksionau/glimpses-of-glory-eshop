@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace GlimpsesOfGlory.Core.Services;
 
-public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventoryStore, IEmailSender emailSender, ILogger<AdminOrderService> logger) : IAdminOrderService
+public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventoryStore, IPaymentGateway paymentGateway, IEmailSender emailSender, ILogger<AdminOrderService> logger) : IAdminOrderService
 {
     public async Task<IReadOnlyList<AdminOrderSummary>> GetAllOrdersAsync(CancellationToken cancellationToken)
     {
@@ -150,12 +150,12 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         return rows > 0 ? OrderUpdateResult.Updated : OrderUpdateResult.InvalidTransition;
     }
 
-    private static AdminOrderDetail ToDetail(Order order) => new(
+    private AdminOrderDetail ToDetail(Order order) => new(
         order.Id,
         order.FulfillmentMethod,
         order.PaymentMethod,
         order.IsPaid,
-        order.StripePaymentIntentId,
+        order.StripePaymentIntentId is { } paymentIntentId ? paymentGateway.GetPaymentDashboardUrl(paymentIntentId) : null,
         order.ShippingAddress.ToInfo(order.Email),
         order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity, l.IsPreorder, l.ExpectedAvailabilityDate)).ToList(),
         order.Subtotal,

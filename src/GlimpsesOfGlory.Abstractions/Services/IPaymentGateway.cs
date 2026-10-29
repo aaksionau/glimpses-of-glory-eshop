@@ -20,4 +20,7 @@ public interface IPaymentGateway
 
     // Throws PaymentSignatureVerificationException when the signature doesn't verify.
     PaymentWebhookResult HandleWebhookEvent(string payload, string signatureHeader);
+
+    // Where an admin can view (and refund) the payment in the provider's dashboard.
+    string GetPaymentDashboardUrl(string paymentIntentId);
 }

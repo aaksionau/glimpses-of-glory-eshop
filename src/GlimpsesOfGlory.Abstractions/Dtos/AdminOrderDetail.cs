@@ -7,7 +7,7 @@ public sealed record AdminOrderDetail(
     FulfillmentMethod FulfillmentMethod,
     PaymentMethod PaymentMethod,
     bool IsPaid,
-    string? StripePaymentIntentId,
+    string? PaymentDashboardUrl,
     ShippingAddressInfo Address,
     IReadOnlyList<OrderConfirmationLine> Lines,
     decimal Subtotal,
