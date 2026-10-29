@@ -4,10 +4,8 @@
     ViewData["Title"] = "Products";
 }
 
-<div>
-    <div class="flex justify-end items-center mb-4">
-        <a asp-page="/Admin/Products/New" class="bg-black text-white px-4 py-2 rounded-lg font-semibold">Add product</a>
-    </div>
-
-    <partial name="_ProductTable" model="Model.Products" />
+<div class="flex justify-end items-center mb-4">
+    <a asp-page="/Admin/Products/New" class="bg-black text-white px-4 py-2 rounded-lg font-semibold">Add product</a>
 </div>
+
+<partial name="_ProductTable" model="Model.Products" />
