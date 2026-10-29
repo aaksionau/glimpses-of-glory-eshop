@@ -1,4 +1,5 @@
 using GlimpsesOfGlory.Abstractions.Services;
+using GlimpsesOfGlory.Core.Services;
 
 namespace GlimpsesOfGlory.UnitTests;
 
@@ -9,6 +10,7 @@ public sealed class FakeInventoryStore(IDictionary<int, int> initialStock) : IIn
 {
     private readonly Dictionary<int, int> _stock = new(initialStock);
     private readonly Dictionary<int, int> _preordered = [];
+    private readonly HashSet<int> _received = [];
     private readonly Lock _gate = new();
 
     public Task<bool> TryReserveStockAsync(int productId, int quantity, CancellationToken cancellationToken)
@@ -33,6 +35,47 @@ public sealed class FakeInventoryStore(IDictionary<int, int> initialStock) : IIn
             return Task.CompletedTask;
         }
     }
+
+    public Task RestockAsync(int productId, int quantity, CancellationToken cancellationToken)
+    {
+        lock (_gate)
+        {
+            AddStock(productId, quantity);
+            return Task.CompletedTask;
+        }
+    }
+
+    public Task ReleasePreorderAsync(int productId, int quantity, CancellationToken cancellationToken)
+    {
+        lock (_gate)
+        {
+            if (_received.Contains(productId))
+            {
+                AddStock(productId, quantity);
+            }
+            else
+            {
+                _preordered[productId] = Math.Max(0, _preordered.GetValueOrDefault(productId) - quantity);
+            }
+            return Task.CompletedTask;
+        }
+    }
+
+    // Mirrors AdminProductService.ReceiveStockAsync: the product leaves preorder and its
+    // stock becomes what was received minus what preorder buyers are already owed.
+    public void ReceivePreorderStock(int productId, int quantityReceived)
+    {
+        lock (_gate)
+        {
+            _stock[productId] = PreorderStockReconciler.Reconcile(quantityReceived, _preordered.GetValueOrDefault(productId));
+            _preordered[productId] = 0;
+            _received.Add(productId);
+        }
+    }
+
+    // Caller must hold _gate.
+    private void AddStock(int productId, int quantity) =>
+        _stock[productId] = _stock.GetValueOrDefault(productId) + quantity;
 
     public int GetStock(int productId) => _stock[productId];
 
