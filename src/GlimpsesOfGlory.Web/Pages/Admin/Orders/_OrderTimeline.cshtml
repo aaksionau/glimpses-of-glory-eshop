@@ -11,7 +11,7 @@
                 <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full @(step.IsComplete ? "bg-black" : "border border-gray-300 bg-white")" aria-hidden="true"></span>
                 <div>
                     <p class="@(step.IsComplete ? "font-semibold" : "")">@step.Label</p>
-                    @if (step.At is { } at && step.IsComplete)
+                    @if (step.At is { } at)
                     {
                         <time datetime="@at.ToString("o")" class="text-sm text-gray-500">@OrderTimeline.Timestamp(step)</time>
                     }

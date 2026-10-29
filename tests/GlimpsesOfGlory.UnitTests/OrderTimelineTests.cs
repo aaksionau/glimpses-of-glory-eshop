@@ -19,13 +19,12 @@ public class OrderTimelineTests
         DateTimeOffset? paidAt = null,
         DateTimeOffset? shippedAt = null,
         DateTimeOffset? pickedUpAt = null,
-        DateTimeOffset? cancelledAt = null,
-        bool? isPaid = null) =>
+        DateTimeOffset? cancelledAt = null) =>
         new(
             Id: 42,
             FulfillmentMethod: fulfillmentMethod,
             PaymentMethod: PaymentMethod.Cash,
-            IsPaid: isPaid ?? paidAt is not null,
+            IsPaid: paidAt is not null,
             PaymentDashboardUrl: null,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
             Lines: [],
