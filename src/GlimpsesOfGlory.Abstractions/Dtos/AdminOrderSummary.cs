@@ -4,6 +4,7 @@ namespace GlimpsesOfGlory.Abstractions.Dtos;
 
 public sealed record AdminOrderSummary(
     int Id,
+    string CustomerName,
     string Email,
     int ItemCount,
     decimal Total,
@@ -12,4 +13,5 @@ public sealed record AdminOrderSummary(
     bool IsPaid,
     bool HasPreorderLines,
     bool NeedsRefund,
+    bool NeedsAction,
     DateTimeOffset CreatedAt);

@@ -62,4 +62,18 @@ public class OrderTransitionPolicyTests
     {
         Assert.Equal(expected, OrderTransitionPolicy.NeedsRefund(status, paymentMethod, isPaid));
     }
+
+    [Theory]
+    [InlineData(OrderStatus.New, true, true)]
+    [InlineData(OrderStatus.New, false, true)]
+    [InlineData(OrderStatus.Shipped, false, true)]
+    [InlineData(OrderStatus.Shipped, true, false)]
+    [InlineData(OrderStatus.PickedUp, false, true)]
+    [InlineData(OrderStatus.PickedUp, true, false)]
+    [InlineData(OrderStatus.Cancelled, false, false)]
+    [InlineData(OrderStatus.Cancelled, true, false)]
+    public void NeedsAction_ForNewOrUnpaidOpenOrders(OrderStatus status, bool isPaid, bool expected)
+    {
+        Assert.Equal(expected, OrderTransitionPolicy.NeedsAction(status, isPaid));
+    }
 }

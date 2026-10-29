@@ -16,20 +16,22 @@
         <p class="text-red-600 mb-4" role="alert">@Model.ErrorMessage</p>
     }
 
-    <p class="mb-4">
-        Status:
-        <span class="font-semibold @(Model.Order.Status switch { OrderStatus.Cancelled => "text-red-600", OrderStatus.Shipped or OrderStatus.PickedUp => "text-green-700", _ => "text-gray-700" })">
-            @FulfillmentLabels.Status(Model.Order.Status, Model.Order.FulfillmentMethod)
-        </span>
+    <p class="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span>Status:</span>
+        <partial name="_Badge" model="OrderBadges.Status(Model.Order.Status, Model.Order.FulfillmentMethod)" />
+        @if (isPickup)
+        {
+            <partial name="_Badge" model="OrderBadges.Pickup" />
+        }
         @if (!string.IsNullOrWhiteSpace(Model.Order.TrackingNumber))
         {
-            <text> &middot; Tracking: <strong>@Model.Order.TrackingNumber</strong></text>
+            <span>&middot; Tracking: <strong>@Model.Order.TrackingNumber</strong></span>
         }
-        <br />
-        Payment:
-        <span class="font-semibold @(Model.Order.IsPaid ? "text-green-700" : "text-red-600")">
-            @PaymentLabels.Status(Model.Order.PaymentMethod, Model.Order.IsPaid)
-        </span>
+    </p>
+    <p class="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span>Payment:</span>
+        <partial name="_Badge" model="OrderBadges.Payment(Model.Order.IsPaid)" />
+        <span class="text-sm text-gray-500">@PaymentLabels.Status(Model.Order.PaymentMethod, Model.Order.IsPaid)</span>
     </p>
 
     @if (Model.Order.NeedsRefund)

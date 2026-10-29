@@ -4,6 +4,7 @@
 @using GlimpsesOfGlory.Web.Helpers
 @{
     ViewData["Title"] = "Orders";
+    var now = DateTimeOffset.UtcNow;
 }
 
 <div class="overflow-x-auto">
@@ -16,42 +17,56 @@
         <table class="w-full text-left border-collapse">
             <thead>
                 <tr class="border-b border-black/20 text-sm text-gray-500">
-                    <th class="py-2 pr-2">Order</th>
-                    <th class="py-2 pr-2">Customer</th>
-                    <th class="py-2 pr-2">Items</th>
-                    <th class="py-2 pr-2">Total</th>
-                    <th class="py-2 pr-2">Status</th>
-                    <th class="py-2 pr-2">Placed</th>
+                    <th scope="col" class="py-2 pl-3 pr-2">Order</th>
+                    <th scope="col" class="py-2 pr-2">Customer</th>
+                    <th scope="col" class="py-2 pr-2 text-right">Items</th>
+                    <th scope="col" class="py-2 pr-4 text-right">Total</th>
+                    <th scope="col" class="py-2 pr-2">Status</th>
+                    <th scope="col" class="py-2 pr-2">Payment</th>
+                    <th scope="col" class="py-2 pr-2">Placed</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var order in Model.Orders)
                 {
-                    <tr class="border-b border-black/10">
-                        <td class="py-2 pr-2">
-                            <a asp-page="/Admin/Orders/Details" asp-route-id="@order.Id" class="font-medium hover:underline">#@order.Id</a>
-                            @if (order.HasPreorderLines)
-                            {
-                                <span class="ml-1 bg-black text-white text-xs font-semibold px-2 py-1 rounded-full">Preorder</span>
-                            }
-                            @if (order.FulfillmentMethod == FulfillmentMethod.Pickup)
-                            {
-                                <span class="ml-1 border border-black text-xs font-semibold px-2 py-1 rounded-full">Pickup</span>
-                            }
-                            @if (order.NeedsRefund)
-                            {
-                                <span class="ml-1 bg-red-600 text-white text-xs font-semibold px-2 py-1 rounded-full">Refund required</span>
-                            }
-                            @if (!order.IsPaid)
-                            {
-                                <span class="ml-1 bg-red-600 text-white text-xs font-semibold px-2 py-1 rounded-full">Unpaid</span>
-                            }
+                    @* The order link stretches over the whole row (after:absolute inset-0), so the row is
+                       clickable anywhere while the link stays the single keyboard focus stop. *@
+                    <tr class="relative border-b border-black/10 hover:bg-gray-50 @(order.NeedsAction ? "bg-amber-50/70" : "")">
+                        <td class="py-2 pl-3 pr-2 border-l-4 @(order.NeedsAction ? "border-l-amber-400" : "border-l-transparent")">
+                            <a asp-page="/Admin/Orders/Details" asp-route-id="@order.Id"
+                               class="font-medium hover:underline outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-black">
+                                #@order.Id
+                                @if (order.NeedsAction)
+                                {
+                                    <span class="sr-only">(needs action)</span>
+                                }
+                            </a>
+                            <span class="ml-1 inline-flex flex-wrap gap-1 align-middle">
+                                @if (order.HasPreorderLines)
+                                {
+                                    <partial name="_Badge" model="OrderBadges.Preorder" />
+                                }
+                                @if (order.FulfillmentMethod == FulfillmentMethod.Pickup)
+                                {
+                                    <partial name="_Badge" model="OrderBadges.Pickup" />
+                                }
+                                @if (order.NeedsRefund)
+                                {
+                                    <partial name="_Badge" model="OrderBadges.RefundRequired" />
+                                }
+                            </span>
                         </td>
-                        <td class="py-2 pr-2">@order.Email</td>
-                        <td class="py-2 pr-2">@order.ItemCount</td>
-                        <td class="py-2 pr-2">@order.Total.ToString("C")</td>
-                        <td class="py-2 pr-2">@FulfillmentLabels.Status(order.Status, order.FulfillmentMethod)</td>
-                        <td class="py-2 pr-2">@order.CreatedAt.ToString("MMM d, yyyy")</td>
+                        <td class="py-2 pr-2">
+                            <div>@order.CustomerName</div>
+                            <div class="text-sm text-gray-500">@order.Email</div>
+                        </td>
+                        <td class="py-2 pr-2 text-right tabular-nums">@order.ItemCount</td>
+                        <td class="py-2 pr-4 text-right tabular-nums">@order.Total.ToString("C")</td>
+                        <td class="py-2 pr-2"><partial name="_Badge" model="OrderBadges.Status(order.Status, order.FulfillmentMethod)" /></td>
+                        <td class="py-2 pr-2"><partial name="_Badge" model="OrderBadges.Payment(order.IsPaid)" /></td>
+                        <td class="py-2 pr-2 whitespace-nowrap text-sm">
+                            <time datetime="@order.CreatedAt.ToString("o")" title="@RelativeTime.FullTimestamp(order.CreatedAt)">@RelativeTime.Format(order.CreatedAt, now)</time>
+                        </td>
                     </tr>
                 }
             </tbody>

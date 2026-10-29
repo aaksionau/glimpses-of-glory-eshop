@@ -17,6 +17,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
             .OrderByDescending(o => o.CreatedAt)
             .Select(o => new AdminOrderSummary(
                 o.Id,
+                o.ShippingAddress.FullName,
                 o.Email,
                 o.Lines.Sum(l => l.Quantity),
                 o.Total,
@@ -25,6 +26,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
                 o.PaidAt != null,
                 o.Lines.Any(l => l.IsPreorder),
                 OrderTransitionPolicy.NeedsRefund(o.Status, o.PaymentMethod, o.PaidAt != null),
+                OrderTransitionPolicy.NeedsAction(o.Status, o.PaidAt != null),
                 o.CreatedAt))
             .ToListAsync(cancellationToken);
     }
