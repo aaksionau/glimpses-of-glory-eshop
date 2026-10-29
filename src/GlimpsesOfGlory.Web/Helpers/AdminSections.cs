@@ -9,10 +9,25 @@ public enum AdminSection
     Shipping,
 }
 
-// Maps an /admin request path to the sidebar section it belongs to, so the admin
-// layout can highlight the current section without every page declaring it.
+// One sidebar entry: the section, the URL segment under /admin it owns, and its label.
+public sealed record AdminSectionLink(AdminSection Section, string PathSegment, string Label)
+{
+    public string Href => PathSegment.Length == 0 ? "/admin" : $"/admin/{PathSegment}";
+}
+
+// The single table of admin sidebar sections. It drives both the sidebar links and the
+// mapping from an /admin request path to the section to highlight, so adding a section
+// means adding one entry here.
 public static class AdminSections
 {
+    public static IReadOnlyList<AdminSectionLink> Links { get; } =
+    [
+        new(AdminSection.Dashboard, "", "Dashboard"),
+        new(AdminSection.Orders, "orders", "Orders"),
+        new(AdminSection.Products, "products", "Products"),
+        new(AdminSection.Shipping, "shipping", "Shipping rates"),
+    ];
+
     public static AdminSection FromPath(string? path)
     {
         var segments = (path ?? string.Empty).Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
@@ -26,12 +41,8 @@ public static class AdminSections
             return AdminSection.Dashboard;
         }
 
-        return segments[1].ToLowerInvariant() switch
-        {
-            "orders" => AdminSection.Orders,
-            "products" => AdminSection.Products,
-            "shipping" => AdminSection.Shipping,
-            _ => AdminSection.None,
-        };
+        var link = Links.FirstOrDefault(l =>
+            l.PathSegment.Length > 0 && l.PathSegment.Equals(segments[1], StringComparison.OrdinalIgnoreCase));
+        return link?.Section ?? AdminSection.None;
     }
 }

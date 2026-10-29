@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Web.Helpers;
@@ -217,7 +218,7 @@ public class RazorViewToStringRendererTests
         Assert.Contains("Products", html);
         Assert.Contains("Shipping rates", html);
         Assert.Contains("Sign out", html);
-        Assert.Single(System.Text.RegularExpressions.Regex.Matches(html, "aria-current=\"page\""));
+        Assert.Single(Regex.Matches(html, "aria-current=\"page\""));
         Assert.Matches("aria-current=\"page\"[^>]*>Orders</a>", html);
         Assert.DoesNotContain("Cart", html);
     }

@@ -3,17 +3,10 @@
 @{
     // A partial: never wrapped in the admin layout, even when rendered on its own.
     Layout = null;
-    // Plain hrefs (not asp-page) so the partial renders without routing, e.g. in tests.
-    var links = new (AdminSection Section, string Href, string Label)[]
-    {
-        (AdminSection.Dashboard, "/admin", "Dashboard"),
-        (AdminSection.Orders, "/admin/orders", "Orders"),
-        (AdminSection.Products, "/admin/products", "Products"),
-        (AdminSection.Shipping, "/admin/shipping", "Shipping rates"),
-    };
 }
+@* Plain hrefs (not asp-page) so the partial renders without routing, e.g. in tests. *@
 <nav aria-label="Admin" class="flex flex-col gap-1 text-sm">
-    @foreach (var link in links)
+    @foreach (var link in AdminSections.Links)
     {
         var isCurrent = link.Section == Model;
         <a href="@link.Href"

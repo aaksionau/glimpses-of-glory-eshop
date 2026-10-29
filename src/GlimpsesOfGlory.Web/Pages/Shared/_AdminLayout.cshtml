@@ -12,17 +12,19 @@
     <title>@title - Admin - Glimpses of Glory</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
-<body class="min-h-screen bg-gray-100 text-gray-900 md:flex" x-data="{ menuOpen: false }">
+<body class="min-h-screen bg-gray-100 text-gray-900 md:flex" x-data="{ menuOpen: false }" x-on:keydown.escape.window="menuOpen = false">
     <aside class="bg-gray-900 text-white md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:overflow-y-auto">
         <div class="flex items-center justify-between px-4 py-3 md:py-5">
             <a href="/admin" class="font-semibold tracking-wide">Glimpses of Glory <span class="text-gray-400 font-normal">Admin</span></a>
             <button type="button"
                     class="md:hidden rounded-md border border-white/20 px-3 py-1 text-sm"
                     aria-controls="admin-sidebar-nav"
+                    aria-expanded="false"
                     :aria-expanded="menuOpen.toString()"
                     x-on:click="menuOpen = !menuOpen">Menu</button>
         </div>
-        <div id="admin-sidebar-nav" class="hidden px-3 pb-4 md:block" :class="{ 'hidden': !menuOpen }">
+        @* Not hidden by default: without JS the nav stays visible on small screens; Alpine collapses it. *@
+        <div id="admin-sidebar-nav" class="px-3 pb-4 md:block" :class="{ 'hidden': !menuOpen }">
             <partial name="/Pages/Admin/_AdminSidebarNav.cshtml" model="currentSection" />
         </div>
     </aside>
