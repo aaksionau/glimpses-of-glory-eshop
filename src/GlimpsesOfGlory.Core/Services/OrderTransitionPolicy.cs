@@ -6,8 +6,12 @@ namespace GlimpsesOfGlory.Core.Services;
 // CanMark* flags on AdminOrderDetail, and AdminOrderService enforces it so a crafted POST can't skip it.
 public static class OrderTransitionPolicy
 {
-    // Shipped/ready-for-pickup and cancelled are both final for fulfillment.
+    // Shipped/ready-for-pickup can only be reached from New; past that, only a pickup order moves on (to picked up).
     public static bool CanMarkShipped(OrderStatus status) => status == OrderStatus.New;
+
+    // Shipped means "ready for pickup" for pickup orders; shipping orders have no further step.
+    public static bool CanMarkPickedUp(OrderStatus status, FulfillmentMethod fulfillmentMethod) =>
+        status == OrderStatus.Shipped && fulfillmentMethod == FulfillmentMethod.Pickup;
 
     public static bool CanMarkCancelled(OrderStatus status) => status == OrderStatus.New;
 

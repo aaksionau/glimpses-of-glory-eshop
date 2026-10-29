@@ -18,7 +18,7 @@
 
     <p class="mb-4">
         Status:
-        <span class="font-semibold @(Model.Order.Status == OrderStatus.Cancelled ? "text-red-600" : Model.Order.Status == OrderStatus.Shipped ? "text-green-700" : "text-gray-700")">
+        <span class="font-semibold @(Model.Order.Status == OrderStatus.Cancelled ? "text-red-600" : Model.Order.Status is OrderStatus.Shipped or OrderStatus.PickedUp ? "text-green-700" : "text-gray-700")">
             @FulfillmentLabels.Status(Model.Order.Status, Model.Order.FulfillmentMethod)
         </span>
         @if (!string.IsNullOrWhiteSpace(Model.Order.TrackingNumber))
@@ -46,7 +46,7 @@
         </div>
     }
 
-    @if (Model.Order.CanMarkShipped || Model.Order.CanMarkPaid || Model.Order.CanMarkCancelled)
+    @if (Model.Order.CanMarkShipped || Model.Order.CanMarkPickedUp || Model.Order.CanMarkPaid || Model.Order.CanMarkCancelled)
     {
         <div class="flex flex-wrap gap-4">
             @if (Model.Order.CanMarkShipped)
@@ -62,6 +62,13 @@
                         </label>
                     }
                     <button type="submit" class="bg-black text-white px-4 py-2 rounded-lg font-semibold">Mark @FulfillmentLabels.ShippedStatus(Model.Order.FulfillmentMethod).ToLowerInvariant()</button>
+                </form>
+            }
+
+            @if (Model.Order.CanMarkPickedUp)
+            {
+                <form hx-post="/admin/orders/@Model.Order.Id?handler=MarkPickedUp" hx-target="#order-status" hx-swap="outerHTML" asp-antiforgery="true">
+                    <button type="submit" class="bg-black text-white px-4 py-2 rounded-lg font-semibold">Mark picked up</button>
                 </form>
             }
 
