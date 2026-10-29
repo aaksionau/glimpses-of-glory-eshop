@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
@@ -10,10 +11,13 @@ namespace GlimpsesOfGlory.Core.Services;
 
 public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventoryStore, IPaymentGateway paymentGateway, IEmailSender emailSender, TimeProvider timeProvider, ILogger<AdminOrderService> logger) : IAdminOrderService
 {
-    public async Task<IReadOnlyList<AdminOrderSummary>> GetAllOrdersAsync(CancellationToken cancellationToken)
+    // SQL-translatable twin of OrderTransitionPolicy.NeedsAction - keep the two in step.
+    private static readonly Expression<Func<Order, bool>> NeedsActionFilter =
+        o => o.Status == OrderStatus.New || (o.PaidAt == null && o.Status != OrderStatus.Cancelled);
+
+    public async Task<IReadOnlyList<AdminOrderSummary>> GetOrdersAsync(AdminOrderTab tab, CancellationToken cancellationToken)
     {
-        return await db.Orders
-            .AsNoTracking()
+        return await InTab(db.Orders.AsNoTracking(), tab)
             .OrderByDescending(o => o.CreatedAt)
             .Select(o => new AdminOrderSummary(
                 o.Id,
@@ -30,6 +34,25 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
                 o.CreatedAt))
             .ToListAsync(cancellationToken);
     }
+
+    // One COUNT query per tab; the DbContext can't run them concurrently.
+    public async Task<AdminOrderTabCounts> GetOrderTabCountsAsync(CancellationToken cancellationToken)
+    {
+        var needsAction = await InTab(db.Orders, AdminOrderTab.NeedsAction).CountAsync(cancellationToken);
+        var shipped = await InTab(db.Orders, AdminOrderTab.Shipped).CountAsync(cancellationToken);
+        var cancelled = await InTab(db.Orders, AdminOrderTab.Cancelled).CountAsync(cancellationToken);
+        var all = await db.Orders.CountAsync(cancellationToken);
+        return new AdminOrderTabCounts(needsAction, shipped, cancelled, all);
+    }
+
+    private static IQueryable<Order> InTab(IQueryable<Order> orders, AdminOrderTab tab) => tab switch
+    {
+        AdminOrderTab.NeedsAction => orders.Where(NeedsActionFilter),
+        AdminOrderTab.Shipped => orders.Where(o => o.Status == OrderStatus.Shipped || o.Status == OrderStatus.PickedUp),
+        AdminOrderTab.Cancelled => orders.Where(o => o.Status == OrderStatus.Cancelled),
+        AdminOrderTab.All => orders,
+        _ => throw new ArgumentOutOfRangeException(nameof(tab), tab, null),
+    };
 
     public async Task<AdminOrderDetail?> GetOrderAsync(int id, CancellationToken cancellationToken)
     {

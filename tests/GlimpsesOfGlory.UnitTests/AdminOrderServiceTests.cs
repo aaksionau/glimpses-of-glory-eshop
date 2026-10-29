@@ -7,6 +7,8 @@ using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Core.ValueObjects;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace GlimpsesOfGlory.UnitTests;
@@ -128,13 +130,94 @@ public sealed class AdminOrderServiceTests : IDisposable
         Assert.Null(detail.CancelledAt);
     }
 
+    [Fact]
+    public async Task GetOrders_FiltersByTab_AndCountsMatch()
+    {
+        var newCash = await AddOrderAsync(FulfillmentMethod.Shipping);
+        var newCard = await AddOrderAsync(FulfillmentMethod.Shipping, paymentMethod: PaymentMethod.Card, paidAt: T1);
+        var shippedUnpaidCash = await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.Shipped);
+        var shippedPaid = await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Shipped, paymentMethod: PaymentMethod.Card, paidAt: T1);
+        var pickedUpPaid = await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.PickedUp, paidAt: T1);
+        var cancelledUnpaid = await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Cancelled);
+        var service = Service();
+
+        Assert.Equal([newCash, newCard, shippedUnpaidCash], await IdsAsync(service, AdminOrderTab.NeedsAction));
+        Assert.Equal([shippedUnpaidCash, shippedPaid, pickedUpPaid], await IdsAsync(service, AdminOrderTab.Shipped));
+        Assert.Equal([cancelledUnpaid], await IdsAsync(service, AdminOrderTab.Cancelled));
+        Assert.Equal(6, (await IdsAsync(service, AdminOrderTab.All)).Count);
+
+        Assert.Equal(new AdminOrderTabCounts(NeedsAction: 3, Shipped: 3, Cancelled: 1, All: 6), await service.GetOrderTabCountsAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GetOrders_NeedsActionTab_AgreesWithTheRowHighlight()
+    {
+        await AddOrderAsync(FulfillmentMethod.Shipping);
+        await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.Shipped);
+        await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Shipped, paidAt: T1);
+        await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Cancelled);
+
+        var all = await Service().GetOrdersAsync(AdminOrderTab.All, CancellationToken.None);
+        var needsAction = await IdsAsync(Service(), AdminOrderTab.NeedsAction);
+
+        Assert.Equal(all.Where(o => o.NeedsAction).Select(o => o.Id).Order(), needsAction);
+    }
+
+    [Fact]
+    public async Task GetOrders_ListsNewestFirst()
+    {
+        var older = await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: T1);
+        var newer = await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: T2);
+
+        var orders = await Service().GetOrdersAsync(AdminOrderTab.NeedsAction, CancellationToken.None);
+
+        Assert.Equal([newer, older], orders.Select(o => o.Id));
+    }
+
+    [Fact]
+    public async Task GetOrderTabCounts_WithNoOrders_IsAllZero()
+    {
+        Assert.Equal(new AdminOrderTabCounts(0, 0, 0, 0), await Service().GetOrderTabCountsAsync(CancellationToken.None));
+    }
+
+    private static async Task<List<int>> IdsAsync(AdminOrderService service, AdminOrderTab tab)
+    {
+        var orders = await service.GetOrdersAsync(tab, CancellationToken.None);
+        // Same CreatedAt for most seeded orders, so compare by id to stay order-independent.
+        return orders.Select(o => o.Id).Order().ToList();
+    }
+
     private AppDbContext CreateDb() =>
-        new(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
+        new(new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection)
+            .ReplaceService<IModelCustomizer, SqliteDateTimeOffsetCustomizer>()
+            .Options);
+
+    // SQLite can't ORDER BY a DateTimeOffset (production runs on Postgres, which can), so the test
+    // model stores them as sortable binary values instead.
+    private sealed class SqliteDateTimeOffsetCustomizer(ModelCustomizerDependencies dependencies) : RelationalModelCustomizer(dependencies)
+    {
+        public override void Customize(ModelBuilder modelBuilder, DbContext context)
+        {
+            base.Customize(modelBuilder, context);
+            foreach (var property in modelBuilder.Model.GetEntityTypes().SelectMany(t => t.GetProperties())
+                .Where(p => p.ClrType == typeof(DateTimeOffset) || p.ClrType == typeof(DateTimeOffset?)))
+            {
+                property.SetValueConverter(new DateTimeOffsetToBinaryConverter());
+            }
+        }
+    }
 
     private AdminOrderService Service() =>
         new(CreateDb(), new FakeInventoryStore(new Dictionary<int, int>()), new FakePaymentGateway(), new NullEmailSender(), clock, NullLogger<AdminOrderService>.Instance);
 
-    private async Task<int> AddOrderAsync(FulfillmentMethod fulfillmentMethod, DateTimeOffset? shippedAt = null)
+    private async Task<int> AddOrderAsync(
+        FulfillmentMethod fulfillmentMethod,
+        DateTimeOffset? shippedAt = null,
+        OrderStatus status = OrderStatus.New,
+        PaymentMethod paymentMethod = PaymentMethod.Cash,
+        DateTimeOffset? paidAt = null,
+        DateTimeOffset? createdAt = null)
     {
         await using var db = CreateDb();
         var order = new Order
@@ -142,8 +225,10 @@ public sealed class AdminOrderServiceTests : IDisposable
             Email = "shopper@example.com",
             FulfillmentMethod = fulfillmentMethod,
             ShippingAddress = new ShippingAddress { FullName = "Jane Shopper" },
-            PaymentMethod = PaymentMethod.Cash,
-            CreatedAt = new DateTimeOffset(2026, 8, 1, 9, 0, 0, TimeSpan.Zero),
+            Status = status,
+            PaymentMethod = paymentMethod,
+            PaidAt = paidAt,
+            CreatedAt = createdAt ?? new DateTimeOffset(2026, 8, 1, 9, 0, 0, TimeSpan.Zero),
             ShippedAt = shippedAt,
         };
         db.Orders.Add(order);
