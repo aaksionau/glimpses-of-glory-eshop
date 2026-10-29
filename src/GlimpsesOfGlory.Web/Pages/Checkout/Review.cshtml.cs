@@ -55,7 +55,7 @@ public class ReviewModel(ICartService cartService, IOrderService orderService, C
         var orderId = await orderService.PlaceCashOrderAsync(address.ToShippingAddressInfo(), cancellationToken);
         if (orderId is null)
         {
-            TempData["Error"] = "Sorry, one or more items in your cart are no longer available in the requested quantity.";
+            TempData["Error"] = CheckoutMessages.ItemsUnavailable;
             return RedirectToPage("/Cart/Index");
         }
 

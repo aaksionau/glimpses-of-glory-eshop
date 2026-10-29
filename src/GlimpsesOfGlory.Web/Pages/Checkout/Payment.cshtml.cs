@@ -37,7 +37,7 @@ public class PaymentModel(
 
         if (setup is null)
         {
-            TempData["Error"] = "Sorry, one or more items in your cart are no longer available in the requested quantity.";
+            TempData["Error"] = CheckoutMessages.ItemsUnavailable;
             return RedirectToPage("/Cart/Index");
         }
 

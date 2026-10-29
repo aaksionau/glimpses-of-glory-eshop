@@ -21,9 +21,9 @@
                     @order.Address.Email<br />
                     We'll email you when your order is ready to collect.
                 </p>
-                @if (order.PaymentMethod == PaymentMethod.Cash)
+                @if (!order.IsPaid)
                 {
-                    <p class="font-medium mt-2">Please bring @order.Total.ToString("C") in cash when you collect your order.</p>
+                    <p class="font-medium mt-2">@PaymentLabels.CashDueNote(order.Total)</p>
                 }
             }
             else

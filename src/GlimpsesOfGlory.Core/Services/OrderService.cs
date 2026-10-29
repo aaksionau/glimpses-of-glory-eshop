@@ -7,6 +7,7 @@ using GlimpsesOfGlory.Core.Extensions;
 using GlimpsesOfGlory.Core.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Linq.Expressions;
 
 namespace GlimpsesOfGlory.Core.Services;
 
@@ -20,23 +21,11 @@ public sealed class OrderService(
 {
     public async Task<PaymentIntentSetup?> CreatePaymentIntentAsync(FulfillmentMethod fulfillmentMethod, ShippingAddressInfo address, string? existingPaymentIntentId, CancellationToken cancellationToken)
     {
-        var cart = await cartService.GetSummaryAsync(cancellationToken);
-        if (cart.Lines.Count == 0)
+        if (await PriceCartAsync(fulfillmentMethod, cancellationToken) is not (var lines, var subtotal, var shippingCost))
         {
             return null;
         }
 
-        var lines = await BuildCheckoutLinesAsync(cart, cancellationToken);
-        if (lines is null)
-        {
-            return null;
-        }
-
-        // Shipping only depends on item quantity (and fulfillment method), which the
-        // session-cached cart already has correct - only prices/stock need re-deriving
-        // from the DB above.
-        var subtotal = lines.Sum(l => l.UnitPrice * l.Quantity);
-        var shippingCost = await cartService.GetShippingCostAsync(fulfillmentMethod, cancellationToken);
         var total = subtotal + shippingCost;
 
         var existingPendingCheckout = existingPaymentIntentId is null
@@ -151,20 +140,11 @@ public sealed class OrderService(
 
     public async Task<int?> PlaceCashOrderAsync(ShippingAddressInfo address, CancellationToken cancellationToken)
     {
-        var cart = await cartService.GetSummaryAsync(cancellationToken);
-        if (cart.Lines.Count == 0)
-        {
-            return null;
-        }
-
-        var lines = await BuildCheckoutLinesAsync(cart, cancellationToken);
-        if (lines is null)
-        {
-            return null;
-        }
-
         // Cash is only offered for local pickup.
-        var shippingCost = await cartService.GetShippingCostAsync(FulfillmentMethod.Pickup, cancellationToken);
+        if (await PriceCartAsync(FulfillmentMethod.Pickup, cancellationToken) is not (var lines, var subtotal, var shippingCost))
+        {
+            return null;
+        }
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
@@ -179,7 +159,7 @@ public sealed class OrderService(
             Email = address.Email,
             FulfillmentMethod = FulfillmentMethod.Pickup,
             ShippingAddress = ShippingAddress.FromInfo(address),
-            Subtotal = lines.Sum(l => l.UnitPrice * l.Quantity),
+            Subtotal = subtotal,
             ShippingCost = shippingCost,
             PaymentMethod = PaymentMethod.Cash,
             Lines = lines.Select(ToOrderLine).ToList(),
@@ -192,21 +172,42 @@ public sealed class OrderService(
         return order.Id;
     }
 
-    public async Task<OrderConfirmationView?> GetOrderConfirmationAsync(string paymentIntentId, CancellationToken cancellationToken)
+    public Task<OrderConfirmationView?> GetOrderConfirmationAsync(string paymentIntentId, CancellationToken cancellationToken) =>
+        GetOrderConfirmationAsync(o => o.StripePaymentIntentId == paymentIntentId, cancellationToken);
+
+    public Task<OrderConfirmationView?> GetOrderConfirmationAsync(int orderId, CancellationToken cancellationToken) =>
+        GetOrderConfirmationAsync(o => o.Id == orderId, cancellationToken);
+
+    private async Task<OrderConfirmationView?> GetOrderConfirmationAsync(Expression<Func<Order, bool>> predicate, CancellationToken cancellationToken)
     {
         var order = await dbContext.Orders
+            .AsNoTracking()
             .Include(o => o.Lines)
-            .FirstOrDefaultAsync(o => o.StripePaymentIntentId == paymentIntentId, cancellationToken);
+            .FirstOrDefaultAsync(predicate, cancellationToken);
+
         return order is null ? null : ToConfirmationView(order);
     }
 
-    public async Task<OrderConfirmationView?> GetOrderConfirmationAsync(int orderId, CancellationToken cancellationToken)
+    // Returns null when the cart is empty or can't be fulfilled as it stands.
+    private async Task<(List<PendingCheckoutLine> Lines, decimal Subtotal, decimal ShippingCost)?> PriceCartAsync(FulfillmentMethod fulfillmentMethod, CancellationToken cancellationToken)
     {
-        var order = await dbContext.Orders
-            .Include(o => o.Lines)
-            .FirstOrDefaultAsync(o => o.Id == orderId, cancellationToken);
+        var cart = await cartService.GetSummaryAsync(cancellationToken);
+        if (cart.Lines.Count == 0)
+        {
+            return null;
+        }
 
-        return order is null ? null : ToConfirmationView(order);
+        var lines = await BuildCheckoutLinesAsync(cart, cancellationToken);
+        if (lines is null)
+        {
+            return null;
+        }
+
+        // Shipping only depends on item quantity (and fulfillment method), which the
+        // session-cached cart already has correct - only prices/stock need re-deriving
+        // from the DB above.
+        var shippingCost = await cartService.GetShippingCostAsync(fulfillmentMethod, cancellationToken);
+        return (lines, lines.Sum(l => l.UnitPrice * l.Quantity), shippingCost);
     }
 
     // Re-derives prices/stock from the DB rather than trusting the session-cached cart,
@@ -289,7 +290,7 @@ public sealed class OrderService(
     private static OrderConfirmationView ToConfirmationView(Order order) => new(
         order.Id,
         order.FulfillmentMethod,
-        order.PaymentMethod,
+        order.IsPaid,
         order.ShippingAddress.ToInfo(order.Email),
         order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity, l.IsPreorder, l.ExpectedAvailabilityDate)).ToList(),
         order.Subtotal,

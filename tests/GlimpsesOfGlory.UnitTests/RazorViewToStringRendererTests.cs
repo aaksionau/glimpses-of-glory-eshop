@@ -64,7 +64,7 @@ public class RazorViewToStringRendererTests
         var order = new OrderConfirmationView(
             OrderId: 42,
             FulfillmentMethod: FulfillmentMethod.Shipping,
-            PaymentMethod: PaymentMethod.Card,
+            IsPaid: true,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
             Subtotal: 25.00m,
@@ -88,7 +88,7 @@ public class RazorViewToStringRendererTests
         var order = new OrderConfirmationView(
             OrderId: 44,
             FulfillmentMethod: FulfillmentMethod.Pickup,
-            PaymentMethod: PaymentMethod.Card,
+            IsPaid: true,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
             Subtotal: 25.00m,
@@ -113,7 +113,6 @@ public class RazorViewToStringRendererTests
         var order = new OrderShippedView(
             OrderId: 42,
             FulfillmentMethod: FulfillmentMethod.Shipping,
-            PaymentMethod: PaymentMethod.Card,
             IsPaid: true,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
@@ -136,7 +135,6 @@ public class RazorViewToStringRendererTests
         var order = new OrderShippedView(
             OrderId: 43,
             FulfillmentMethod: FulfillmentMethod.Shipping,
-            PaymentMethod: PaymentMethod.Card,
             IsPaid: true,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 1, false, null)],
@@ -156,7 +154,6 @@ public class RazorViewToStringRendererTests
         var order = new OrderShippedView(
             OrderId: 44,
             FulfillmentMethod: FulfillmentMethod.Pickup,
-            PaymentMethod: PaymentMethod.Card,
             IsPaid: true,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
@@ -178,7 +175,6 @@ public class RazorViewToStringRendererTests
         var order = new OrderShippedView(
             OrderId: 45,
             FulfillmentMethod: FulfillmentMethod.Pickup,
-            PaymentMethod: PaymentMethod.Cash,
             IsPaid: false,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
@@ -197,7 +193,7 @@ public class RazorViewToStringRendererTests
         var order = new OrderConfirmationView(
             OrderId: 46,
             FulfillmentMethod: FulfillmentMethod.Pickup,
-            PaymentMethod: PaymentMethod.Cash,
+            IsPaid: false,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
             Subtotal: 25.00m,

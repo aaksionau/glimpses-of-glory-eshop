@@ -9,7 +9,6 @@ public sealed record AdminOrderSummary(
     decimal Total,
     OrderStatus Status,
     FulfillmentMethod FulfillmentMethod,
-    PaymentMethod PaymentMethod,
     bool IsPaid,
     bool HasPreorderLines,
     DateTimeOffset CreatedAt);

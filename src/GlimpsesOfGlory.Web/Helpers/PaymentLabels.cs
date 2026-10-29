@@ -10,4 +10,8 @@ public static class PaymentLabels
         PaymentMethod.Cash => isPaid ? "Cash (paid)" : "Cash at pickup (unpaid)",
         _ => "Card",
     };
+
+    // Shown wherever an unpaid order is still to be collected.
+    public static string CashDueNote(decimal total) =>
+        $"Please bring {total:C} in cash when you collect your order.";
 }
