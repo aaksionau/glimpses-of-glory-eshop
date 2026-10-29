@@ -11,4 +11,5 @@ public sealed record AdminOrderSummary(
     FulfillmentMethod FulfillmentMethod,
     bool IsPaid,
     bool HasPreorderLines,
+    bool NeedsRefund,
     DateTimeOffset CreatedAt);

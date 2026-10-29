@@ -7,6 +7,7 @@ public sealed record AdminOrderDetail(
     FulfillmentMethod FulfillmentMethod,
     PaymentMethod PaymentMethod,
     bool IsPaid,
+    string? StripePaymentIntentId,
     ShippingAddressInfo Address,
     IReadOnlyList<OrderConfirmationLine> Lines,
     decimal Subtotal,
@@ -17,4 +18,5 @@ public sealed record AdminOrderDetail(
     DateTimeOffset CreatedAt,
     bool CanMarkShipped,
     bool CanMarkPaid,
-    bool CanMarkCancelled);
+    bool CanMarkCancelled,
+    bool NeedsRefund);

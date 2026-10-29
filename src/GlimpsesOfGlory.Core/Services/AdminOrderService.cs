@@ -24,6 +24,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
                 o.FulfillmentMethod,
                 o.PaidAt != null,
                 o.Lines.Any(l => l.IsPreorder),
+                OrderTransitionPolicy.NeedsRefund(o.Status, o.PaymentMethod, o.PaidAt != null),
                 o.CreatedAt))
             .ToListAsync(cancellationToken);
     }
@@ -154,6 +155,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         order.FulfillmentMethod,
         order.PaymentMethod,
         order.IsPaid,
+        order.StripePaymentIntentId,
         order.ShippingAddress.ToInfo(order.Email),
         order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity, l.IsPreorder, l.ExpectedAvailabilityDate)).ToList(),
         order.Subtotal,
@@ -164,7 +166,8 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         order.CreatedAt,
         OrderTransitionPolicy.CanMarkShipped(order.Status),
         OrderTransitionPolicy.CanMarkPaid(order.Status, order.IsPaid),
-        OrderTransitionPolicy.CanMarkCancelled(order.Status));
+        OrderTransitionPolicy.CanMarkCancelled(order.Status),
+        OrderTransitionPolicy.NeedsRefund(order.Status, order.PaymentMethod, order.IsPaid));
 
     private static OrderShippedView ToShippedView(Order order) => new(
         order.Id,
