@@ -82,6 +82,22 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         return OrderUpdateResult.Updated;
     }
 
+    public async Task<OrderUpdateResult> MarkPickedUpAsync(int id, CancellationToken cancellationToken)
+    {
+        var state = await GetStateAsync(id, cancellationToken);
+        if (state is null)
+        {
+            return OrderUpdateResult.NotFound;
+        }
+        if (!OrderTransitionPolicy.CanMarkPickedUp(state.Status, state.FulfillmentMethod))
+        {
+            return OrderUpdateResult.InvalidTransition;
+        }
+
+        return await UpdateIfStatusAsync(id, state.Status, setters => setters
+            .SetProperty(o => o.Status, OrderStatus.PickedUp), cancellationToken);
+    }
+
     public async Task<OrderUpdateResult> MarkPaidAsync(int id, CancellationToken cancellationToken)
     {
         var state = await GetStateAsync(id, cancellationToken);
@@ -136,7 +152,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
     private Task<OrderState?> GetStateAsync(int id, CancellationToken cancellationToken) =>
         db.Orders
             .Where(o => o.Id == id)
-            .Select(o => new OrderState(o.Status, o.PaidAt != null))
+            .Select(o => new OrderState(o.Status, o.FulfillmentMethod, o.PaidAt != null))
             .FirstOrDefaultAsync(cancellationToken);
 
     // Only applies if the order is still in the status the caller checked the policy against,
@@ -165,6 +181,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         order.TrackingNumber,
         order.CreatedAt,
         OrderTransitionPolicy.CanMarkShipped(order.Status),
+        OrderTransitionPolicy.CanMarkPickedUp(order.Status, order.FulfillmentMethod),
         OrderTransitionPolicy.CanMarkPaid(order.Status, order.IsPaid),
         OrderTransitionPolicy.CanMarkCancelled(order.Status),
         OrderTransitionPolicy.NeedsRefund(order.Status, order.PaymentMethod, order.IsPaid));
@@ -178,5 +195,5 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         order.Total,
         order.TrackingNumber);
 
-    private sealed record OrderState(OrderStatus Status, bool IsPaid);
+    private sealed record OrderState(OrderStatus Status, FulfillmentMethod FulfillmentMethod, bool IsPaid);
 }

@@ -9,6 +9,7 @@ public class OrderTransitionPolicyTests
     [InlineData(OrderStatus.New, true)]
     [InlineData(OrderStatus.Shipped, false)]
     [InlineData(OrderStatus.Cancelled, false)]
+    [InlineData(OrderStatus.PickedUp, false)]
     public void CanMarkShipped_OnlyFromNew(OrderStatus status, bool expected)
     {
         Assert.Equal(expected, OrderTransitionPolicy.CanMarkShipped(status));
@@ -18,9 +19,23 @@ public class OrderTransitionPolicyTests
     [InlineData(OrderStatus.New, true)]
     [InlineData(OrderStatus.Shipped, false)]
     [InlineData(OrderStatus.Cancelled, false)]
+    [InlineData(OrderStatus.PickedUp, false)]
     public void CanMarkCancelled_OnlyFromNew(OrderStatus status, bool expected)
     {
         Assert.Equal(expected, OrderTransitionPolicy.CanMarkCancelled(status));
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Shipped, FulfillmentMethod.Pickup, true)]
+    [InlineData(OrderStatus.New, FulfillmentMethod.Pickup, false)]
+    [InlineData(OrderStatus.Cancelled, FulfillmentMethod.Pickup, false)]
+    [InlineData(OrderStatus.PickedUp, FulfillmentMethod.Pickup, false)]
+    [InlineData(OrderStatus.New, FulfillmentMethod.Shipping, false)]
+    [InlineData(OrderStatus.Shipped, FulfillmentMethod.Shipping, false)]
+    [InlineData(OrderStatus.Cancelled, FulfillmentMethod.Shipping, false)]
+    public void CanMarkPickedUp_OnlyForPickupOrdersReadyForPickup(OrderStatus status, FulfillmentMethod fulfillmentMethod, bool expected)
+    {
+        Assert.Equal(expected, OrderTransitionPolicy.CanMarkPickedUp(status, fulfillmentMethod));
     }
 
     [Theory]
@@ -29,6 +44,8 @@ public class OrderTransitionPolicyTests
     [InlineData(OrderStatus.Cancelled, false, false)]
     [InlineData(OrderStatus.New, true, false)]
     [InlineData(OrderStatus.Shipped, true, false)]
+    [InlineData(OrderStatus.PickedUp, false, true)]
+    [InlineData(OrderStatus.PickedUp, true, false)]
     public void CanMarkPaid_WhenUnpaidAndNotCancelled(OrderStatus status, bool isPaid, bool expected)
     {
         Assert.Equal(expected, OrderTransitionPolicy.CanMarkPaid(status, isPaid));
@@ -40,6 +57,7 @@ public class OrderTransitionPolicyTests
     [InlineData(OrderStatus.Cancelled, PaymentMethod.Cash, true, false)]
     [InlineData(OrderStatus.New, PaymentMethod.Card, true, false)]
     [InlineData(OrderStatus.Shipped, PaymentMethod.Card, true, false)]
+    [InlineData(OrderStatus.PickedUp, PaymentMethod.Card, true, false)]
     public void NeedsRefund_OnlyForCancelledPaidCardOrders(OrderStatus status, PaymentMethod paymentMethod, bool isPaid, bool expected)
     {
         Assert.Equal(expected, OrderTransitionPolicy.NeedsRefund(status, paymentMethod, isPaid));

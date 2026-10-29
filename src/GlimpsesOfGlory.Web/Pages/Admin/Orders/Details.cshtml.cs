@@ -46,6 +46,13 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
             cancellationToken);
     }
 
+    public async Task<IActionResult> OnPostMarkPickedUpAsync(int id, CancellationToken cancellationToken)
+    {
+        var result = await adminOrderService.MarkPickedUpAsync(id, cancellationToken);
+
+        return await OrderStatusPartialAsync(id, result, _ => "Order marked as picked up.", cancellationToken);
+    }
+
     public async Task<IActionResult> OnPostMarkPaidAsync(int id, CancellationToken cancellationToken)
     {
         var result = await adminOrderService.MarkPaidAsync(id, cancellationToken);

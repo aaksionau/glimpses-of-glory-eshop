@@ -12,6 +12,10 @@ public static class FulfillmentLabels
     public static string ShippedStatus(FulfillmentMethod fulfillmentMethod) =>
         fulfillmentMethod == FulfillmentMethod.Pickup ? "Ready for pickup" : "Shipped";
 
-    public static string Status(OrderStatus status, FulfillmentMethod fulfillmentMethod) =>
-        status == OrderStatus.Shipped ? ShippedStatus(fulfillmentMethod) : status.ToString();
+    public static string Status(OrderStatus status, FulfillmentMethod fulfillmentMethod) => status switch
+    {
+        OrderStatus.Shipped => ShippedStatus(fulfillmentMethod),
+        OrderStatus.PickedUp => "Picked up",
+        _ => status.ToString(),
+    };
 }

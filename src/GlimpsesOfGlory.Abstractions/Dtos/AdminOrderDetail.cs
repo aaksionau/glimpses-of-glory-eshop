@@ -17,6 +17,7 @@ public sealed record AdminOrderDetail(
     string? TrackingNumber,
     DateTimeOffset CreatedAt,
     bool CanMarkShipped,
+    bool CanMarkPickedUp,
     bool CanMarkPaid,
     bool CanMarkCancelled,
     bool NeedsRefund);
