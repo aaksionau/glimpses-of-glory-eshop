@@ -23,6 +23,15 @@ public class RelativeTimeTests
     }
 
     [Fact]
+    public void Format_FallbackDateIsInUtc()
+    {
+        // 01:30 on Oct 2 at +02:00 is still Oct 1 in UTC, the zone the tooltip uses.
+        var at = new DateTimeOffset(2026, 10, 2, 1, 30, 0, TimeSpan.FromHours(2));
+
+        Assert.Equal("Oct 1, 2026", RelativeTime.Format(at, Now));
+    }
+
+    [Fact]
     public void FullTimestamp_IsInUtc()
     {
         var at = new DateTimeOffset(2026, 10, 29, 14, 5, 0, TimeSpan.FromHours(2));

@@ -1,4 +1,5 @@
 @model IReadOnlyList<GlimpsesOfGlory.Abstractions.Dtos.AdminProductSummary>
+@using GlimpsesOfGlory.Web.Helpers
 
 <div id="product-table" class="overflow-x-auto">
     @if (Model.Count == 0)
@@ -38,7 +39,7 @@
                             @product.StockQuantity
                             @if (product.IsPreorder)
                             {
-                                <span class="ml-1"><partial name="_Badge" model="GlimpsesOfGlory.Web.Helpers.OrderBadges.Preorder" /></span>
+                                <span class="ml-1"><partial name="_Badge" model="OrderBadges.Preorder" /></span>
                             }
                         </td>
                         <td class="py-2 pr-2">

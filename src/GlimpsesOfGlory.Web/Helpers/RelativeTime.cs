@@ -4,7 +4,8 @@ namespace GlimpsesOfGlory.Web.Helpers;
 
 public static class RelativeTime
 {
-    // Short "2 h ago" wording for recent moments; older ones fall back to a plain date.
+    // Short "2 h ago" wording for recent moments; older ones fall back to a plain UTC date,
+    // matching the UTC timestamp in the tooltip.
     public static string Format(DateTimeOffset at, DateTimeOffset now)
     {
         var elapsed = now - at;
@@ -24,7 +25,7 @@ public static class RelativeTime
         {
             return $"{(int)elapsed.TotalDays} d ago";
         }
-        return at.ToString("MMM d, yyyy", CultureInfo.InvariantCulture);
+        return at.ToUniversalTime().ToString("MMM d, yyyy", CultureInfo.InvariantCulture);
     }
 
     // Full timestamp for the tooltip behind a relative date.
