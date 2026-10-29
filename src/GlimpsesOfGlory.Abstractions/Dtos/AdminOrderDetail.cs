@@ -4,6 +4,7 @@ namespace GlimpsesOfGlory.Abstractions.Dtos;
 
 public sealed record AdminOrderDetail(
     int Id,
+    FulfillmentMethod FulfillmentMethod,
     ShippingAddressInfo Address,
     IReadOnlyList<OrderConfirmationLine> Lines,
     decimal Subtotal,

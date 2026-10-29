@@ -1,5 +1,6 @@
 @page "/checkout/confirmation"
 @model GlimpsesOfGlory.Web.Pages.Checkout.ConfirmationModel
+@using GlimpsesOfGlory.Abstractions.Enums
 @using GlimpsesOfGlory.Web.Helpers
 @{
     ViewData["Title"] = "Order confirmation";
@@ -12,18 +13,30 @@
         <p class="text-ink-light mb-6">Order #@order.OrderId &middot; @order.CreatedAt.ToLocalTime().ToString("f")</p>
 
         <section class="mb-6">
-            <h2 class="font-semibold text-lg">Shipping to</h2>
-            <p class="text-ink-light mt-1">
-                @order.Address.FullName<br />
-                @order.Address.AddressLine1<br />
-                @if (!string.IsNullOrWhiteSpace(order.Address.AddressLine2))
-                {
-                    @order.Address.AddressLine2<br />
-                }
-                @order.Address.City, @order.Address.State @order.Address.PostalCode<br />
-                @order.Address.Country<br />
-                @order.Address.Email
-            </p>
+            @if (order.FulfillmentMethod == FulfillmentMethod.Pickup)
+            {
+                <h2 class="font-semibold text-lg">Local pickup</h2>
+                <p class="text-ink-light mt-1">
+                    @order.Address.FullName<br />
+                    @order.Address.Email<br />
+                    We'll email you when your order is ready to collect.
+                </p>
+            }
+            else
+            {
+                <h2 class="font-semibold text-lg">Shipping to</h2>
+                <p class="text-ink-light mt-1">
+                    @order.Address.FullName<br />
+                    @order.Address.AddressLine1<br />
+                    @if (!string.IsNullOrWhiteSpace(order.Address.AddressLine2))
+                    {
+                        @order.Address.AddressLine2<br />
+                    }
+                    @order.Address.City, @order.Address.State @order.Address.PostalCode<br />
+                    @order.Address.Country<br />
+                    @order.Address.Email
+                </p>
+            }
         </section>
 
         <section>
@@ -47,7 +60,7 @@
 
             <div class="mt-4 flex flex-col items-end gap-1">
                 <p>Subtotal: <span class="font-medium">@order.Subtotal.ToString("C")</span></p>
-                <p>Shipping: <span class="font-medium">@order.ShippingCost.ToString("C")</span></p>
+                <p>@FulfillmentLabels.CostLabel(order.FulfillmentMethod): <span class="font-medium">@order.ShippingCost.ToString("C")</span></p>
                 <p class="text-lg font-bold">Total: @order.Total.ToString("C")</p>
             </div>
         </section>

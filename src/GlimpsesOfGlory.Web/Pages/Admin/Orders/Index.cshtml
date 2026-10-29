@@ -1,5 +1,7 @@
 @page "/admin/orders"
 @model GlimpsesOfGlory.Web.Pages.Admin.Orders.IndexModel
+@using GlimpsesOfGlory.Abstractions.Enums
+@using GlimpsesOfGlory.Web.Helpers
 @{
     ViewData["Title"] = "Admin - Orders";
 }
@@ -38,11 +40,15 @@
                                 {
                                     <span class="ml-1 bg-black text-white text-xs font-semibold px-2 py-1 rounded-full">Preorder</span>
                                 }
+                                @if (order.FulfillmentMethod == FulfillmentMethod.Pickup)
+                                {
+                                    <span class="ml-1 border border-black text-xs font-semibold px-2 py-1 rounded-full">Pickup</span>
+                                }
                             </td>
                             <td class="py-2 pr-2">@order.Email</td>
                             <td class="py-2 pr-2">@order.ItemCount</td>
                             <td class="py-2 pr-2">@order.Total.ToString("C")</td>
-                            <td class="py-2 pr-2">@order.Status</td>
+                            <td class="py-2 pr-2">@FulfillmentLabels.Status(order.Status, order.FulfillmentMethod)</td>
                             <td class="py-2 pr-2">@order.CreatedAt.ToString("MMM d, yyyy")</td>
                         </tr>
                     }

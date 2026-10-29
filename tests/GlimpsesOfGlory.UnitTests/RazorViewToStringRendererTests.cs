@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Web.Helpers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
@@ -62,6 +63,7 @@ public class RazorViewToStringRendererTests
         var renderer = CreateRenderer();
         var order = new OrderConfirmationView(
             OrderId: 42,
+            FulfillmentMethod: FulfillmentMethod.Shipping,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
             Subtotal: 25.00m,
@@ -78,6 +80,27 @@ public class RazorViewToStringRendererTests
         Assert.Contains("$30.00", html);
     }
 
+    [Fact]
+    public async Task RenderAsync_RendersOrderConfirmationTemplate_ForPickupOrder()
+    {
+        var renderer = CreateRenderer();
+        var order = new OrderConfirmationView(
+            OrderId: 44,
+            FulfillmentMethod: FulfillmentMethod.Pickup,
+            Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null),
+            Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
+            Subtotal: 25.00m,
+            ShippingCost: 0m,
+            Total: 25.00m,
+            CreatedAt: new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero));
+
+        var html = await renderer.RenderAsync("~/Emails/OrderConfirmation.cshtml", order);
+
+        Assert.Contains("Local pickup", html);
+        Assert.DoesNotContain("Shipping to", html);
+        Assert.Contains("$25.00", html);
+    }
+
     // OrderNotifier.SendShippedNotificationAsync renders this same template before sending
     // via Resend, so exercising it directly (as above for OrderConfirmation) covers the
     // order/tracking details without needing a real mailbox.
@@ -87,6 +110,7 @@ public class RazorViewToStringRendererTests
         var renderer = CreateRenderer();
         var order = new OrderShippedView(
             OrderId: 42,
+            FulfillmentMethod: FulfillmentMethod.Shipping,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
             Total: 30.00m,
@@ -107,6 +131,7 @@ public class RazorViewToStringRendererTests
         var renderer = CreateRenderer();
         var order = new OrderShippedView(
             OrderId: 43,
+            FulfillmentMethod: FulfillmentMethod.Shipping,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 1, false, null)],
             Total: 17.50m,
@@ -116,5 +141,24 @@ public class RazorViewToStringRendererTests
 
         Assert.Contains("Order #43", html);
         Assert.DoesNotContain("Tracking number", html);
+    }
+
+    [Fact]
+    public async Task RenderAsync_RendersOrderShippedTemplate_ForPickupOrder()
+    {
+        var renderer = CreateRenderer();
+        var order = new OrderShippedView(
+            OrderId: 44,
+            FulfillmentMethod: FulfillmentMethod.Pickup,
+            Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null),
+            Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
+            Total: 25.00m,
+            TrackingNumber: null);
+
+        var html = await renderer.RenderAsync("~/Emails/OrderShipped.cshtml", order);
+
+        Assert.Contains("ready for pickup", html);
+        Assert.DoesNotContain("on its way", html);
+        Assert.DoesNotContain("Shipping to", html);
     }
 }

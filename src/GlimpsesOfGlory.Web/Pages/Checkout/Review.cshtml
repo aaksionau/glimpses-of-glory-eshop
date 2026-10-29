@@ -1,5 +1,6 @@
 @page "/checkout/review"
 @model GlimpsesOfGlory.Web.Pages.Checkout.ReviewModel
+@using GlimpsesOfGlory.Web.Helpers
 @{
     ViewData["Title"] = "Review order";
 }
@@ -8,7 +9,7 @@
     <h1 class="text-3xl font-bold mb-6 font-display">Checkout</h1>
 
     <ol class="flex gap-2 text-sm mb-6 text-ink-light">
-        <li>1. Address</li>
+        <li>1. Details</li>
         <li>&rarr;</li>
         <li class="font-semibold text-ink">2. Review</li>
         <li>&rarr;</li>
@@ -17,18 +18,23 @@
 
     <section class="mb-6">
         <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-lg">Shipping to</h2>
+            <h2 class="font-semibold text-lg">@(Model.Address.IsPickup ? "Local pickup" : "Shipping to")</h2>
             <a href="/checkout" class="text-sm text-gold-dark hover:underline">Edit</a>
         </div>
         <p class="text-ink-light mt-1">
             @Model.Address.FullName<br />
-            @Model.Address.AddressLine1<br />
-            @if (!string.IsNullOrWhiteSpace(Model.Address.AddressLine2))
+            @if (!Model.Address.IsPickup)
             {
-                @Model.Address.AddressLine2<br />
+                <text>
+                    @Model.Address.AddressLine1<br />
+                    @if (!string.IsNullOrWhiteSpace(Model.Address.AddressLine2))
+                    {
+                        @Model.Address.AddressLine2<br />
+                    }
+                    @Model.Address.City, @Model.Address.State @Model.Address.PostalCode<br />
+                    @Model.Address.Country<br />
+                </text>
             }
-            @Model.Address.City, @Model.Address.State @Model.Address.PostalCode<br />
-            @Model.Address.Country<br />
             @Model.Address.Email
         </p>
     </section>
@@ -58,8 +64,8 @@
 
         <div class="mt-4 flex flex-col items-end gap-1">
             <p>Subtotal: <span class="font-medium">@Model.Cart.Subtotal.ToString("C")</span></p>
-            <p>Shipping: <span class="font-medium">@Model.Cart.ShippingCost.ToString("C")</span></p>
-            <p class="text-lg font-bold">Total: @Model.Cart.Total.ToString("C")</p>
+            <p>@FulfillmentLabels.CostLabel(Model.Address.FulfillmentMethod): <span class="font-medium">@Model.ShippingCost.ToString("C")</span></p>
+            <p class="text-lg font-bold">Total: @Model.Total.ToString("C")</p>
         </div>
     </section>
 

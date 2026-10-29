@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Web.Configuration;
 using Microsoft.Extensions.Options;
@@ -22,7 +23,10 @@ public sealed class OrderNotifier(
     public async Task SendShippedNotificationAsync(OrderShippedView order, CancellationToken cancellationToken)
     {
         var html = await viewRenderer.RenderAsync("~/Emails/OrderShipped.cshtml", order);
-        await SendAsync(order.Address.Email, $"Your order #{order.OrderId} has shipped", html, cancellationToken);
+        var subject = order.FulfillmentMethod == FulfillmentMethod.Pickup
+            ? $"Your order #{order.OrderId} is ready for pickup"
+            : $"Your order #{order.OrderId} has shipped";
+        await SendAsync(order.Address.Email, subject, html, cancellationToken);
     }
 
     private async Task SendAsync(string to, string subject, string html, CancellationToken cancellationToken)

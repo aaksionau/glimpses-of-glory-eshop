@@ -1,4 +1,5 @@
 using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Core.Services;
 
@@ -27,7 +28,7 @@ public class CartServiceTests
     private sealed class FakeShippingSettingsService : IShippingSettingsService
     {
         public Task<IReadOnlyList<ShippingTierView>> GetTiersAsync(CancellationToken cancellationToken)
-            => Task.FromResult<IReadOnlyList<ShippingTierView>>([new ShippingTierView(1, 1, 0m)]);
+            => Task.FromResult<IReadOnlyList<ShippingTierView>>([new ShippingTierView(1, 1, 7.50m)]);
 
         public Task UpdateTiersAsync(IReadOnlyList<ShippingTierUpdate> tiers, CancellationToken cancellationToken)
             => Task.CompletedTask;
@@ -38,6 +39,30 @@ public class CartServiceTests
 
     private static CartService CreateService(FakeCartStore cartStore, ProductDetail? product) =>
         new(cartStore, new FakeProductCatalogService(product), new FakeShippingSettingsService());
+
+    [Fact]
+    public async Task GetShippingCostAsync_UsesShippingTiers_WhenShipping()
+    {
+        var cartStore = new FakeCartStore();
+        var service = CreateService(cartStore, CreateProduct(stockQuantity: 5));
+        await service.AddLineAsync("widget", 1, CancellationToken.None);
+
+        var cost = await service.GetShippingCostAsync(FulfillmentMethod.Shipping, CancellationToken.None);
+
+        Assert.Equal(7.50m, cost);
+    }
+
+    [Fact]
+    public async Task GetShippingCostAsync_IsFree_WhenPickup()
+    {
+        var cartStore = new FakeCartStore();
+        var service = CreateService(cartStore, CreateProduct(stockQuantity: 5));
+        await service.AddLineAsync("widget", 1, CancellationToken.None);
+
+        var cost = await service.GetShippingCostAsync(FulfillmentMethod.Pickup, CancellationToken.None);
+
+        Assert.Equal(0m, cost);
+    }
 
     [Fact]
     public async Task AddLineAsync_RejectsWhenProductOutOfStock()

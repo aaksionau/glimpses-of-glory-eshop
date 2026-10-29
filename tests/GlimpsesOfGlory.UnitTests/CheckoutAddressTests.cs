@@ -1,0 +1,55 @@
+using System.ComponentModel.DataAnnotations;
+using GlimpsesOfGlory.Abstractions.Enums;
+using GlimpsesOfGlory.Web.Dtos;
+
+namespace GlimpsesOfGlory.UnitTests;
+
+public class CheckoutAddressTests
+{
+    private static List<ValidationResult> Validate(CheckoutAddress address)
+    {
+        var results = new List<ValidationResult>();
+        Validator.TryValidateObject(address, new ValidationContext(address), results, validateAllProperties: true);
+        return results;
+    }
+
+    [Fact]
+    public void Validate_RequiresStreetAddress_WhenShipping()
+    {
+        var address = new CheckoutAddress { FulfillmentMethod = FulfillmentMethod.Shipping, Email = "shopper@example.com", FullName = "Jane Shopper" };
+
+        var results = Validate(address);
+
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CheckoutAddress.AddressLine1)));
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CheckoutAddress.Country)));
+    }
+
+    [Fact]
+    public void Validate_OnlyRequiresNameAndEmail_WhenPickup()
+    {
+        var address = new CheckoutAddress { FulfillmentMethod = FulfillmentMethod.Pickup, Email = "shopper@example.com", FullName = "Jane Shopper" };
+
+        var results = Validate(address);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void ToShippingAddressInfo_DropsStreetAddress_WhenPickup()
+    {
+        var address = new CheckoutAddress
+        {
+            FulfillmentMethod = FulfillmentMethod.Pickup,
+            Email = "shopper@example.com",
+            FullName = "Jane Shopper",
+            AddressLine1 = "123 Main St",
+            City = "Springfield",
+        };
+
+        var info = address.ToShippingAddressInfo();
+
+        Assert.Equal("Jane Shopper", info.FullName);
+        Assert.Null(info.AddressLine1);
+        Assert.Null(info.City);
+    }
+}

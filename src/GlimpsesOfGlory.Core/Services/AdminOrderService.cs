@@ -20,6 +20,7 @@ public sealed class AdminOrderService(AppDbContext db, IEmailSender emailSender,
                 o.Lines.Sum(l => l.Quantity),
                 o.Total,
                 o.Status,
+                o.FulfillmentMethod,
                 o.Lines.Any(l => l.IsPreorder),
                 o.CreatedAt))
             .ToListAsync(cancellationToken);
@@ -74,6 +75,7 @@ public sealed class AdminOrderService(AppDbContext db, IEmailSender emailSender,
 
     private static AdminOrderDetail ToDetail(Order order) => new(
         order.Id,
+        order.FulfillmentMethod,
         order.ShippingAddress.ToInfo(order.Email),
         order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity, l.IsPreorder, l.ExpectedAvailabilityDate)).ToList(),
         order.Subtotal,
@@ -85,6 +87,7 @@ public sealed class AdminOrderService(AppDbContext db, IEmailSender emailSender,
 
     private static OrderShippedView ToShippedView(Order order) => new(
         order.Id,
+        order.FulfillmentMethod,
         order.ShippingAddress.ToInfo(order.Email),
         order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity, l.IsPreorder, l.ExpectedAvailabilityDate)).ToList(),
         order.Total,

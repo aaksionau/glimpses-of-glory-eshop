@@ -9,4 +9,4 @@ public sealed record CartLineView(
     bool IsPreorder,
     DateOnly? ExpectedAvailabilityDate);
 
-public sealed record CartSummary(IReadOnlyList<CartLineView> Lines, decimal Subtotal, decimal ShippingCost, decimal Total);
+public sealed record CartSummary(IReadOnlyList<CartLineView> Lines, decimal Subtotal);

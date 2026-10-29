@@ -7,6 +7,7 @@ public sealed class Order : ICheckoutHeader
 {
     public int Id { get; set; }
     public required string Email { get; set; }
+    public FulfillmentMethod FulfillmentMethod { get; set; }
     public required ShippingAddress ShippingAddress { get; set; }
     public decimal Subtotal { get; set; }
     public decimal ShippingCost { get; set; }

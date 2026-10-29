@@ -1,3 +1,4 @@
+using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Core.ValueObjects;
 
 namespace GlimpsesOfGlory.Core.Entities;
@@ -8,6 +9,7 @@ namespace GlimpsesOfGlory.Core.Entities;
 internal interface ICheckoutHeader
 {
     string Email { get; set; }
+    FulfillmentMethod FulfillmentMethod { get; set; }
     ShippingAddress ShippingAddress { get; set; }
     decimal Subtotal { get; set; }
     decimal ShippingCost { get; set; }

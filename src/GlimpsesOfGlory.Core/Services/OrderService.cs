@@ -1,4 +1,5 @@
 using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Exceptions;
 using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Core.Entities;
@@ -17,7 +18,7 @@ public sealed class OrderService(
     IEmailSender emailSender,
     ILogger<OrderService> logger) : IOrderService
 {
-    public async Task<PaymentIntentSetup?> CreatePaymentIntentAsync(ShippingAddressInfo address, string? existingPaymentIntentId, CancellationToken cancellationToken)
+    public async Task<PaymentIntentSetup?> CreatePaymentIntentAsync(FulfillmentMethod fulfillmentMethod, ShippingAddressInfo address, string? existingPaymentIntentId, CancellationToken cancellationToken)
     {
         var cart = await cartService.GetSummaryAsync(cancellationToken);
         if (cart.Lines.Count == 0)
@@ -51,11 +52,11 @@ public sealed class OrderService(
             });
         }
 
-        // Shipping only depends on item quantity, which the session-cached cart already
-        // has correct (only prices/stock need re-deriving from the DB above), so reuse
-        // cart.ShippingCost instead of re-fetching tiers and recalculating it here.
+        // Shipping only depends on item quantity (and fulfillment method), which the
+        // session-cached cart already has correct - only prices/stock need re-deriving
+        // from the DB above.
         var subtotal = lines.Sum(l => l.UnitPrice * l.Quantity);
-        var shippingCost = cart.ShippingCost;
+        var shippingCost = await cartService.GetShippingCostAsync(fulfillmentMethod, cancellationToken);
         var total = subtotal + shippingCost;
 
         var existingPendingCheckout = existingPaymentIntentId is null
@@ -71,6 +72,7 @@ public sealed class OrderService(
                 var updatedPaymentIntent = await paymentGateway.UpdatePaymentIntentAsync(existingPaymentIntentId!, total, address.Email, cancellationToken);
 
                 existingPendingCheckout.Email = address.Email;
+                existingPendingCheckout.FulfillmentMethod = fulfillmentMethod;
                 existingPendingCheckout.ShippingAddress = ShippingAddress.FromInfo(address);
                 existingPendingCheckout.Subtotal = subtotal;
                 existingPendingCheckout.ShippingCost = shippingCost;
@@ -94,6 +96,7 @@ public sealed class OrderService(
         {
             StripePaymentIntentId = paymentIntent.PaymentIntentId,
             Email = address.Email,
+            FulfillmentMethod = fulfillmentMethod,
             ShippingAddress = ShippingAddress.FromInfo(address),
             Subtotal = subtotal,
             ShippingCost = shippingCost,
@@ -143,6 +146,7 @@ public sealed class OrderService(
         var order = new Order
         {
             Email = pendingCheckout.Email,
+            FulfillmentMethod = pendingCheckout.FulfillmentMethod,
             ShippingAddress = pendingCheckout.ShippingAddress.Clone(),
             Subtotal = pendingCheckout.Subtotal,
             ShippingCost = pendingCheckout.ShippingCost,
@@ -206,6 +210,7 @@ public sealed class OrderService(
 
     private static OrderConfirmationView ToConfirmationView(Order order) => new(
         order.Id,
+        order.FulfillmentMethod,
         order.ShippingAddress.ToInfo(order.Email),
         order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity, l.IsPreorder, l.ExpectedAvailabilityDate)).ToList(),
         order.Subtotal,

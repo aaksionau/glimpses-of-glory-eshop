@@ -1,3 +1,4 @@
+using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Core.ValueObjects;
 
 namespace GlimpsesOfGlory.Core.Entities;
@@ -11,6 +12,7 @@ public sealed class PendingCheckout : ICheckoutHeader
     public int Id { get; set; }
     public required string StripePaymentIntentId { get; set; }
     public required string Email { get; set; }
+    public FulfillmentMethod FulfillmentMethod { get; set; }
     public required ShippingAddress ShippingAddress { get; set; }
     public decimal Subtotal { get; set; }
     public decimal ShippingCost { get; set; }

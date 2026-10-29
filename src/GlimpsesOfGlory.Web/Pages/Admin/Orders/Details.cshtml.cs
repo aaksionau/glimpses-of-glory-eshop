@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Services;
+using GlimpsesOfGlory.Web.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
@@ -39,8 +40,10 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
             return NotFound();
         }
 
-        StatusMessage = "Order marked as shipped and the buyer has been emailed.";
-        return await OrderStatusPartialAsync(id, cancellationToken);
+        return await OrderStatusPartialAsync(
+            id,
+            order => $"Order marked as {FulfillmentLabels.ShippedStatus(order.FulfillmentMethod).ToLowerInvariant()} and the buyer has been emailed.",
+            cancellationToken);
     }
 
     public async Task<IActionResult> OnPostMarkCancelledAsync(int id, CancellationToken cancellationToken)
@@ -51,11 +54,11 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
             return NotFound();
         }
 
-        StatusMessage = "Order marked as cancelled.";
-        return await OrderStatusPartialAsync(id, cancellationToken);
+        return await OrderStatusPartialAsync(id, _ => "Order marked as cancelled.", cancellationToken);
     }
 
-    private async Task<IActionResult> OrderStatusPartialAsync(int id, CancellationToken cancellationToken)
+    // statusMessage gets the reloaded order so the wording can depend on it (e.g. shipped vs. ready for pickup).
+    private async Task<IActionResult> OrderStatusPartialAsync(int id, Func<AdminOrderDetail, string> statusMessage, CancellationToken cancellationToken)
     {
         var order = await adminOrderService.GetOrderAsync(id, cancellationToken);
         if (order is null)
@@ -65,6 +68,7 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
 
         Order = order;
         TrackingNumber = order.TrackingNumber;
+        StatusMessage = statusMessage(order);
         return Partial("_OrderStatus", this);
     }
 }
