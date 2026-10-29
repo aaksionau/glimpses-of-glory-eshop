@@ -13,6 +13,10 @@ public class ReviewModel(ICartService cartService, CheckoutSessionStore checkout
 
     public CheckoutAddress Address { get; private set; } = null!;
 
+    public decimal ShippingCost { get; private set; }
+
+    public decimal Total => Cart.Subtotal + ShippingCost;
+
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         var cart = await cartService.GetSummaryAsync(cancellationToken);
@@ -29,6 +33,7 @@ public class ReviewModel(ICartService cartService, CheckoutSessionStore checkout
 
         Cart = cart;
         Address = address;
+        ShippingCost = await cartService.GetShippingCostAsync(address.FulfillmentMethod, cancellationToken);
         return Page();
     }
 }

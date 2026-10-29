@@ -1,4 +1,5 @@
 using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Enums;
 
 namespace GlimpsesOfGlory.Abstractions.Services;
 
@@ -9,7 +10,7 @@ public interface IOrderService
     // (e.g. from CheckoutSessionStore) to update that PaymentIntent/PendingCheckout in
     // place - on a page revisit (back button, refresh) - instead of creating a new one
     // each time; falls back to creating fresh if the existing one can no longer be used.
-    Task<PaymentIntentSetup?> CreatePaymentIntentAsync(ShippingAddressInfo address, string? existingPaymentIntentId, CancellationToken cancellationToken);
+    Task<PaymentIntentSetup?> CreatePaymentIntentAsync(FulfillmentMethod fulfillmentMethod, ShippingAddressInfo address, string? existingPaymentIntentId, CancellationToken cancellationToken);
 
     // Webhook-driven order finalization: idempotent, safe to call more than once
     // for the same PaymentIntent (e.g. duplicate webhook delivery).

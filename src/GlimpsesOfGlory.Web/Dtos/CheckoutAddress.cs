@@ -1,10 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Enums;
 
 namespace GlimpsesOfGlory.Web.Dtos;
 
-public sealed class CheckoutAddress
+public sealed class CheckoutAddress : IValidatableObject
 {
+    public FulfillmentMethod FulfillmentMethod { get; set; } = FulfillmentMethod.Shipping;
+
     [Required(ErrorMessage = "Email is required.")]
     [EmailAddress(ErrorMessage = "Enter a valid email address.")]
     [StringLength(200)]
@@ -14,29 +17,56 @@ public sealed class CheckoutAddress
     [StringLength(200)]
     public string FullName { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Address is required.")]
     [StringLength(200)]
-    public string AddressLine1 { get; set; } = string.Empty;
+    public string? AddressLine1 { get; set; }
 
     [StringLength(200)]
     public string? AddressLine2 { get; set; }
 
-    [Required(ErrorMessage = "City is required.")]
     [StringLength(100)]
-    public string City { get; set; } = string.Empty;
+    public string? City { get; set; }
 
-    [Required(ErrorMessage = "State/region is required.")]
     [StringLength(100)]
-    public string State { get; set; } = string.Empty;
+    public string? State { get; set; }
 
-    [Required(ErrorMessage = "Postal code is required.")]
     [StringLength(20)]
-    public string PostalCode { get; set; } = string.Empty;
+    public string? PostalCode { get; set; }
 
-    [Required(ErrorMessage = "Country is required.")]
     [StringLength(100)]
-    public string Country { get; set; } = string.Empty;
+    public string? Country { get; set; }
 
-    public ShippingAddressInfo ToShippingAddressInfo() =>
-        new(Email, FullName, AddressLine1, AddressLine2, City, State, PostalCode, Country);
+    public bool IsPickup => FulfillmentMethod == FulfillmentMethod.Pickup;
+
+    // Pickup orders don't need (or keep) a street address - drop anything left over
+    // from the shopper toggling between shipping and pickup.
+    public ShippingAddressInfo ToShippingAddressInfo() => IsPickup
+        ? new(Email, FullName, null, null, null, null, null, null)
+        : new(Email, FullName, AddressLine1, AddressLine2, City, State, PostalCode, Country);
+
+    // The street address is only required when shipping, so it's validated here rather
+    // than with [Required] on each property.
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (IsPickup)
+        {
+            yield break;
+        }
+
+        (string? Value, string Name, string Message)[] requiredFields =
+        [
+            (AddressLine1, nameof(AddressLine1), "Address is required."),
+            (City, nameof(City), "City is required."),
+            (State, nameof(State), "State/region is required."),
+            (PostalCode, nameof(PostalCode), "Postal code is required."),
+            (Country, nameof(Country), "Country is required."),
+        ];
+
+        foreach (var (value, name, message) in requiredFields)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                yield return new ValidationResult(message, [name]);
+            }
+        }
+    }
 }

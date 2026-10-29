@@ -1,5 +1,7 @@
 @page "/admin/orders/{id:int}"
 @model GlimpsesOfGlory.Web.Pages.Admin.Orders.DetailsModel
+@using GlimpsesOfGlory.Abstractions.Enums
+@using GlimpsesOfGlory.Web.Helpers
 @{
     ViewData["Title"] = $"Admin - Order #{Model.Order.Id}";
 }
@@ -18,19 +20,29 @@
             <p>@Model.Order.Address.Email</p>
             <p class="text-sm text-gray-500">Placed @Model.Order.CreatedAt.ToString("MMMM d, yyyy")</p>
         </div>
-        <div>
-            <h3 class="font-semibold mb-1">Shipping address</h3>
-            <p>
-                @Model.Order.Address.FullName<br />
-                @Model.Order.Address.AddressLine1<br />
-                @if (!string.IsNullOrWhiteSpace(Model.Order.Address.AddressLine2))
-                {
-                    @Model.Order.Address.AddressLine2<text><br /></text>
-                }
-                @Model.Order.Address.City, @Model.Order.Address.State @Model.Order.Address.PostalCode<br />
-                @Model.Order.Address.Country
-            </p>
-        </div>
+        @if (Model.Order.FulfillmentMethod == FulfillmentMethod.Pickup)
+        {
+            <div>
+                <h3 class="font-semibold mb-1">Local pickup</h3>
+                <p>@Model.Order.Address.FullName</p>
+            </div>
+        }
+        else
+        {
+            <div>
+                <h3 class="font-semibold mb-1">Shipping address</h3>
+                <p>
+                    @Model.Order.Address.FullName<br />
+                    @Model.Order.Address.AddressLine1<br />
+                    @if (!string.IsNullOrWhiteSpace(Model.Order.Address.AddressLine2))
+                    {
+                        @Model.Order.Address.AddressLine2<text><br /></text>
+                    }
+                    @Model.Order.Address.City, @Model.Order.Address.State @Model.Order.Address.PostalCode<br />
+                    @Model.Order.Address.Country
+                </p>
+            </div>
+        }
     </div>
 
     <table class="w-full text-left border-collapse mb-4">
@@ -61,7 +73,7 @@
 
     <p class="text-right mb-6">
         Subtotal: @Model.Order.Subtotal.ToString("C")<br />
-        Shipping: @Model.Order.ShippingCost.ToString("C")<br />
+        @FulfillmentLabels.CostLabel(Model.Order.FulfillmentMethod): @Model.Order.ShippingCost.ToString("C")<br />
         <strong>Total: @Model.Order.Total.ToString("C")</strong>
     </p>
 

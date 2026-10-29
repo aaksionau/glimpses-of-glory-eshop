@@ -22,7 +22,7 @@ namespace GlimpsesOfGlory.Core.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("GlimpsesOfGlory.Core.Orders.Entities.Order", b =>
+            modelBuilder.Entity("GlimpsesOfGlory.Core.Entities.Order", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -36,6 +36,9 @@ namespace GlimpsesOfGlory.Core.Migrations
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("FulfillmentMethod")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("ShippingCost")
                         .HasPrecision(10, 2)
@@ -64,7 +67,7 @@ namespace GlimpsesOfGlory.Core.Migrations
                     b.ToTable("Orders");
                 });
 
-            modelBuilder.Entity("GlimpsesOfGlory.Core.Orders.Entities.OrderLine", b =>
+            modelBuilder.Entity("GlimpsesOfGlory.Core.Entities.OrderLine", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -102,7 +105,7 @@ namespace GlimpsesOfGlory.Core.Migrations
                     b.ToTable("OrderLines");
                 });
 
-            modelBuilder.Entity("GlimpsesOfGlory.Core.Orders.Entities.PendingCheckout", b =>
+            modelBuilder.Entity("GlimpsesOfGlory.Core.Entities.PendingCheckout", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -116,6 +119,9 @@ namespace GlimpsesOfGlory.Core.Migrations
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("FulfillmentMethod")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("ShippingCost")
                         .HasPrecision(10, 2)
@@ -137,7 +143,7 @@ namespace GlimpsesOfGlory.Core.Migrations
                     b.ToTable("PendingCheckouts");
                 });
 
-            modelBuilder.Entity("GlimpsesOfGlory.Core.Orders.Entities.PendingCheckoutLine", b =>
+            modelBuilder.Entity("GlimpsesOfGlory.Core.Entities.PendingCheckoutLine", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -175,7 +181,7 @@ namespace GlimpsesOfGlory.Core.Migrations
                     b.ToTable("PendingCheckoutLines");
                 });
 
-            modelBuilder.Entity("GlimpsesOfGlory.Core.Products.Entities.Product", b =>
+            modelBuilder.Entity("GlimpsesOfGlory.Core.Entities.Product", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -222,7 +228,7 @@ namespace GlimpsesOfGlory.Core.Migrations
                     b.ToTable("Products");
                 });
 
-            modelBuilder.Entity("GlimpsesOfGlory.Core.Products.Entities.ProductPhoto", b =>
+            modelBuilder.Entity("GlimpsesOfGlory.Core.Entities.ProductPhoto", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -247,7 +253,7 @@ namespace GlimpsesOfGlory.Core.Migrations
                     b.ToTable("ProductPhotos");
                 });
 
-            modelBuilder.Entity("GlimpsesOfGlory.Core.Shipping.Entities.ShippingTierSetting", b =>
+            modelBuilder.Entity("GlimpsesOfGlory.Core.Entities.ShippingTierSetting", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -281,26 +287,23 @@ namespace GlimpsesOfGlory.Core.Migrations
                         });
                 });
 
-            modelBuilder.Entity("GlimpsesOfGlory.Core.Orders.Entities.Order", b =>
+            modelBuilder.Entity("GlimpsesOfGlory.Core.Entities.Order", b =>
                 {
-                    b.OwnsOne("GlimpsesOfGlory.Core.Orders.ValueObjects.ShippingAddress", "ShippingAddress", b1 =>
+                    b.OwnsOne("GlimpsesOfGlory.Core.ValueObjects.ShippingAddress", "ShippingAddress", b1 =>
                         {
                             b1.Property<int>("OrderId")
                                 .HasColumnType("integer");
 
                             b1.Property<string>("AddressLine1")
-                                .IsRequired()
                                 .HasColumnType("text");
 
                             b1.Property<string>("AddressLine2")
                                 .HasColumnType("text");
 
                             b1.Property<string>("City")
-                                .IsRequired()
                                 .HasColumnType("text");
 
                             b1.Property<string>("Country")
-                                .IsRequired()
                                 .HasColumnType("text");
 
                             b1.Property<string>("FullName")
@@ -308,11 +311,9 @@ namespace GlimpsesOfGlory.Core.Migrations
                                 .HasColumnType("text");
 
                             b1.Property<string>("PostalCode")
-                                .IsRequired()
                                 .HasColumnType("text");
 
                             b1.Property<string>("State")
-                                .IsRequired()
                                 .HasColumnType("text");
 
                             b1.HasKey("OrderId");
@@ -327,35 +328,32 @@ namespace GlimpsesOfGlory.Core.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("GlimpsesOfGlory.Core.Orders.Entities.OrderLine", b =>
+            modelBuilder.Entity("GlimpsesOfGlory.Core.Entities.OrderLine", b =>
                 {
-                    b.HasOne("GlimpsesOfGlory.Core.Orders.Entities.Order", null)
+                    b.HasOne("GlimpsesOfGlory.Core.Entities.Order", null)
                         .WithMany("Lines")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("GlimpsesOfGlory.Core.Orders.Entities.PendingCheckout", b =>
+            modelBuilder.Entity("GlimpsesOfGlory.Core.Entities.PendingCheckout", b =>
                 {
-                    b.OwnsOne("GlimpsesOfGlory.Core.Orders.ValueObjects.ShippingAddress", "ShippingAddress", b1 =>
+                    b.OwnsOne("GlimpsesOfGlory.Core.ValueObjects.ShippingAddress", "ShippingAddress", b1 =>
                         {
                             b1.Property<int>("PendingCheckoutId")
                                 .HasColumnType("integer");
 
                             b1.Property<string>("AddressLine1")
-                                .IsRequired()
                                 .HasColumnType("text");
 
                             b1.Property<string>("AddressLine2")
                                 .HasColumnType("text");
 
                             b1.Property<string>("City")
-                                .IsRequired()
                                 .HasColumnType("text");
 
                             b1.Property<string>("Country")
-                                .IsRequired()
                                 .HasColumnType("text");
 
                             b1.Property<string>("FullName")
@@ -363,11 +361,9 @@ namespace GlimpsesOfGlory.Core.Migrations
                                 .HasColumnType("text");
 
                             b1.Property<string>("PostalCode")
-                                .IsRequired()
                                 .HasColumnType("text");
 
                             b1.Property<string>("State")
-                                .IsRequired()
                                 .HasColumnType("text");
 
                             b1.HasKey("PendingCheckoutId");
@@ -382,35 +378,35 @@ namespace GlimpsesOfGlory.Core.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("GlimpsesOfGlory.Core.Orders.Entities.PendingCheckoutLine", b =>
+            modelBuilder.Entity("GlimpsesOfGlory.Core.Entities.PendingCheckoutLine", b =>
                 {
-                    b.HasOne("GlimpsesOfGlory.Core.Orders.Entities.PendingCheckout", null)
+                    b.HasOne("GlimpsesOfGlory.Core.Entities.PendingCheckout", null)
                         .WithMany("Lines")
                         .HasForeignKey("PendingCheckoutId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("GlimpsesOfGlory.Core.Products.Entities.ProductPhoto", b =>
+            modelBuilder.Entity("GlimpsesOfGlory.Core.Entities.ProductPhoto", b =>
                 {
-                    b.HasOne("GlimpsesOfGlory.Core.Products.Entities.Product", null)
+                    b.HasOne("GlimpsesOfGlory.Core.Entities.Product", null)
                         .WithMany("Photos")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("GlimpsesOfGlory.Core.Orders.Entities.Order", b =>
+            modelBuilder.Entity("GlimpsesOfGlory.Core.Entities.Order", b =>
                 {
                     b.Navigation("Lines");
                 });
 
-            modelBuilder.Entity("GlimpsesOfGlory.Core.Orders.Entities.PendingCheckout", b =>
+            modelBuilder.Entity("GlimpsesOfGlory.Core.Entities.PendingCheckout", b =>
                 {
                     b.Navigation("Lines");
                 });
 
-            modelBuilder.Entity("GlimpsesOfGlory.Core.Products.Entities.Product", b =>
+            modelBuilder.Entity("GlimpsesOfGlory.Core.Entities.Product", b =>
                 {
                     b.Navigation("Photos");
                 });

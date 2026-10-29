@@ -33,7 +33,7 @@ public class PaymentModel(
         }
 
         var existingPaymentIntentId = checkoutSessionStore.GetPaymentIntentId();
-        var setup = await orderService.CreatePaymentIntentAsync(address.ToShippingAddressInfo(), existingPaymentIntentId, cancellationToken);
+        var setup = await orderService.CreatePaymentIntentAsync(address.FulfillmentMethod, address.ToShippingAddressInfo(), existingPaymentIntentId, cancellationToken);
 
         if (setup is null)
         {
