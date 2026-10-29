@@ -1,4 +1,5 @@
 using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Enums;
 
 namespace GlimpsesOfGlory.Abstractions.Services;
 
@@ -9,10 +10,10 @@ public interface IAdminOrderService
     Task<AdminOrderDetail?> GetOrderAsync(int id, CancellationToken cancellationToken);
 
     // Sends a shipping-notification email to the buyer on success.
-    Task<bool> MarkShippedAsync(int id, string? trackingNumber, CancellationToken cancellationToken);
+    Task<OrderUpdateResult> MarkShippedAsync(int id, string? trackingNumber, CancellationToken cancellationToken);
 
     // For cash orders, once the payment has been collected in person.
-    Task<bool> MarkPaidAsync(int id, CancellationToken cancellationToken);
+    Task<OrderUpdateResult> MarkPaidAsync(int id, CancellationToken cancellationToken);
 
-    Task<bool> MarkCancelledAsync(int id, CancellationToken cancellationToken);
+    Task<OrderUpdateResult> MarkCancelledAsync(int id, CancellationToken cancellationToken);
 }
