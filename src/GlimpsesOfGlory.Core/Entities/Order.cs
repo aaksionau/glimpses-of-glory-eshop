@@ -22,5 +22,10 @@ public sealed class Order : ICheckoutHeader
     // Null for cash orders, which never go through Stripe.
     public string? StripePaymentIntentId { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    // Stamped once by AdminOrderService when the order reaches each step; null for orders that
+    // never reached it, and for orders that reached it before these columns existed.
+    public DateTimeOffset? ShippedAt { get; set; }
+    public DateTimeOffset? PickedUpAt { get; set; }
+    public DateTimeOffset? CancelledAt { get; set; }
     public List<OrderLine> Lines { get; set; } = [];
 }

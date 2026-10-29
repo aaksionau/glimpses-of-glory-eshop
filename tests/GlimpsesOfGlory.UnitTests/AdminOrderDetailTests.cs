@@ -35,6 +35,10 @@ public class AdminOrderDetailTests
             Status: status,
             TrackingNumber: null,
             CreatedAt: new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero),
+            PaidAt: isPaid ? new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero) : null,
+            ShippedAt: null,
+            PickedUpAt: null,
+            CancelledAt: null,
             CanMarkShipped: status == OrderStatus.New,
             CanMarkPickedUp: status == OrderStatus.Shipped && fulfillmentMethod == FulfillmentMethod.Pickup,
             CanMarkPaid: !isPaid && status != OrderStatus.Cancelled,
@@ -150,6 +154,7 @@ public class AdminOrderDetailTests
         Assert.Matches("id=\"order-header-badges\"[^>]*hx-swap-oob=\"true\"", html);
         Assert.Matches("id=\"order-payment\"[^>]*hx-swap-oob=\"true\"", html);
         Assert.Matches("id=\"order-fulfillment\"[^>]*hx-swap-oob=\"true\"", html);
+        Assert.Matches("id=\"order-timeline\"[^>]*hx-swap-oob=\"true\"", html);
         var headerBadges = Regex.Match(html, "id=\"order-header-badges\".*?</div>", RegexOptions.Singleline).Value;
         Assert.Contains(">Paid<", headerBadges);
         Assert.Contains(">Picked up<", headerBadges);
@@ -166,6 +171,25 @@ public class AdminOrderDetailTests
 
         Assert.Contains("id=\"order-header-badges\"", html);
         Assert.DoesNotContain("hx-swap-oob", html);
+    }
+
+    [Fact]
+    public async Task Timeline_ShowsCompletedStepsWithTime_AndPendingStepsGreyedOut()
+    {
+        var order = Order(status: OrderStatus.Shipped, fulfillmentMethod: FulfillmentMethod.Pickup) with
+        {
+            ShippedAt = new DateTimeOffset(2026, 8, 2, 14, 30, 0, TimeSpan.Zero),
+        };
+        var model = new DetailsModel(new FakeAdminOrderService(order));
+        await model.OnGetAsync(42, CancellationToken.None);
+
+        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderTimeline.cshtml", model);
+
+        Assert.DoesNotContain("hx-swap-oob", html);
+        Assert.Matches("data-timeline-step=\"Ready for pickup\" data-complete=\"true\"", html);
+        Assert.Contains("August 2, 2026 at 14:30 UTC", html);
+        Assert.Matches("text-gray-400\" data-timeline-step=\"Picked up\" data-complete=\"false\"", html);
+        Assert.Contains("Pending", html);
     }
 
     // Runs the real MarkPaid handler, so the model is in the state its htmx response renders.
