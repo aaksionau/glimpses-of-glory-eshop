@@ -83,6 +83,41 @@ public class AdminOrderDetailTests
     }
 
     [Fact]
+    public void EveryOrderAction_HasAMatchingPageHandler()
+    {
+        // _OrderStatus posts to ?handler={action}, so each enum member must name an OnPost{Action}Async handler.
+        foreach (var action in Enum.GetValues<OrderAction>())
+        {
+            Assert.NotNull(typeof(DetailsModel).GetMethod($"OnPost{action}Async"));
+        }
+    }
+
+    [Theory]
+    [InlineData(OrderAction.MarkShipped, FulfillmentMethod.Shipping, "Mark shipped")]
+    [InlineData(OrderAction.MarkShipped, FulfillmentMethod.Pickup, "Mark ready for pickup")]
+    [InlineData(OrderAction.MarkPickedUp, FulfillmentMethod.Pickup, "Mark picked up")]
+    [InlineData(OrderAction.MarkPaid, FulfillmentMethod.Pickup, "Mark as paid")]
+    public void Label_NamesTheAction(OrderAction action, FulfillmentMethod fulfillmentMethod, string expected)
+    {
+        Assert.Equal(expected, OrderActions.Label(action, fulfillmentMethod));
+    }
+
+    [Fact]
+    public async Task MarkShipped_WithInvalidTrackingNumber_SavesNothing()
+    {
+        var service = new FakeAdminOrderService(Order()) { AfterUpdate = Order(status: OrderStatus.Shipped) };
+        var model = CreateModel(service);
+        model.ModelState.AddModelError(nameof(DetailsModel.TrackingNumber), "Too long");
+
+        var result = await model.OnPostMarkShippedAsync(42, CancellationToken.None);
+
+        var partial = Assert.IsType<PartialViewResult>(result);
+        Assert.Equal("_OrderStatus", partial.ViewName);
+        Assert.Equal(OrderStatus.New, model.Order.Status);
+        Assert.Equal(0, service.UpdateCount);
+    }
+
+    [Fact]
     public void ExpectedAvailability_FormatsTheDate()
     {
         Assert.Equal("Expected available Nov 3, 2026", PreorderNoteFormatter.ExpectedAvailability(new DateOnly(2026, 11, 3)));
@@ -137,7 +172,17 @@ public class AdminOrderDetailTests
     private static async Task<DetailsModel> RunMarkPaidHandlerAsync(AdminOrderDetail before, AdminOrderDetail after)
     {
         var service = new FakeAdminOrderService(before) { AfterUpdate = after };
-        var model = new DetailsModel(service)
+        var model = CreateModel(service);
+
+        var result = await model.OnPostMarkPaidAsync(before.Id, CancellationToken.None);
+
+        var partial = Assert.IsType<PartialViewResult>(result);
+        Assert.Equal("_OrderStatus", partial.ViewName);
+        return Assert.IsType<DetailsModel>(partial.Model);
+    }
+
+    private static DetailsModel CreateModel(IAdminOrderService service) =>
+        new(service)
         {
             // PageModel.Partial reads ViewData and metadata the framework normally supplies.
             MetadataProvider = new EmptyModelMetadataProvider(),
@@ -147,13 +192,6 @@ public class AdminOrderDetailTests
             },
         };
 
-        var result = await model.OnPostMarkPaidAsync(before.Id, CancellationToken.None);
-
-        var partial = Assert.IsType<PartialViewResult>(result);
-        Assert.Equal("_OrderStatus", partial.ViewName);
-        return Assert.IsType<DetailsModel>(partial.Model);
-    }
-
     private static Task<string> RenderAsync(string viewPath, DetailsModel model) =>
         RazorViewToStringRendererTests.CreateRenderer().RenderAsync(viewPath, model);
 
@@ -162,6 +200,8 @@ public class AdminOrderDetailTests
         public AdminOrderDetail? AfterUpdate { get; init; }
 
         private AdminOrderDetail current = order;
+
+        public int UpdateCount { get; private set; }
 
         public Task<IReadOnlyList<AdminOrderSummary>> GetAllOrdersAsync(CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<AdminOrderSummary>>([]);
@@ -179,6 +219,7 @@ public class AdminOrderDetailTests
 
         private Task<OrderUpdateResult> Update()
         {
+            UpdateCount++;
             current = AfterUpdate ?? current;
             return Task.FromResult(OrderUpdateResult.Updated);
         }

@@ -1,8 +1,10 @@
 using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Enums;
 
 namespace GlimpsesOfGlory.Web.Helpers;
 
-// The forward (non-cancel) steps the admin order page can offer.
+// The forward (non-cancel) steps the admin order page can offer. Member names double as the
+// DetailsModel page handler names (OnPost{Action}Async) - a unit test pins that.
 public enum OrderAction
 {
     MarkShipped,
@@ -19,6 +21,13 @@ public static class OrderActions
     public static OrderAction? Primary(AdminOrderDetail order) => Available(order).Cast<OrderAction?>().FirstOrDefault();
 
     public static IReadOnlyList<OrderAction> Secondary(AdminOrderDetail order) => Available(order).Skip(1).ToList();
+
+    public static string Label(OrderAction action, FulfillmentMethod fulfillmentMethod) => action switch
+    {
+        OrderAction.MarkShipped => $"Mark {FulfillmentLabels.ShippedStatus(fulfillmentMethod).ToLowerInvariant()}",
+        OrderAction.MarkPickedUp => "Mark picked up",
+        _ => "Mark as paid",
+    };
 
     private static IEnumerable<OrderAction> Available(AdminOrderDetail order)
     {

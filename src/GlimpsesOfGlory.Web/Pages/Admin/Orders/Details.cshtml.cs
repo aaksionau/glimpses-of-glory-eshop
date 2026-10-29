@@ -24,6 +24,9 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
     // (header badges, fulfillment and payment cards) are then sent as out-of-band swaps.
     public bool IsHtmxUpdate { get; private set; }
 
+    // The hx-swap-oob value for those fragments; null drops the attribute on a full page render.
+    public string? OutOfBandSwap => IsHtmxUpdate ? "true" : null;
+
     public async Task<IActionResult> OnGetAsync(int id, CancellationToken cancellationToken)
     {
         var order = await adminOrderService.GetOrderAsync(id, cancellationToken);
@@ -42,6 +45,20 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
     // along as out-of-band swaps so they stay in sync.
     public async Task<IActionResult> OnPostMarkShippedAsync(int id, CancellationToken cancellationToken)
     {
+        if (!ModelState.IsValid)
+        {
+            // Re-render with the validation message and the admin's input; nothing is saved.
+            var order = await adminOrderService.GetOrderAsync(id, cancellationToken);
+            if (order is null)
+            {
+                return NotFound();
+            }
+
+            Order = order;
+            IsHtmxUpdate = true;
+            return Partial("_OrderStatus", this);
+        }
+
         var result = await adminOrderService.MarkShippedAsync(id, TrackingNumber, cancellationToken);
 
         return await OrderStatusPartialAsync(

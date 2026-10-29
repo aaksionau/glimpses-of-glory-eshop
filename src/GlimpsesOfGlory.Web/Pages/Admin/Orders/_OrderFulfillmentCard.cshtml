@@ -2,7 +2,7 @@
 @using GlimpsesOfGlory.Abstractions.Enums
 
 @* Re-sent out-of-band after each htmx action: marking shipped can add a tracking number. *@
-<section id="order-fulfillment" class="rounded-lg border border-black/10 bg-white p-4" aria-labelledby="order-fulfillment-heading" hx-swap-oob="@(Model.IsHtmxUpdate ? "true" : null)">
+<section id="order-fulfillment" class="rounded-lg border border-black/10 bg-white p-4" aria-labelledby="order-fulfillment-heading" hx-swap-oob="@Model.OutOfBandSwap">
     @if (Model.Order.FulfillmentMethod == FulfillmentMethod.Pickup)
     {
         <h2 id="order-fulfillment-heading" class="font-semibold mb-2">Fulfillment: local pickup</h2>
