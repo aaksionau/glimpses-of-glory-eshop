@@ -3,15 +3,10 @@
 @using GlimpsesOfGlory.Abstractions.Enums
 @using GlimpsesOfGlory.Web.Helpers
 @{
-    ViewData["Title"] = "Admin - Orders";
+    ViewData["Title"] = "Orders";
 }
 
-<div class="py-5">
-    <h1 class="text-2xl font-bold mb-4">Admin dashboard</h1>
-    <partial name="/Pages/Admin/_AdminNav.cshtml" />
-
-    <h2 class="text-xl font-semibold mb-4">Orders</h2>
-
+<div>
     <div class="overflow-x-auto">
         @if (Model.Orders.Count == 0)
         {

@@ -205,4 +205,20 @@ public class RazorViewToStringRendererTests
 
         Assert.Contains("bring $25.00 in cash", html);
     }
+
+    [Fact]
+    public async Task RenderAsync_RendersAdminSidebar_HighlightingOnlyTheCurrentSection()
+    {
+        var renderer = CreateRenderer();
+
+        var html = await renderer.RenderAsync("~/Pages/Admin/_AdminSidebarNav.cshtml", AdminSection.Orders);
+
+        Assert.Contains("Dashboard", html);
+        Assert.Contains("Products", html);
+        Assert.Contains("Shipping rates", html);
+        Assert.Contains("Sign out", html);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(html, "aria-current=\"page\""));
+        Assert.Matches("aria-current=\"page\"[^>]*>Orders</a>", html);
+        Assert.DoesNotContain("Cart", html);
+    }
 }
