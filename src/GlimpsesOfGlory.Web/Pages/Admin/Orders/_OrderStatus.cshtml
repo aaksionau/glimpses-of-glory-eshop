@@ -1,92 +1,73 @@
 @model GlimpsesOfGlory.Web.Pages.Admin.Orders.DetailsModel
-@using GlimpsesOfGlory.Abstractions.Dtos
 @using GlimpsesOfGlory.Abstractions.Enums
 @using GlimpsesOfGlory.Web.Helpers
 @{
     var isPickup = Model.Order.FulfillmentMethod == FulfillmentMethod.Pickup;
+    var primary = OrderActions.Primary(Model.Order);
+    var secondary = OrderActions.Secondary(Model.Order);
+
+    const string PrimaryButton = "bg-black text-white hover:bg-black/80 px-4 py-2 rounded-lg font-semibold";
+    const string SecondaryButton = "border border-black/20 bg-white hover:bg-gray-50 px-4 py-2 rounded-lg font-semibold";
+
+    async Task RenderActionAsync(OrderAction action, bool isPrimary)
+    {
+        var label = OrderActions.Label(action, Model.Order.FulfillmentMethod);
+        <form hx-post="/admin/orders/@Model.Order.Id?handler=@action" hx-target="#order-status" hx-swap="outerHTML" asp-antiforgery="true" class="flex flex-col gap-2" data-order-action="@action" data-primary="@(isPrimary ? "true" : "false")">
+            @* Pickup orders have nothing to track. *@
+            @if (action == OrderAction.MarkShipped && !isPickup)
+            {
+                <label class="block">
+                    <span class="block mb-1 text-sm">Tracking number (optional)</span>
+                    <input asp-for="TrackingNumber" type="text" class="w-full border border-black/20 rounded px-3 py-2" />
+                    <span asp-validation-for="TrackingNumber" class="text-red-600 text-sm"></span>
+                </label>
+            }
+            <button type="submit" class="@(isPrimary ? PrimaryButton : SecondaryButton)">@label</button>
+        </form>
+    }
 }
 
-<div id="order-status" class="border border-black/10 rounded p-4">
+<section id="order-status" class="rounded-lg border border-black/10 bg-white p-4" aria-labelledby="order-actions-heading">
+    <h2 id="order-actions-heading" class="font-semibold mb-2">Actions</h2>
+
     @if (!string.IsNullOrEmpty(Model.StatusMessage))
     {
-        <p class="text-green-700 mb-4">@Model.StatusMessage</p>
+        <p class="text-green-700 mb-4" role="status">@Model.StatusMessage</p>
     }
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
         <p class="text-red-600 mb-4" role="alert">@Model.ErrorMessage</p>
     }
 
-    <p class="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span>Status:</span>
-        <partial name="_Badge" model="OrderBadges.Status(Model.Order.Status, Model.Order.FulfillmentMethod)" />
-        @if (isPickup)
-        {
-            <partial name="_Badge" model="OrderBadges.Pickup" />
-        }
-        @if (!string.IsNullOrWhiteSpace(Model.Order.TrackingNumber))
-        {
-            <span>&middot; Tracking: <strong>@Model.Order.TrackingNumber</strong></span>
-        }
-    </p>
-    <p class="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span>Payment:</span>
-        <partial name="_Badge" model="OrderBadges.Payment(Model.Order.IsPaid)" />
-        <span class="text-sm text-gray-500">@PaymentLabels.Status(Model.Order.PaymentMethod, Model.Order.IsPaid)</span>
-    </p>
-
-    @if (Model.Order.NeedsRefund)
+    @if (primary is { } primaryAction)
     {
-        <div class="border border-red-600 bg-red-50 rounded p-3 mb-4" role="alert">
-            <p class="font-semibold text-red-600">Refund required</p>
-            <p class="text-sm">
-                This paid card order was cancelled, but the payment isn't refunded automatically. Refund @Model.Order.Total.ToString("C") in Stripe.
-                @if (Model.Order.PaymentDashboardUrl is not null)
-                {
-                    <a href="@Model.Order.PaymentDashboardUrl" target="_blank" rel="noopener noreferrer" class="font-semibold underline">Open payment in Stripe</a>
-                }
-            </p>
-        </div>
-    }
-
-    @if (Model.Order.CanMarkShipped || Model.Order.CanMarkPickedUp || Model.Order.CanMarkPaid || Model.Order.CanMarkCancelled)
-    {
-        <div class="flex flex-wrap gap-4">
-            @if (Model.Order.CanMarkShipped)
+        <div class="flex flex-col gap-3">
+            @{ await RenderActionAsync(primaryAction, isPrimary: true); }
+            @foreach (var action in secondary)
             {
-                <form hx-post="/admin/orders/@Model.Order.Id?handler=MarkShipped" hx-target="#order-status" hx-swap="outerHTML" asp-antiforgery="true" class="flex flex-wrap items-end gap-2">
-                    @* Pickup orders have nothing to track. *@
-                    @if (!isPickup)
-                    {
-                        <label class="block">
-                            <span class="block mb-1 text-sm">Tracking number (optional)</span>
-                            <input asp-for="TrackingNumber" type="text" class="border border-black/20 rounded px-3 py-2" />
-                            <span asp-validation-for="TrackingNumber" class="text-red-600 text-sm"></span>
-                        </label>
-                    }
-                    <button type="submit" class="bg-black text-white px-4 py-2 rounded-lg font-semibold">Mark @FulfillmentLabels.ShippedStatus(Model.Order.FulfillmentMethod).ToLowerInvariant()</button>
-                </form>
-            }
-
-            @if (Model.Order.CanMarkPickedUp)
-            {
-                <form hx-post="/admin/orders/@Model.Order.Id?handler=MarkPickedUp" hx-target="#order-status" hx-swap="outerHTML" asp-antiforgery="true">
-                    <button type="submit" class="bg-black text-white px-4 py-2 rounded-lg font-semibold">Mark picked up</button>
-                </form>
-            }
-
-            @if (Model.Order.CanMarkPaid)
-            {
-                <form hx-post="/admin/orders/@Model.Order.Id?handler=MarkPaid" hx-target="#order-status" hx-swap="outerHTML" asp-antiforgery="true">
-                    <button type="submit" class="bg-black text-white px-4 py-2 rounded-lg font-semibold">Mark as paid</button>
-                </form>
-            }
-
-            @if (Model.Order.CanMarkCancelled)
-            {
-                <form hx-post="/admin/orders/@Model.Order.Id?handler=MarkCancelled" hx-target="#order-status" hx-swap="outerHTML" hx-confirm="Cancel order #@Model.Order.Id? This can't be undone." asp-antiforgery="true">
-                    <button type="submit" class="border border-red-600 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold">Cancel order</button>
-                </form>
+                await RenderActionAsync(action, isPrimary: false);
             }
         </div>
     }
-</div>
+    else if (!Model.Order.CanMarkCancelled)
+    {
+        <p class="text-sm text-gray-500">No further actions for this order.</p>
+    }
+
+    @if (Model.Order.CanMarkCancelled)
+    {
+        <form hx-post="/admin/orders/@Model.Order.Id?handler=MarkCancelled" hx-target="#order-status" hx-swap="outerHTML" hx-confirm="Cancel order #@Model.Order.Id? This can't be undone." asp-antiforgery="true" class="mt-4 border-t border-black/10 pt-3 text-right" data-order-action="MarkCancelled">
+            <button type="submit" class="min-h-11 px-2 text-sm font-semibold text-red-600 hover:text-red-700 hover:underline">Cancel order</button>
+        </form>
+    }
+</section>
+
+@if (Model.IsHtmxUpdate)
+{
+    @* Out-of-band swaps: keep the header badges and the other cards in sync with the new status.
+       Full paths: short names only resolve via the page's route, which the view-engine lookup for this
+       fragment (handler PartialViewResult, string rendering) can't rely on. *@
+    <partial name="/Pages/Admin/Orders/_OrderHeaderBadges.cshtml" model="Model" />
+    <partial name="/Pages/Admin/Orders/_OrderFulfillmentCard.cshtml" model="Model" />
+    <partial name="/Pages/Admin/Orders/_OrderPaymentCard.cshtml" model="Model" />
+}

@@ -30,7 +30,10 @@
     </aside>
     <div class="flex-1 min-w-0">
         <header class="border-b border-gray-200 bg-white px-4 py-4 md:px-8">
-            <h1 class="text-2xl font-semibold">@title</h1>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <h1 class="text-2xl font-semibold">@title</h1>
+                @await RenderSectionAsync("HeaderBadges", required: false)
+            </div>
         </header>
         <main class="px-4 py-6 md:px-8">
             @RenderBody()

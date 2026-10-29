@@ -27,7 +27,7 @@ public class RazorViewToStringRendererTests
     // Builds just enough of the ASP.NET Core Razor view engine (no Kestrel, no HTTP
     // request, no database) to render a .cshtml view to a string, mirroring how
     // Program.cs wires RazorViewToStringRenderer via AddRazorPages().
-    private static RazorViewToStringRenderer CreateRenderer()
+    internal static RazorViewToStringRenderer CreateRenderer()
     {
         var webAssembly = typeof(RazorViewToStringRenderer).Assembly;
 
