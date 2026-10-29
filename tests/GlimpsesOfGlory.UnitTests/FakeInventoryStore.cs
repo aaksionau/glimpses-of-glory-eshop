@@ -40,7 +40,7 @@ public sealed class FakeInventoryStore(IDictionary<int, int> initialStock) : IIn
     {
         lock (_gate)
         {
-            _stock[productId] = _stock.GetValueOrDefault(productId) + quantity;
+            AddStock(productId, quantity);
             return Task.CompletedTask;
         }
     }
@@ -51,7 +51,7 @@ public sealed class FakeInventoryStore(IDictionary<int, int> initialStock) : IIn
         {
             if (_received.Contains(productId))
             {
-                _stock[productId] = _stock.GetValueOrDefault(productId) + quantity;
+                AddStock(productId, quantity);
             }
             else
             {
@@ -72,6 +72,10 @@ public sealed class FakeInventoryStore(IDictionary<int, int> initialStock) : IIn
             _received.Add(productId);
         }
     }
+
+    // Caller must hold _gate.
+    private void AddStock(int productId, int quantity) =>
+        _stock[productId] = _stock.GetValueOrDefault(productId) + quantity;
 
     public int GetStock(int productId) => _stock[productId];
 
