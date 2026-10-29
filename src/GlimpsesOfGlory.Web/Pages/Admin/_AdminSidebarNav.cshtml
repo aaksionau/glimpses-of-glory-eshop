@@ -1,0 +1,17 @@
+@model GlimpsesOfGlory.Web.Helpers.AdminSection
+@using GlimpsesOfGlory.Web.Helpers
+@{
+    // A partial: never wrapped in the admin layout, even when rendered on its own.
+    Layout = null;
+}
+@* Plain hrefs (not asp-page) so the partial renders without routing, e.g. in tests. *@
+<nav aria-label="Admin" class="flex flex-col gap-1 text-sm">
+    @foreach (var link in AdminSections.Links)
+    {
+        var isCurrent = link.Section == Model;
+        <a href="@link.Href"
+           aria-current="@(isCurrent ? "page" : null)"
+           class="rounded-md px-3 py-2 font-medium transition-colors @(isCurrent ? "bg-white/10 text-white" : "text-gray-300 hover:bg-white/5 hover:text-white")">@link.Label</a>
+    }
+    <a href="/admin/logout" class="mt-4 rounded-md border border-white/20 px-3 py-2 font-medium text-gray-300 hover:bg-white/5 hover:text-white">Sign out</a>
+</nav>

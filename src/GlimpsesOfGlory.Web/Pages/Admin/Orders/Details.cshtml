@@ -3,16 +3,11 @@
 @using GlimpsesOfGlory.Abstractions.Enums
 @using GlimpsesOfGlory.Web.Helpers
 @{
-    ViewData["Title"] = $"Admin - Order #{Model.Order.Id}";
+    ViewData["Title"] = $"Order #{Model.Order.Id}";
 }
 
-<div class="py-5 max-w-2xl">
-    <h1 class="text-2xl font-bold mb-4">Admin dashboard</h1>
-    <partial name="/Pages/Admin/_AdminNav.cshtml" />
-
-    <a asp-page="/Admin/Orders/Index" class="text-sm hover:underline">&larr; Back to orders</a>
-
-    <h2 class="text-xl font-semibold my-4">Order #@Model.Order.Id</h2>
+<div class="max-w-2xl">
+    <a asp-page="/Admin/Orders/Index" class="inline-block mb-4 text-sm hover:underline">&larr; Back to orders</a>
 
     <div class="grid gap-4 sm:grid-cols-2 mb-6">
         <div>
