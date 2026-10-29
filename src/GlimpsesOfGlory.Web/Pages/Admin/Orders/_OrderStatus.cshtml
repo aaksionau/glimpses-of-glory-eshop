@@ -11,34 +11,25 @@
 
     async Task RenderActionAsync(OrderAction action, bool isPrimary)
     {
-        var buttonClass = isPrimary ? PrimaryButton : SecondaryButton;
-        switch (action)
+        // OrderAction names match the page handler names (OnPost{Action}Async).
+        var label = action switch
         {
-            case OrderAction.MarkShipped:
-                <form hx-post="/admin/orders/@Model.Order.Id?handler=MarkShipped" hx-target="#order-status" hx-swap="outerHTML" asp-antiforgery="true" class="flex flex-col gap-2" data-order-action="MarkShipped" data-primary="@isPrimary.ToString().ToLowerInvariant()">
-                    @* Pickup orders have nothing to track. *@
-                    @if (!isPickup)
-                    {
-                        <label class="block">
-                            <span class="block mb-1 text-sm">Tracking number (optional)</span>
-                            <input asp-for="TrackingNumber" type="text" class="w-full border border-black/20 rounded px-3 py-2" />
-                            <span asp-validation-for="TrackingNumber" class="text-red-600 text-sm"></span>
-                        </label>
-                    }
-                    <button type="submit" class="@buttonClass">Mark @FulfillmentLabels.ShippedStatus(Model.Order.FulfillmentMethod).ToLowerInvariant()</button>
-                </form>
-                break;
-            case OrderAction.MarkPickedUp:
-                <form hx-post="/admin/orders/@Model.Order.Id?handler=MarkPickedUp" hx-target="#order-status" hx-swap="outerHTML" asp-antiforgery="true" class="flex flex-col" data-order-action="MarkPickedUp" data-primary="@isPrimary.ToString().ToLowerInvariant()">
-                    <button type="submit" class="@buttonClass">Mark picked up</button>
-                </form>
-                break;
-            case OrderAction.MarkPaid:
-                <form hx-post="/admin/orders/@Model.Order.Id?handler=MarkPaid" hx-target="#order-status" hx-swap="outerHTML" asp-antiforgery="true" class="flex flex-col" data-order-action="MarkPaid" data-primary="@isPrimary.ToString().ToLowerInvariant()">
-                    <button type="submit" class="@buttonClass">Mark as paid</button>
-                </form>
-                break;
-        }
+            OrderAction.MarkShipped => $"Mark {FulfillmentLabels.ShippedStatus(Model.Order.FulfillmentMethod).ToLowerInvariant()}",
+            OrderAction.MarkPickedUp => "Mark picked up",
+            _ => "Mark as paid",
+        };
+        <form hx-post="/admin/orders/@Model.Order.Id?handler=@action" hx-target="#order-status" hx-swap="outerHTML" asp-antiforgery="true" class="flex flex-col gap-2" data-order-action="@action" data-primary="@(isPrimary ? "true" : "false")">
+            @* Pickup orders have nothing to track. *@
+            @if (action == OrderAction.MarkShipped && !isPickup)
+            {
+                <label class="block">
+                    <span class="block mb-1 text-sm">Tracking number (optional)</span>
+                    <input asp-for="TrackingNumber" type="text" class="w-full border border-black/20 rounded px-3 py-2" />
+                    <span asp-validation-for="TrackingNumber" class="text-red-600 text-sm"></span>
+                </label>
+            }
+            <button type="submit" class="@(isPrimary ? PrimaryButton : SecondaryButton)">@label</button>
+        </form>
     }
 }
 
