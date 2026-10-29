@@ -3,6 +3,7 @@ using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Core.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Logging;
 
 namespace GlimpsesOfGlory.Core.Services;
@@ -37,20 +38,35 @@ public sealed class AdminOrderService(AppDbContext db, IEmailSender emailSender,
         return order is null ? null : ToDetail(order);
     }
 
-    public async Task<bool> MarkShippedAsync(int id, string? trackingNumber, CancellationToken cancellationToken)
+    public async Task<OrderUpdateResult> MarkShippedAsync(int id, string? trackingNumber, CancellationToken cancellationToken)
     {
+        // Loaded up front because the shipping email needs the full order and its lines.
         var order = await db.Orders
+            .AsNoTracking()
             .Include(o => o.Lines)
             .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
         if (order is null)
         {
-            return false;
+            return OrderUpdateResult.NotFound;
+        }
+        if (!OrderTransitionPolicy.CanMarkShipped(order.Status))
+        {
+            return OrderUpdateResult.InvalidTransition;
+        }
+
+        // Guarded on the status we just checked, so a double-click (or two admins at once)
+        // only ships - and emails the buyer - once.
+        var tracking = string.IsNullOrWhiteSpace(trackingNumber) ? null : trackingNumber;
+        var result = await UpdateIfStatusAsync(id, order.Status, setters => setters
+            .SetProperty(o => o.Status, OrderStatus.Shipped)
+            .SetProperty(o => o.TrackingNumber, tracking), cancellationToken);
+        if (result != OrderUpdateResult.Updated)
+        {
+            return result;
         }
 
         order.Status = OrderStatus.Shipped;
-        order.TrackingNumber = string.IsNullOrWhiteSpace(trackingNumber) ? null : trackingNumber;
-        await db.SaveChangesAsync(cancellationToken);
-
+        order.TrackingNumber = tracking;
         try
         {
             await emailSender.SendShippedNotificationAsync(ToShippedView(order), cancellationToken);
@@ -62,26 +78,57 @@ public sealed class AdminOrderService(AppDbContext db, IEmailSender emailSender,
             logger.LogError(ex, "Failed to send shipping-notification email for order {OrderId}", order.Id);
         }
 
-        return true;
+        return OrderUpdateResult.Updated;
     }
 
-    public async Task<bool> MarkPaidAsync(int id, CancellationToken cancellationToken)
+    public async Task<OrderUpdateResult> MarkPaidAsync(int id, CancellationToken cancellationToken)
     {
-        // Only stamps the first time, so a repeat click doesn't move the recorded payment date.
-        var rows = await db.Orders
-            .Where(o => o.Id == id)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(o => o.PaidAt, o => o.PaidAt ?? DateTimeOffset.UtcNow), cancellationToken);
+        var state = await GetStateAsync(id, cancellationToken);
+        if (state is null)
+        {
+            return OrderUpdateResult.NotFound;
+        }
+        if (!OrderTransitionPolicy.CanMarkPaid(state.Status, state.IsPaid))
+        {
+            return OrderUpdateResult.InvalidTransition;
+        }
 
-        return rows > 0;
+        // Coalesced so a concurrent repeat click doesn't move the recorded payment date.
+        return await UpdateIfStatusAsync(id, state.Status, setters => setters
+            .SetProperty(o => o.PaidAt, o => o.PaidAt ?? DateTimeOffset.UtcNow), cancellationToken);
     }
 
-    public async Task<bool> MarkCancelledAsync(int id, CancellationToken cancellationToken)
+    public async Task<OrderUpdateResult> MarkCancelledAsync(int id, CancellationToken cancellationToken)
+    {
+        var state = await GetStateAsync(id, cancellationToken);
+        if (state is null)
+        {
+            return OrderUpdateResult.NotFound;
+        }
+        if (!OrderTransitionPolicy.CanMarkCancelled(state.Status))
+        {
+            return OrderUpdateResult.InvalidTransition;
+        }
+
+        return await UpdateIfStatusAsync(id, state.Status, setters => setters
+            .SetProperty(o => o.Status, OrderStatus.Cancelled), cancellationToken);
+    }
+
+    private Task<OrderState?> GetStateAsync(int id, CancellationToken cancellationToken) =>
+        db.Orders
+            .Where(o => o.Id == id)
+            .Select(o => new OrderState(o.Status, o.PaidAt != null))
+            .FirstOrDefaultAsync(cancellationToken);
+
+    // Only applies if the order is still in the status the caller checked the policy against,
+    // so a concurrent change (another tab, another admin) can't be overridden.
+    private async Task<OrderUpdateResult> UpdateIfStatusAsync(int id, OrderStatus expectedStatus, Action<UpdateSettersBuilder<Order>> setters, CancellationToken cancellationToken)
     {
         var rows = await db.Orders
-            .Where(o => o.Id == id)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(o => o.Status, OrderStatus.Cancelled), cancellationToken);
+            .Where(o => o.Id == id && o.Status == expectedStatus)
+            .ExecuteUpdateAsync(setters, cancellationToken);
 
-        return rows > 0;
+        return rows > 0 ? OrderUpdateResult.Updated : OrderUpdateResult.InvalidTransition;
     }
 
     private static AdminOrderDetail ToDetail(Order order) => new(
@@ -96,7 +143,10 @@ public sealed class AdminOrderService(AppDbContext db, IEmailSender emailSender,
         order.Total,
         order.Status,
         order.TrackingNumber,
-        order.CreatedAt);
+        order.CreatedAt,
+        OrderTransitionPolicy.CanMarkShipped(order.Status),
+        OrderTransitionPolicy.CanMarkPaid(order.Status, order.IsPaid),
+        OrderTransitionPolicy.CanMarkCancelled(order.Status));
 
     private static OrderShippedView ToShippedView(Order order) => new(
         order.Id,
@@ -106,4 +156,6 @@ public sealed class AdminOrderService(AppDbContext db, IEmailSender emailSender,
         order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity, l.IsPreorder, l.ExpectedAvailabilityDate)).ToList(),
         order.Total,
         order.TrackingNumber);
+
+    private sealed record OrderState(OrderStatus Status, bool IsPaid);
 }

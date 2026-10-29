@@ -14,4 +14,7 @@ public sealed record AdminOrderDetail(
     decimal Total,
     OrderStatus Status,
     string? TrackingNumber,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    bool CanMarkShipped,
+    bool CanMarkPaid,
+    bool CanMarkCancelled);
