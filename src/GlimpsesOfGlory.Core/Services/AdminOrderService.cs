@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace GlimpsesOfGlory.Core.Services;
 
-public sealed class AdminOrderService(AppDbContext db, IEmailSender emailSender, ILogger<AdminOrderService> logger) : IAdminOrderService
+public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventoryStore, IEmailSender emailSender, ILogger<AdminOrderService> logger) : IAdminOrderService
 {
     public async Task<IReadOnlyList<AdminOrderSummary>> GetAllOrdersAsync(CancellationToken cancellationToken)
     {
@@ -110,8 +110,26 @@ public sealed class AdminOrderService(AppDbContext db, IEmailSender emailSender,
             return OrderUpdateResult.InvalidTransition;
         }
 
-        return await UpdateIfStatusAsync(id, state.Status, setters => setters
+        // The status guard and the restock commit together, so a concurrent repeat click that
+        // loses the guard can't restock a second time, and a failed restock leaves the order New.
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        var result = await UpdateIfStatusAsync(id, state.Status, setters => setters
             .SetProperty(o => o.Status, OrderStatus.Cancelled), cancellationToken);
+        if (result != OrderUpdateResult.Updated)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return result;
+        }
+
+        var lines = await db.OrderLines
+            .AsNoTracking()
+            .Where(l => l.OrderId == id)
+            .ToListAsync(cancellationToken);
+        await CancelledOrderRestocker.RestockAsync(inventoryStore, lines, cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
+        return OrderUpdateResult.Updated;
     }
 
     private Task<OrderState?> GetStateAsync(int id, CancellationToken cancellationToken) =>
