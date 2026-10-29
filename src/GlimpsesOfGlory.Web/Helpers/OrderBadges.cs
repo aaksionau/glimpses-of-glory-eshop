@@ -33,5 +33,5 @@ public static class OrderBadges
 
     public static Badge Pickup { get; } = Tag("Pickup");
 
-    public static Badge Tag(string text) => new(text, Neutral);
+    private static Badge Tag(string text) => new(text, Neutral);
 }

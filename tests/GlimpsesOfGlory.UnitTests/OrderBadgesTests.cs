@@ -44,7 +44,7 @@ public class OrderBadgesTests
     {
         Assert.Equal("Preorder", OrderBadges.Preorder.Text);
         Assert.Equal("Pickup", OrderBadges.Pickup.Text);
-        Assert.Equal(OrderBadges.Tag("x").CssClass, OrderBadges.Preorder.CssClass);
-        Assert.Equal(OrderBadges.Tag("x").CssClass, OrderBadges.Pickup.CssClass);
+        Assert.Equal(OrderBadges.Preorder.CssClass, OrderBadges.Pickup.CssClass);
+        Assert.Contains("bg-white", OrderBadges.Preorder.CssClass);
     }
 }
