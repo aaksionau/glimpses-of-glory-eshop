@@ -26,30 +26,10 @@ public sealed class OrderService(
             return null;
         }
 
-        var slugs = cart.Lines.Select(l => l.ProductSlug).ToList();
-        var products = await dbContext.Products
-            .Where(p => slugs.Contains(p.Slug))
-            .ToDictionaryAsync(p => p.Slug, cancellationToken);
-
-        // Re-derive prices/stock from the DB rather than trusting the session-cached
-        // cart, since that's what the shopper is actually about to be charged.
-        var lines = new List<PendingCheckoutLine>();
-        foreach (var line in cart.Lines)
+        var lines = await BuildCheckoutLinesAsync(cart, cancellationToken);
+        if (lines is null)
         {
-            if (!products.TryGetValue(line.ProductSlug, out var product) || !product.CanFulfill(line.Quantity))
-            {
-                return null;
-            }
-
-            lines.Add(new PendingCheckoutLine
-            {
-                ProductId = product.Id,
-                ProductName = product.Name,
-                UnitPrice = product.Price,
-                Quantity = line.Quantity,
-                IsPreorder = product.IsPreorder,
-                ExpectedAvailabilityDate = product.ExpectedAvailabilityDate,
-            });
+            return null;
         }
 
         // Shipping only depends on item quantity (and fulfillment method), which the
@@ -125,22 +105,13 @@ public sealed class OrderService(
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
-        foreach (var line in pendingCheckout.Lines)
+        if (!await TryReserveStockAsync(pendingCheckout.Lines, cancellationToken))
         {
-            if (line.IsPreorder)
-            {
-                await inventoryStore.ReservePreorderAsync(line.ProductId, line.Quantity, cancellationToken);
-                continue;
-            }
-
-            if (!await inventoryStore.TryReserveStockAsync(line.ProductId, line.Quantity, cancellationToken))
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                // Payment succeeded but stock ran out before confirmation - only possible if stock
-                // changed between PaymentIntent creation and webhook delivery. The order is
-                // intentionally left uncreated here; this edge case needs manual follow-up (refund).
-                return;
-            }
+            await transaction.RollbackAsync(cancellationToken);
+            // Payment succeeded but stock ran out before confirmation - only possible if stock
+            // changed between PaymentIntent creation and webhook delivery. The order is
+            // intentionally left uncreated here; this edge case needs manual follow-up (refund).
+            return;
         }
 
         var order = new Order
@@ -150,16 +121,10 @@ public sealed class OrderService(
             ShippingAddress = pendingCheckout.ShippingAddress.Clone(),
             Subtotal = pendingCheckout.Subtotal,
             ShippingCost = pendingCheckout.ShippingCost,
+            PaymentMethod = PaymentMethod.Card,
+            PaidAt = DateTimeOffset.UtcNow,
             StripePaymentIntentId = pendingCheckout.StripePaymentIntentId,
-            Lines = pendingCheckout.Lines.Select(l => new OrderLine
-            {
-                ProductId = l.ProductId,
-                ProductName = l.ProductName,
-                UnitPrice = l.UnitPrice,
-                Quantity = l.Quantity,
-                IsPreorder = l.IsPreorder,
-                ExpectedAvailabilityDate = l.ExpectedAvailabilityDate,
-            }).ToList(),
+            Lines = pendingCheckout.Lines.Select(ToOrderLine).ToList(),
         };
         dbContext.Orders.Add(order);
         dbContext.PendingCheckouts.Remove(pendingCheckout);
@@ -179,20 +144,52 @@ public sealed class OrderService(
 
         await transaction.CommitAsync(cancellationToken);
 
-        var confirmation = ToConfirmationView(order);
+        // A failed email mustn't fail the webhook: Stripe would retry, but the idempotency
+        // check above means the retry would just no-op and never resend the email anyway.
+        await SendConfirmationEmailAsync(order, cancellationToken);
+    }
 
-        try
+    public async Task<int?> PlaceCashOrderAsync(ShippingAddressInfo address, CancellationToken cancellationToken)
+    {
+        var cart = await cartService.GetSummaryAsync(cancellationToken);
+        if (cart.Lines.Count == 0)
         {
-            await emailSender.SendOrderConfirmationAsync(confirmation, cancellationToken);
+            return null;
         }
-        catch (Exception ex)
+
+        var lines = await BuildCheckoutLinesAsync(cart, cancellationToken);
+        if (lines is null)
         {
-            // The order is already committed and stock already decremented - a failed
-            // confirmation email shouldn't fail the webhook (Stripe would retry, but the
-            // idempotency check above means the retry would just no-op and never resend
-            // the email anyway). Log for manual follow-up instead.
-            logger.LogError(ex, "Failed to send order confirmation email for order {OrderId}", order.Id);
+            return null;
         }
+
+        // Cash is only offered for local pickup.
+        var shippingCost = await cartService.GetShippingCostAsync(FulfillmentMethod.Pickup, cancellationToken);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        if (!await TryReserveStockAsync(lines, cancellationToken))
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return null;
+        }
+
+        var order = new Order
+        {
+            Email = address.Email,
+            FulfillmentMethod = FulfillmentMethod.Pickup,
+            ShippingAddress = ShippingAddress.FromInfo(address),
+            Subtotal = lines.Sum(l => l.UnitPrice * l.Quantity),
+            ShippingCost = shippingCost,
+            PaymentMethod = PaymentMethod.Cash,
+            Lines = lines.Select(ToOrderLine).ToList(),
+        };
+        dbContext.Orders.Add(order);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        await SendConfirmationEmailAsync(order, cancellationToken);
+        return order.Id;
     }
 
     public async Task<OrderConfirmationView?> GetOrderConfirmationAsync(string paymentIntentId, CancellationToken cancellationToken)
@@ -200,17 +197,99 @@ public sealed class OrderService(
         var order = await dbContext.Orders
             .Include(o => o.Lines)
             .FirstOrDefaultAsync(o => o.StripePaymentIntentId == paymentIntentId, cancellationToken);
-        if (order is null)
+        return order is null ? null : ToConfirmationView(order);
+    }
+
+    public async Task<OrderConfirmationView?> GetOrderConfirmationAsync(int orderId, CancellationToken cancellationToken)
+    {
+        var order = await dbContext.Orders
+            .Include(o => o.Lines)
+            .FirstOrDefaultAsync(o => o.Id == orderId, cancellationToken);
+
+        return order is null ? null : ToConfirmationView(order);
+    }
+
+    // Re-derives prices/stock from the DB rather than trusting the session-cached cart,
+    // since that's what the shopper is actually about to be charged. Returns null when a
+    // product is gone or can no longer fulfil the requested quantity.
+    private async Task<List<PendingCheckoutLine>?> BuildCheckoutLinesAsync(CartSummary cart, CancellationToken cancellationToken)
+    {
+        var slugs = cart.Lines.Select(l => l.ProductSlug).ToList();
+        var products = await dbContext.Products
+            .Where(p => slugs.Contains(p.Slug))
+            .ToDictionaryAsync(p => p.Slug, cancellationToken);
+
+        var lines = new List<PendingCheckoutLine>();
+        foreach (var line in cart.Lines)
         {
-            return null;
+            if (!products.TryGetValue(line.ProductSlug, out var product) || !product.CanFulfill(line.Quantity))
+            {
+                return null;
+            }
+
+            lines.Add(new PendingCheckoutLine
+            {
+                ProductId = product.Id,
+                ProductName = product.Name,
+                UnitPrice = product.Price,
+                Quantity = line.Quantity,
+                IsPreorder = product.IsPreorder,
+                ExpectedAvailabilityDate = product.ExpectedAvailabilityDate,
+            });
         }
 
-        return ToConfirmationView(order);
+        return lines;
     }
+
+    // Must run inside a transaction - on false the caller rolls back so the lines
+    // already reserved don't stand.
+    private async Task<bool> TryReserveStockAsync(IEnumerable<ICheckoutLine> lines, CancellationToken cancellationToken)
+    {
+        foreach (var line in lines)
+        {
+            if (line.IsPreorder)
+            {
+                await inventoryStore.ReservePreorderAsync(line.ProductId, line.Quantity, cancellationToken);
+                continue;
+            }
+
+            if (!await inventoryStore.TryReserveStockAsync(line.ProductId, line.Quantity, cancellationToken))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private async Task SendConfirmationEmailAsync(Order order, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await emailSender.SendOrderConfirmationAsync(ToConfirmationView(order), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            // The order is already committed and stock already decremented - a failed
+            // confirmation email shouldn't undo it. Log for manual follow-up instead.
+            logger.LogError(ex, "Failed to send order confirmation email for order {OrderId}", order.Id);
+        }
+    }
+
+    private static OrderLine ToOrderLine(ICheckoutLine line) => new()
+    {
+        ProductId = line.ProductId,
+        ProductName = line.ProductName,
+        UnitPrice = line.UnitPrice,
+        Quantity = line.Quantity,
+        IsPreorder = line.IsPreorder,
+        ExpectedAvailabilityDate = line.ExpectedAvailabilityDate,
+    };
 
     private static OrderConfirmationView ToConfirmationView(Order order) => new(
         order.Id,
         order.FulfillmentMethod,
+        order.PaymentMethod,
         order.ShippingAddress.ToInfo(order.Email),
         order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity, l.IsPreorder, l.ExpectedAvailabilityDate)).ToList(),
         order.Subtotal,

@@ -18,9 +18,22 @@ public class ConfirmationModel(IOrderService orderService, ICartService cartServ
 
     public async Task<IActionResult> OnGetAsync(
         [FromQuery(Name = "payment_intent")] string? paymentIntent,
+        [FromQuery(Name = "order")] int? orderId,
         int attempt,
         CancellationToken cancellationToken)
     {
+        // Cash orders: placed synchronously on the review page, so there's nothing to poll for.
+        if (orderId is not null)
+        {
+            if (checkoutSessionStore.GetPlacedOrderId() != orderId)
+            {
+                return RedirectToPage("/Cart/Index");
+            }
+
+            Order = await orderService.GetOrderConfirmationAsync(orderId.Value, cancellationToken);
+            return Order is null ? RedirectToPage("/Cart/Index") : Page();
+        }
+
         if (string.IsNullOrEmpty(paymentIntent))
         {
             return RedirectToPage("/Cart/Index");

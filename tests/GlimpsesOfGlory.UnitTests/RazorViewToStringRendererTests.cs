@@ -64,6 +64,7 @@ public class RazorViewToStringRendererTests
         var order = new OrderConfirmationView(
             OrderId: 42,
             FulfillmentMethod: FulfillmentMethod.Shipping,
+            PaymentMethod: PaymentMethod.Card,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
             Subtotal: 25.00m,
@@ -87,6 +88,7 @@ public class RazorViewToStringRendererTests
         var order = new OrderConfirmationView(
             OrderId: 44,
             FulfillmentMethod: FulfillmentMethod.Pickup,
+            PaymentMethod: PaymentMethod.Card,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
             Subtotal: 25.00m,
@@ -111,6 +113,8 @@ public class RazorViewToStringRendererTests
         var order = new OrderShippedView(
             OrderId: 42,
             FulfillmentMethod: FulfillmentMethod.Shipping,
+            PaymentMethod: PaymentMethod.Card,
+            IsPaid: true,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
             Total: 30.00m,
@@ -132,6 +136,8 @@ public class RazorViewToStringRendererTests
         var order = new OrderShippedView(
             OrderId: 43,
             FulfillmentMethod: FulfillmentMethod.Shipping,
+            PaymentMethod: PaymentMethod.Card,
+            IsPaid: true,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 1, false, null)],
             Total: 17.50m,
@@ -150,6 +156,8 @@ public class RazorViewToStringRendererTests
         var order = new OrderShippedView(
             OrderId: 44,
             FulfillmentMethod: FulfillmentMethod.Pickup,
+            PaymentMethod: PaymentMethod.Card,
+            IsPaid: true,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
             Total: 25.00m,
@@ -160,5 +168,45 @@ public class RazorViewToStringRendererTests
         Assert.Contains("ready for pickup", html);
         Assert.DoesNotContain("on its way", html);
         Assert.DoesNotContain("Shipping to", html);
+        Assert.DoesNotContain("in cash", html);
+    }
+
+    [Fact]
+    public async Task RenderAsync_RendersOrderShippedTemplate_ForUnpaidCashOrder_AsksForCash()
+    {
+        var renderer = CreateRenderer();
+        var order = new OrderShippedView(
+            OrderId: 45,
+            FulfillmentMethod: FulfillmentMethod.Pickup,
+            PaymentMethod: PaymentMethod.Cash,
+            IsPaid: false,
+            Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null),
+            Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
+            Total: 25.00m,
+            TrackingNumber: null);
+
+        var html = await renderer.RenderAsync("~/Emails/OrderShipped.cshtml", order);
+
+        Assert.Contains("bring $25.00 in cash", html);
+    }
+
+    [Fact]
+    public async Task RenderAsync_RendersOrderConfirmationTemplate_ForCashOrder_AsksForCash()
+    {
+        var renderer = CreateRenderer();
+        var order = new OrderConfirmationView(
+            OrderId: 46,
+            FulfillmentMethod: FulfillmentMethod.Pickup,
+            PaymentMethod: PaymentMethod.Cash,
+            Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null),
+            Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
+            Subtotal: 25.00m,
+            ShippingCost: 0m,
+            Total: 25.00m,
+            CreatedAt: new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero));
+
+        var html = await renderer.RenderAsync("~/Emails/OrderConfirmation.cshtml", order);
+
+        Assert.Contains("bring $25.00 in cash", html);
     }
 }

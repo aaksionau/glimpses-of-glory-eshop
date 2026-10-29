@@ -40,6 +40,12 @@ namespace GlimpsesOfGlory.Core.Migrations
                     b.Property<int>("FulfillmentMethod")
                         .HasColumnType("integer");
 
+                    b.Property<DateTimeOffset?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PaymentMethod")
+                        .HasColumnType("integer");
+
                     b.Property<decimal>("ShippingCost")
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
@@ -48,7 +54,6 @@ namespace GlimpsesOfGlory.Core.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("StripePaymentIntentId")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<decimal>("Subtotal")

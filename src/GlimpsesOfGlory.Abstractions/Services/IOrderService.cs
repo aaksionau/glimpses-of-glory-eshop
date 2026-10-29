@@ -16,5 +16,12 @@ public interface IOrderService
     // for the same PaymentIntent (e.g. duplicate webhook delivery).
     Task ConfirmPaymentAsync(string paymentIntentId, CancellationToken cancellationToken);
 
+    // Places a pay-cash-at-pickup order straight away (no PaymentIntent/webhook round trip):
+    // reserves stock, persists the Order as unpaid, and emails the confirmation. Returns the
+    // new order's id, or null when the cart is empty or a line item no longer has enough stock.
+    Task<int?> PlaceCashOrderAsync(ShippingAddressInfo address, CancellationToken cancellationToken);
+
     Task<OrderConfirmationView?> GetOrderConfirmationAsync(string paymentIntentId, CancellationToken cancellationToken);
+
+    Task<OrderConfirmationView?> GetOrderConfirmationAsync(int orderId, CancellationToken cancellationToken);
 }

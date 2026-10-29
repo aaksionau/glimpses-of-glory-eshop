@@ -14,7 +14,13 @@ public sealed class Order : ICheckoutHeader
     public decimal Total => Subtotal + ShippingCost;
     public OrderStatus Status { get; set; } = OrderStatus.New;
     public string? TrackingNumber { get; set; }
-    public required string StripePaymentIntentId { get; set; }
+    public PaymentMethod PaymentMethod { get; set; }
+    // Set when the payment is confirmed: on the Stripe webhook for card orders, or by an
+    // admin once the cash has been collected for cash orders.
+    public DateTimeOffset? PaidAt { get; set; }
+    public bool IsPaid => PaidAt is not null;
+    // Null for cash orders, which never go through Stripe.
+    public string? StripePaymentIntentId { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public List<OrderLine> Lines { get; set; } = [];
 }

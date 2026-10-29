@@ -14,6 +14,10 @@
     {
         <h1>Your order is ready for pickup, @Model.Address.FullName!</h1>
         <p>Order #@Model.OrderId is ready to collect.</p>
+        @if (!Model.IsPaid)
+        {
+            <p><strong>Please bring @Model.Total.ToString("C") in cash when you collect your order.</strong></p>
+        }
     }
     else
     {

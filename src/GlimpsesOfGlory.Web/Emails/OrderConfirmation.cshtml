@@ -48,6 +48,10 @@
     {
         <h2>Local pickup</h2>
         <p>We'll email you when your order is ready to collect.</p>
+        @if (Model.PaymentMethod == PaymentMethod.Cash)
+        {
+            <p><strong>Please bring @Model.Total.ToString("C") in cash when you collect your order.</strong></p>
+        }
     }
     else
     {

@@ -44,6 +44,10 @@
                                 {
                                     <span class="ml-1 border border-black text-xs font-semibold px-2 py-1 rounded-full">Pickup</span>
                                 }
+                                @if (!order.IsPaid)
+                                {
+                                    <span class="ml-1 bg-red-600 text-white text-xs font-semibold px-2 py-1 rounded-full">Unpaid</span>
+                                }
                             </td>
                             <td class="py-2 pr-2">@order.Email</td>
                             <td class="py-2 pr-2">@order.ItemCount</td>

@@ -7,6 +7,7 @@ public sealed class CheckoutSessionStore(IHttpContextAccessor httpContextAccesso
 {
     private const string AddressSessionKey = "CheckoutAddress";
     private const string PaymentIntentSessionKey = "CheckoutPaymentIntentId";
+    private const string PlacedOrderSessionKey = "CheckoutPlacedOrderId";
 
     public CheckoutAddress? GetAddress()
     {
@@ -24,6 +25,15 @@ public sealed class CheckoutSessionStore(IHttpContextAccessor httpContextAccesso
 
     public void SavePaymentIntentId(string paymentIntentId) =>
         Session.SetString(PaymentIntentSessionKey, paymentIntentId);
+
+    // The last cash order placed from this session. Cash orders have no PaymentIntent id
+    // to look the confirmation up by, so the confirmation page only shows an order whose
+    // id matches this - stops anyone viewing another shopper's order by guessing ids.
+    // Deliberately kept by Clear() so the confirmation page survives a refresh.
+    public int? GetPlacedOrderId() => Session.GetInt32(PlacedOrderSessionKey);
+
+    public void SavePlacedOrderId(int orderId) =>
+        Session.SetInt32(PlacedOrderSessionKey, orderId);
 
     public void Clear()
     {
