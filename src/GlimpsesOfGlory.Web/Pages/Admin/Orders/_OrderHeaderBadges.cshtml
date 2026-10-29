@@ -1,0 +1,17 @@
+@model GlimpsesOfGlory.Web.Pages.Admin.Orders.DetailsModel
+@using GlimpsesOfGlory.Abstractions.Enums
+@using GlimpsesOfGlory.Web.Helpers
+
+@* Rendered in the page header; re-sent out-of-band after each htmx action so it stays in sync. *@
+<div id="order-header-badges" class="flex flex-wrap items-center gap-2" hx-swap-oob="@(Model.IsHtmxUpdate ? "true" : null)">
+    <partial name="_Badge" model="OrderBadges.Status(Model.Order.Status, Model.Order.FulfillmentMethod)" />
+    <partial name="_Badge" model="OrderBadges.Payment(Model.Order.IsPaid)" />
+    @if (Model.Order.FulfillmentMethod == FulfillmentMethod.Pickup)
+    {
+        <partial name="_Badge" model="OrderBadges.Pickup" />
+    }
+    @if (Model.Order.NeedsRefund)
+    {
+        <partial name="_Badge" model="OrderBadges.RefundRequired" />
+    }
+</div>

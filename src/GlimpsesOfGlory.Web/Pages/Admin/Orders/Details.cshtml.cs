@@ -20,6 +20,10 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
 
     public string? ErrorMessage { get; private set; }
 
+    // True when rendering the htmx response to an action: the fragments outside #order-status
+    // (header badges, fulfillment and payment cards) are then sent as out-of-band swaps.
+    public bool IsHtmxUpdate { get; private set; }
+
     public async Task<IActionResult> OnGetAsync(int id, CancellationToken cancellationToken)
     {
         var order = await adminOrderService.GetOrderAsync(id, cancellationToken);
@@ -33,8 +37,9 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
         return Page();
     }
 
-    // Swaps just the #order-status fragment (hx-target) so marking an order shipped/cancelled
-    // never triggers a full page reload (AC requirement).
+    // Swaps the #order-status actions fragment (hx-target) so marking an order shipped/cancelled
+    // never triggers a full page reload; the header badges and the fulfillment/payment cards ride
+    // along as out-of-band swaps so they stay in sync.
     public async Task<IActionResult> OnPostMarkShippedAsync(int id, CancellationToken cancellationToken)
     {
         var result = await adminOrderService.MarkShippedAsync(id, TrackingNumber, cancellationToken);
@@ -83,6 +88,7 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
 
         Order = order;
         TrackingNumber = order.TrackingNumber;
+        IsHtmxUpdate = true;
         if (result == OrderUpdateResult.InvalidTransition)
         {
             // Usually a stale page (the order changed in another tab) - the re-rendered

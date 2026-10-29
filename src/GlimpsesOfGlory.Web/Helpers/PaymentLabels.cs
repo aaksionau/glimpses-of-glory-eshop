@@ -11,6 +11,12 @@ public static class PaymentLabels
         _ => "Card",
     };
 
+    public static string Method(PaymentMethod paymentMethod) => paymentMethod switch
+    {
+        PaymentMethod.Cash => "Cash",
+        _ => "Card",
+    };
+
     // Shown wherever an unpaid order is still to be collected.
     public static string CashDueNote(decimal total) =>
         $"Please bring {total:C} in cash when you collect your order.";

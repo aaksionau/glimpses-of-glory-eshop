@@ -1,76 +1,73 @@
 @page "/admin/orders/{id:int}"
 @model GlimpsesOfGlory.Web.Pages.Admin.Orders.DetailsModel
-@using GlimpsesOfGlory.Abstractions.Enums
 @using GlimpsesOfGlory.Web.Helpers
 @{
     ViewData["Title"] = $"Order #{Model.Order.Id}";
 }
 
-<div class="max-w-2xl">
+@section HeaderBadges {
+    <partial name="_OrderHeaderBadges" model="Model" />
+}
+
+<div class="max-w-6xl">
     <a asp-page="/Admin/Orders/Index" class="inline-block mb-4 text-sm hover:underline">&larr; Back to orders</a>
 
-    <div class="grid gap-4 sm:grid-cols-2 mb-6">
-        <div>
-            <h3 class="font-semibold mb-1">Customer</h3>
-            <p>@Model.Order.Address.Email</p>
-            <p class="text-sm text-gray-500">Placed @Model.Order.CreatedAt.ToString("MMMM d, yyyy")</p>
-        </div>
-        @if (Model.Order.FulfillmentMethod == FulfillmentMethod.Pickup)
-        {
-            <div>
-                <h3 class="font-semibold mb-1">Local pickup</h3>
-                <p>@Model.Order.Address.FullName</p>
-            </div>
-        }
-        else
-        {
-            <div>
-                <h3 class="font-semibold mb-1">Shipping address</h3>
-                <p>
-                    @Model.Order.Address.FullName<br />
-                    @Model.Order.Address.AddressLine1<br />
-                    @if (!string.IsNullOrWhiteSpace(Model.Order.Address.AddressLine2))
-                    {
-                        @Model.Order.Address.AddressLine2<text><br /></text>
-                    }
-                    @Model.Order.Address.City, @Model.Order.Address.State @Model.Order.Address.PostalCode<br />
-                    @Model.Order.Address.Country
-                </p>
-            </div>
-        }
-    </div>
-
-    <table class="w-full text-left border-collapse mb-4">
-        <thead>
-            <tr class="border-b border-black/20 text-sm text-gray-500">
-                <th class="py-2 pr-2">Item</th>
-                <th class="py-2 pr-2">Qty</th>
-                <th class="py-2 pr-2">Price</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var line in Model.Order.Lines)
-            {
-                <tr class="border-b border-black/10">
-                    <td class="py-2 pr-2">
-                        @line.ProductName
-                        @if (line.IsPreorder)
+    @* One column on mobile; line items on the left and the order's cards on the right from lg up. *@
+    <div class="grid gap-6 lg:grid-cols-3 lg:items-start">
+        <section class="rounded-lg border border-black/10 bg-white p-4 lg:col-span-2" aria-labelledby="order-items-heading">
+            <h2 id="order-items-heading" class="font-semibold mb-2">Items</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-black/20 text-sm text-gray-500">
+                            <th scope="col" class="py-2 pr-2">Item</th>
+                            <th scope="col" class="py-2 pr-2 text-right">Qty</th>
+                            <th scope="col" class="py-2 pr-2 text-right">Price</th>
+                            <th scope="col" class="py-2 text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var line in Model.Order.Lines)
                         {
-                            <span class="ml-1"><partial name="_Badge" model="OrderBadges.Preorder" /></span>
+                            <tr class="border-b border-black/10 align-top">
+                                <td class="py-2 pr-2">
+                                    @line.ProductName
+                                    @if (line.IsPreorder)
+                                    {
+                                        <span class="ml-1"><partial name="_Badge" model="OrderBadges.Preorder" /></span>
+                                        <p class="text-sm text-gray-500">@PreorderNoteFormatter.ExpectedAvailability(line.ExpectedAvailabilityDate)</p>
+                                    }
+                                </td>
+                                <td class="py-2 pr-2 text-right">@line.Quantity</td>
+                                <td class="py-2 pr-2 text-right">@line.UnitPrice.ToString("C")</td>
+                                <td class="py-2 text-right">@((line.UnitPrice * line.Quantity).ToString("C"))</td>
+                            </tr>
                         }
-                    </td>
-                    <td class="py-2 pr-2">@line.Quantity</td>
-                    <td class="py-2 pr-2">@line.UnitPrice.ToString("C")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+                    </tbody>
+                </table>
+            </div>
 
-    <p class="text-right mb-6">
-        Subtotal: @Model.Order.Subtotal.ToString("C")<br />
-        @FulfillmentLabels.CostLabel(Model.Order.FulfillmentMethod): @Model.Order.ShippingCost.ToString("C")<br />
-        <strong>Total: @Model.Order.Total.ToString("C")</strong>
-    </p>
+            <dl class="mt-4 ml-auto grid max-w-xs grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-right">
+                <dt>Subtotal</dt>
+                <dd>@Model.Order.Subtotal.ToString("C")</dd>
+                <dt>@FulfillmentLabels.CostLabel(Model.Order.FulfillmentMethod)</dt>
+                <dd>@Model.Order.ShippingCost.ToString("C")</dd>
+                <dt class="font-semibold">Total</dt>
+                <dd class="font-semibold">@Model.Order.Total.ToString("C")</dd>
+            </dl>
+        </section>
 
-    <partial name="_OrderStatus" model="Model" />
+        <div class="flex flex-col gap-6">
+            <section class="rounded-lg border border-black/10 bg-white p-4" aria-labelledby="order-customer-heading">
+                <h2 id="order-customer-heading" class="font-semibold mb-2">Customer</h2>
+                <p>@Model.Order.Address.FullName</p>
+                <p><a href="mailto:@Model.Order.Address.Email" class="hover:underline">@Model.Order.Address.Email</a></p>
+                <p class="text-sm text-gray-500">Placed @Model.Order.CreatedAt.ToString("MMMM d, yyyy")</p>
+            </section>
+
+            <partial name="_OrderFulfillmentCard" model="Model" />
+            <partial name="_OrderPaymentCard" model="Model" />
+            <partial name="_OrderStatus" model="Model" />
+        </div>
+    </div>
 </div>

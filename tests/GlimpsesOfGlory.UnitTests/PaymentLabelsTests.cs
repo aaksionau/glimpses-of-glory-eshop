@@ -13,4 +13,12 @@ public class PaymentLabelsTests
     {
         Assert.Equal(expected, PaymentLabels.Status(paymentMethod, isPaid));
     }
+
+    [Theory]
+    [InlineData(PaymentMethod.Card, "Card")]
+    [InlineData(PaymentMethod.Cash, "Cash")]
+    public void Method_NamesThePaymentMethod(PaymentMethod paymentMethod, string expected)
+    {
+        Assert.Equal(expected, PaymentLabels.Method(paymentMethod));
+    }
 }

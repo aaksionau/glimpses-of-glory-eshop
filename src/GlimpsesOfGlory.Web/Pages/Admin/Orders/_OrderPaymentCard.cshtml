@@ -1,0 +1,30 @@
+@model GlimpsesOfGlory.Web.Pages.Admin.Orders.DetailsModel
+@using GlimpsesOfGlory.Web.Helpers
+
+@* Re-sent out-of-band after each htmx action: marking paid or cancelling changes it. *@
+<section id="order-payment" class="rounded-lg border border-black/10 bg-white p-4" aria-labelledby="order-payment-heading" hx-swap-oob="@(Model.IsHtmxUpdate ? "true" : null)">
+    <h2 id="order-payment-heading" class="font-semibold mb-2">Payment</h2>
+    <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+        <dt class="text-gray-500">Method</dt>
+        <dd>@PaymentLabels.Method(Model.Order.PaymentMethod)</dd>
+        <dt class="text-gray-500">Status</dt>
+        <dd class="flex flex-wrap items-center gap-2">
+            <partial name="_Badge" model="OrderBadges.Payment(Model.Order.IsPaid)" />
+            <span class="text-gray-500">@PaymentLabels.Status(Model.Order.PaymentMethod, Model.Order.IsPaid)</span>
+        </dd>
+    </dl>
+
+    @if (Model.Order.NeedsRefund)
+    {
+        <div class="border border-red-600 bg-red-50 rounded p-3 mt-4" role="alert">
+            <p class="font-semibold text-red-600">Refund required</p>
+            <p class="text-sm">
+                This paid card order was cancelled, but the payment isn't refunded automatically. Refund @Model.Order.Total.ToString("C") in Stripe.
+                @if (Model.Order.PaymentDashboardUrl is not null)
+                {
+                    <a href="@Model.Order.PaymentDashboardUrl" target="_blank" rel="noopener noreferrer" class="font-semibold underline">Open payment in Stripe</a>
+                }
+            </p>
+        </div>
+    }
+</section>
