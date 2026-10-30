@@ -26,68 +26,7 @@
             </label>
         </fieldset>
 
-        <label class="block">
-            <span class="block mb-1 font-medium">Email</span>
-            <input asp-for="Address.Email" type="email" required
-                   class="w-full border border-ink/20 rounded px-3 py-2" />
-            <span asp-validation-for="Address.Email" class="text-red-600 text-sm"></span>
-        </label>
-
-        <label class="block">
-            <span class="block mb-1 font-medium">Full name</span>
-            <input asp-for="Address.FullName" type="text" required
-                   class="w-full border border-ink/20 rounded px-3 py-2" />
-            <span asp-validation-for="Address.FullName" class="text-red-600 text-sm"></span>
-        </label>
-
-        @* Disabled (not just hidden) for pickup so the browser skips the required checks
-           and doesn't post the address fields. *@
-        <fieldset class="flex flex-col gap-4" x-show="method === '@FulfillmentMethod.Shipping'" :disabled="method !== '@FulfillmentMethod.Shipping'">
-            <label class="block">
-                <span class="block mb-1 font-medium">Address line 1</span>
-                <input asp-for="Address.AddressLine1" type="text" required
-                       class="w-full border border-ink/20 rounded px-3 py-2" />
-                <span asp-validation-for="Address.AddressLine1" class="text-red-600 text-sm"></span>
-            </label>
-
-            <label class="block">
-                <span class="block mb-1 font-medium">Address line 2 <span class="text-ink-light font-normal">(optional)</span></span>
-                <input asp-for="Address.AddressLine2" type="text"
-                       class="w-full border border-ink/20 rounded px-3 py-2" />
-            </label>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label class="block">
-                    <span class="block mb-1 font-medium">City</span>
-                    <input asp-for="Address.City" type="text" required
-                           class="w-full border border-ink/20 rounded px-3 py-2" />
-                    <span asp-validation-for="Address.City" class="text-red-600 text-sm"></span>
-                </label>
-
-                <label class="block">
-                    <span class="block mb-1 font-medium">State/Region</span>
-                    <input asp-for="Address.State" type="text" required
-                           class="w-full border border-ink/20 rounded px-3 py-2" />
-                    <span asp-validation-for="Address.State" class="text-red-600 text-sm"></span>
-                </label>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label class="block">
-                    <span class="block mb-1 font-medium">Postal code</span>
-                    <input asp-for="Address.PostalCode" type="text" required
-                           class="w-full border border-ink/20 rounded px-3 py-2" />
-                    <span asp-validation-for="Address.PostalCode" class="text-red-600 text-sm"></span>
-                </label>
-
-                <label class="block">
-                    <span class="block mb-1 font-medium">Country</span>
-                    <input asp-for="Address.Country" type="text" required
-                           class="w-full border border-ink/20 rounded px-3 py-2" />
-                    <span asp-validation-for="Address.Country" class="text-red-600 text-sm"></span>
-                </label>
-            </div>
-        </fieldset>
+        <partial name="_CheckoutDetailsFields" for="Address" />
 
         <button type="submit" class="bg-gold hover:bg-gold-dark transition-colors text-white px-6 py-3 rounded-full font-semibold mt-2">
             Continue to review
