@@ -12,16 +12,12 @@
                   placeholder="e.g. Customer called, collecting Friday"
                   class="w-full border border-black/20 rounded px-3 py-2 text-sm"></textarea>
         <span asp-validation-for="InternalNote" class="text-red-600 text-sm"></span>
-        <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
             @if (!string.IsNullOrEmpty(Model.NoteStatusMessage))
             {
                 <p class="text-sm text-green-700" role="status">@Model.NoteStatusMessage</p>
             }
-            else
-            {
-                <span></span>
-            }
-            <button type="submit" class="border border-black/20 bg-white hover:bg-gray-50 px-4 py-2 rounded-lg font-semibold text-sm">Save note</button>
+            <button type="submit" class="ml-auto border border-black/20 bg-white hover:bg-gray-50 px-4 py-2 rounded-lg font-semibold text-sm">Save note</button>
         </div>
     </form>
 </section>

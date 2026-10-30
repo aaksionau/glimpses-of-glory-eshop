@@ -53,23 +53,12 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
     // Swaps only the #order-note card (hx-target), so saving a note never reloads the page.
     public async Task<IActionResult> OnPostSaveNoteAsync(int id, CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid)
+        // When invalid, nothing is saved and the card re-renders with the validation message and the admin's text.
+        var isValid = ModelState.IsValid;
+        if (isValid)
         {
-            // Re-render with the validation message and the admin's text; nothing is saved.
-            var current = await adminOrderService.GetOrderAsync(id, cancellationToken);
-            if (current is null)
-            {
-                return NotFound();
-            }
-
-            Order = current;
-            return Partial("_OrderNote", this);
-        }
-
-        var result = await adminOrderService.UpdateInternalNoteAsync(id, InternalNote, cancellationToken);
-        if (result == OrderUpdateResult.NotFound)
-        {
-            return NotFound();
+            // An unknown order surfaces as NotFound from the reload below.
+            await adminOrderService.UpdateInternalNoteAsync(id, InternalNote, cancellationToken);
         }
 
         var order = await adminOrderService.GetOrderAsync(id, cancellationToken);
@@ -79,10 +68,14 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
         }
 
         Order = order;
-        // Show the stored (trimmed) note, not the raw input.
-        ModelState.Remove(nameof(InternalNote));
-        InternalNote = order.InternalNote;
-        NoteStatusMessage = order.InternalNote is null ? "Note cleared." : "Note saved.";
+        if (isValid)
+        {
+            // Show the stored (trimmed) note, not the raw input.
+            ModelState.Remove(nameof(InternalNote));
+            InternalNote = order.InternalNote;
+            NoteStatusMessage = order.InternalNote is null ? "Note cleared." : "Note saved.";
+        }
+
         return Partial("_OrderNote", this);
     }
 
