@@ -38,6 +38,9 @@ public class IndexModel(IAdminOrderService adminOrderService, TimeProvider timeP
 
     public string? ExportError { get; private set; }
 
+    // The page's "now" for relative times, from the same clock the order services record with.
+    public DateTimeOffset Now { get; private set; }
+
     public AdminOrderListState State { get; private set; } = AdminOrderListState.FromQuery(null, null, false, null);
 
     public AdminOrderTabLink CurrentTab => AdminOrderTabs.For(State.Tab);
@@ -75,7 +78,8 @@ public class IndexModel(IAdminOrderService adminOrderService, TimeProvider timeP
 
     private async Task LoadListAsync(CancellationToken cancellationToken)
     {
-        var (defaultFrom, defaultTo) = OrderCsvExport.DefaultRange(timeProvider.GetUtcNow());
+        Now = timeProvider.GetUtcNow();
+        var (defaultFrom, defaultTo) = OrderCsvExport.DefaultRange(Now);
         ExportFrom ??= defaultFrom;
         ExportTo ??= defaultTo;
 

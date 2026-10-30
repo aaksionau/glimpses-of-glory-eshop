@@ -4,7 +4,6 @@
 @using GlimpsesOfGlory.Web.Helpers
 @{
     ViewData["Title"] = "Orders";
-    var now = DateTimeOffset.UtcNow;
 }
 
 <nav aria-label="Order status" class="mb-4 border-b border-black/20">
@@ -143,7 +142,7 @@
                         <td class="py-2 pr-2"><partial name="_Badge" model="OrderBadges.Status(order.Status, order.FulfillmentMethod)" /></td>
                         <td class="py-2 pr-2"><partial name="_Badge" model="OrderBadges.Payment(order.IsPaid)" /></td>
                         <td class="py-2 pr-2 whitespace-nowrap text-sm">
-                            <time datetime="@order.CreatedAt.ToString("o")" title="@RelativeTime.FullTimestamp(order.CreatedAt)">@RelativeTime.Format(order.CreatedAt, now)</time>
+                            <time datetime="@order.CreatedAt.ToString("o")" title="@RelativeTime.FullTimestamp(order.CreatedAt)">@RelativeTime.Format(order.CreatedAt, Model.Now)</time>
                         </td>
                     </tr>
                 }
