@@ -28,7 +28,7 @@
 </fieldset>
 
 <button type="submit" x-bind:disabled="submitting"
-        class="w-full bg-gold hover:bg-gold-dark transition-colors text-white px-6 py-3 rounded-full font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
+        class="btn-primary w-full">
     <span class="group-has-[#payment-cash:checked]:hidden">Continue to payment</span>
     <span class="hidden group-has-[#payment-cash:checked]:inline" x-text="submitting ? 'Placing order…' : 'Place order'">Place order</span>
 </button>
