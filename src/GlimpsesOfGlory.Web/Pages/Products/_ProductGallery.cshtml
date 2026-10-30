@@ -29,7 +29,7 @@ else
              closeLightbox() { this.open = false; this.$nextTick(() => this.$refs.trigger.focus()); },
              swipeStart(e) { this.touchX = e.changedTouches[0].clientX; this.swiped = false; },
              swipeEnd(e) {
-                 if (this.touchX === null || this.count < 2) return;
+                 if (this.touchX === null) return;
                  const dx = e.changedTouches[0].clientX - this.touchX;
                  this.touchX = null;
                  if (Math.abs(dx) > 40) { this.swiped = true; dx < 0 ? this.next() : this.prev(); }
@@ -41,13 +41,14 @@ else
                 aria-label="Enlarge photos of @Model.Name"
                 class="relative block w-full aspect-[3/4] bg-cream-dark rounded-2xl overflow-hidden cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-dark"
                 x-on:click="openLightbox()"
-                x-on:touchstart.passive="swipeStart($event)"
-                x-on:touchend="swipeEnd($event)">
+                x-on:touchstart.passive="@(hasMany ? "swipeStart($event)" : null)"
+                x-on:touchend="@(hasMany ? "swipeEnd($event)" : null)">
             @for (var i = 0; i < photos.Count; i++)
             {
                 <img src="/product-photos/@photos[i]"
                      alt="@Model.Name photo @(i + 1)"
                      class="absolute inset-0 w-full h-full object-cover"
+                     loading="@(i == 0 ? null : "lazy")"
                      x-show="active === @i" />
             }
         </button>
@@ -81,13 +82,14 @@ else
              x-on:keydown.escape.prevent.stop="closeLightbox()"
              x-on:keydown.arrow-left="prev()"
              x-on:keydown.arrow-right="next()"
-             x-on:touchstart.passive="swipeStart($event)"
-             x-on:touchend="swipeEnd($event)">
+             x-on:touchstart.passive="@(hasMany ? "swipeStart($event)" : null)"
+             x-on:touchend="@(hasMany ? "swipeEnd($event)" : null)">
             @for (var i = 0; i < photos.Count; i++)
             {
                 <img src="/product-photos/@photos[i]"
                      alt="@Model.Name photo @(i + 1)"
                      class="max-w-full max-h-full object-contain"
+                     loading="lazy"
                      x-show="active === @i" />
             }
 

@@ -38,7 +38,7 @@ public class ProductPageMobileTests
     [Fact]
     public void CartLines_UseTheSameStepper()
     {
-        var cartLines = File.ReadAllText(Path.Combine(CheckoutPaymentFormTests.WebProjectDirectory(), "Pages", "Cart", "_CartLines.cshtml"));
+        var cartLines = ReadPage("Cart/_CartLines.cshtml");
 
         Assert.Contains("<partial name=\"_QuantityStepper\"", cartLines);
         Assert.DoesNotContain("type=\"number\"", cartLines);
@@ -134,17 +134,26 @@ public class ProductPageMobileTests
     }
 
     [Fact]
-    public void Layout_LoadsTheAlpineFocusPlugin_BeforeAlpine()
+    public void DetailsPage_LoadsTheAlpineFocusPlugin_InTheScriptsSection()
     {
-        var layout = File.ReadAllText(Path.Combine(CheckoutPaymentFormTests.WebProjectDirectory(), "Pages", "Shared", "_Layout.cshtml"));
-        var plugin = layout.IndexOf("~/js/alpine-focus.min.js", StringComparison.Ordinal);
+        // The layout renders the Scripts section before Alpine, so the plugin registers first.
+        var page = DetailsPage();
+        var section = page.IndexOf("@section Scripts", StringComparison.Ordinal);
 
-        Assert.True(plugin >= 0);
-        Assert.True(plugin < layout.IndexOf("~/js/alpine.min.js", StringComparison.Ordinal));
+        Assert.True(section >= 0);
+        Assert.True(page.IndexOf("~/js/alpine-focus.min.js", section, StringComparison.Ordinal) > section);
+        var layout = ReadPage("Shared/_Layout.cshtml");
+        Assert.True(layout.IndexOf("RenderSectionAsync(\"Scripts\"", StringComparison.Ordinal) < layout.IndexOf("~/js/alpine.min.js", StringComparison.Ordinal));
     }
 
-    private static string DetailsPage() =>
-        File.ReadAllText(Path.Combine(CheckoutPaymentFormTests.WebProjectDirectory(), "Pages", "Products", "Details.cshtml"));
+    private static readonly Lazy<string> DetailsSource = new(() => ReadPage("Products/Details.cshtml"));
+
+    private static readonly Lazy<GlimpsesOfGlory.Web.Helpers.RazorViewToStringRenderer> Renderer =
+        new(RazorViewToStringRendererTests.CreateRenderer);
+
+    private static string DetailsPage() => DetailsSource.Value;
+
+    private static string ReadPage(string page) => File.ReadAllText(PrimaryButtonTests.PagePath(page));
 
     private static string Lightbox(string html)
     {
@@ -157,5 +166,5 @@ public class ProductPageMobileTests
         RenderAsync(GalleryPath, new ProductDetail("sunrise", "Sunrise", "A print.", 20m, 4, false, null, photos));
 
     private static async Task<string> RenderAsync(string path, object model) =>
-        WebUtility.HtmlDecode(await RazorViewToStringRendererTests.CreateRenderer().RenderAsync(path, model));
+        WebUtility.HtmlDecode(await Renderer.Value.RenderAsync(path, model));
 }

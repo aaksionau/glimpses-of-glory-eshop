@@ -87,7 +87,7 @@ public class PrimaryButtonTests
         Assert.True(ContrastRatio("#ffffff", ThemeColour("gold")) < WcagAaNormalText);
     }
 
-    private static string PagePath(string page) =>
+    internal static string PagePath(string page) =>
         Path.Combine([CheckoutPaymentFormTests.WebProjectDirectory(), "Pages", .. page.Split('/')]);
 
     private static string InputCss() =>

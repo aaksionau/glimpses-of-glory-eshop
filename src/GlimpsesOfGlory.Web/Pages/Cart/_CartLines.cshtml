@@ -1,4 +1,4 @@
-@model GlimpsesOfGlory.Web.Dtos.CartLinesView
+@model CartLinesView
 @using GlimpsesOfGlory.Abstractions.Dtos
 @using GlimpsesOfGlory.Abstractions.Constants
 @using GlimpsesOfGlory.Web.Helpers
@@ -63,11 +63,10 @@
                         }
                     </div>
 
-                    @* The shared stepper fires the input's change event when the value moves; its buttons' ids keep
-                       focus on them across the swap. The short delay lets a few quick taps go as one save, and the
-                       spinner shows while the line saves. Every cart form syncs on #cart-lines and drops a post
-                       while another is in flight: the session cart is last-write-wins, so two overlapping saves
-                       could lose one, and the later swap could show a stale cart. *@
+                    @* The short delay lets a few quick taps go as one save, and the spinner shows while the line
+                       saves. Every cart form syncs on #cart-lines and drops a post while another is in flight: the
+                       session cart is last-write-wins, so two overlapping saves could lose one, and the later swap
+                       could show a stale cart. *@
                     <form class="flex items-center gap-1"
                           hx-post="/cart?handler=UpdateQuantity" hx-target="#cart-lines" hx-swap="outerHTML" hx-trigger="change delay:400ms"
                           hx-sync="closest #cart-lines:drop"
