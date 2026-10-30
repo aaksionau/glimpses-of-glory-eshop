@@ -172,7 +172,7 @@ public sealed class CheckoutUnavailableItemsTests : IDisposable
 
         var html = await RazorViewToStringRendererTests.CreateRenderer().RenderAsync("~/Pages/Cart/_CartLines.cshtml", view);
 
-        Assert.Contains("<p class=\"w-full text-red-600 text-sm\" id=\"error-sunrise\">Only 2 left. Lower the quantity to continue.</p>", html);
+        Assert.Contains("<p class=\"col-span-full text-red-600 text-sm\" id=\"error-sunrise\">Only 2 left. Lower the quantity to continue.</p>", html);
         Assert.Contains("aria-describedby=\"error-sunrise\"", html);
         Assert.DoesNotContain("error-harbour", html);
         Assert.Single(System.Text.RegularExpressions.Regex.Matches(html, "aria-invalid=\"true\""));

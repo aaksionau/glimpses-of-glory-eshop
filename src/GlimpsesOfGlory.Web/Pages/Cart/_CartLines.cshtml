@@ -1,6 +1,7 @@
 @model GlimpsesOfGlory.Web.Dtos.CartLinesView
 @using GlimpsesOfGlory.Abstractions.Dtos
 @using GlimpsesOfGlory.Abstractions.Constants
+@using GlimpsesOfGlory.Abstractions.Enums
 @using GlimpsesOfGlory.Web.Helpers
 @using GlimpsesOfGlory.Web.Dtos
 @{
@@ -33,7 +34,11 @@
 
     @if (cart.Lines.Count == 0)
     {
-        <p>Your cart is empty. <a href="/products" class="text-gold-dark hover:underline">Browse products</a>.</p>
+        <div class="flex flex-col items-center gap-3 rounded-lg bg-cream-dark px-6 py-12 text-center" data-testid="cart-empty">
+            <p class="text-xl font-semibold font-display">Your cart is empty.</p>
+            <p class="text-ink-light">Find a print or a card you love and it will wait for you here.</p>
+            <a href="/products" class="btn-primary mt-2">Browse products</a>
+        </div>
     }
     else
     {
@@ -42,20 +47,27 @@
             {
                 var lineError = Model.ErrorFor(line.ProductSlug);
                 var hasError = lineError is not null;
+                var productUrl = $"/products/{line.ProductSlug}";
                 var stepper = new QuantityStepperView(line.ProductSlug, line.ProductName, line.Quantity,
                     line.IsPreorder ? PreorderPolicy.MaxQuantityPerLine : null, hasError ? $"error-{line.ProductSlug}" : null);
-                <div class="flex flex-wrap items-center gap-4 border-b border-ink/10 pb-4@(hasError ? " border-l-4 border-l-red-600 pl-3" : "")" data-line-error="@(hasError ? "true" : null)">
-                    @if (line.ThumbnailFileName is not null)
-                    {
-                        <img src="/product-photos/@line.ThumbnailFileName" alt="@line.ProductName" class="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
-                    }
-                    else
-                    {
-                        <div class="w-16 h-16 bg-cream-dark rounded-lg flex items-center justify-center text-ink-light text-xs flex-shrink-0">No photo</div>
-                    }
+                @* A fixed grid so a line never wraps by the length of its name. On mobile it is two rows
+                   (image | name, price | Remove, then stepper … line total); from sm: it is one row. *@
+                <div class="@(hasError ? "border-l-4 border-l-red-600 pl-3 " : "")grid grid-cols-[4rem_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 border-b border-ink/10 pb-4 sm:grid-cols-[4rem_minmax(0,1fr)_auto_6rem_auto]" data-line-error="@(hasError ? "true" : null)" data-cart-line="@line.ProductSlug">
+                    @* The name links too; the image link is skipped by keyboard and screen readers so the
+                       product isn't announced twice. *@
+                    <a href="@productUrl" tabindex="-1" aria-hidden="true" class="col-start-1 row-start-1">
+                        @if (line.ThumbnailFileName is not null)
+                        {
+                            <img src="/product-photos/@line.ThumbnailFileName" alt="" class="w-16 h-16 object-cover rounded-lg" />
+                        }
+                        else
+                        {
+                            <div class="w-16 h-16 bg-cream-dark rounded-lg flex items-center justify-center text-ink-light text-xs">No photo</div>
+                        }
+                    </a>
 
-                    <div class="flex-1 min-w-[8rem]">
-                        <p class="font-semibold">@line.ProductName</p>
+                    <div class="col-start-2 row-start-1 min-w-0">
+                        <a href="@productUrl" class="font-semibold break-words hover:underline">@line.ProductName</a>
                         <p class="text-ink-light text-sm">@line.UnitPrice.ToString("C") each</p>
                         @if (PreorderNoteFormatter.Format(line.IsPreorder, line.ExpectedAvailabilityDate) is { } note)
                         {
@@ -67,7 +79,7 @@
                        saves. Every cart form syncs on #cart-lines and drops a post while another is in flight: the
                        session cart is last-write-wins, so two overlapping saves could lose one, and the later swap
                        could show a stale cart. *@
-                    <form class="flex items-center gap-1"
+                    <form class="col-span-2 col-start-1 row-start-2 flex items-center gap-1 sm:col-span-1 sm:col-start-3 sm:row-start-1"
                           hx-post="/cart?handler=UpdateQuantity" hx-target="#cart-lines" hx-swap="outerHTML" hx-trigger="change delay:400ms"
                           hx-sync="closest #cart-lines:drop"
                           hx-indicator="#saving-@line.ProductSlug" asp-antiforgery="true">
@@ -79,25 +91,27 @@
                         </svg>
                     </form>
 
-                    <p class="w-24 text-right font-medium">@((line.UnitPrice * line.Quantity).ToString("C"))</p>
+                    <p class="col-start-3 row-start-2 text-right font-medium sm:col-start-4 sm:row-start-1" data-testid="line-total">@((line.UnitPrice * line.Quantity).ToString("C"))</p>
 
-                    <form hx-post="/cart?handler=Remove" hx-target="#cart-lines" hx-swap="outerHTML" hx-sync="closest #cart-lines:drop" asp-antiforgery="true">
+                    @* Undo makes removing low-stakes, so Remove stays quiet beside the checkout CTA. *@
+                    <form class="col-start-3 row-start-1 justify-self-end sm:col-start-5" hx-post="/cart?handler=Remove" hx-target="#cart-lines" hx-swap="outerHTML" hx-sync="closest #cart-lines:drop" asp-antiforgery="true">
                         <input type="hidden" name="slug" value="@line.ProductSlug" />
-                        <button type="submit" class="text-red-700 hover:underline px-2 py-3">Remove</button>
+                        <button type="submit" aria-label="Remove @line.ProductName" class="text-ink-light hover:text-ink hover:underline px-2 py-3">Remove</button>
                     </form>
 
                     @if (lineError is not null)
                     {
-                        <p class="w-full text-red-600 text-sm" id="error-@line.ProductSlug">@lineError.Message</p>
+                        <p class="col-span-full text-red-600 text-sm" id="error-@line.ProductSlug">@lineError.Message</p>
                     }
                 </div>
             }
         </div>
 
-        <div class="mt-6 flex flex-col items-end gap-1">
-            <p class="text-lg font-bold">Subtotal: @cart.Subtotal.ToString("C")</p>
-            <p class="text-ink-light text-sm" data-testid="cart-shipping">Shipping: @cart.ShippingCost.ToString("C") &middot; or free local pickup</p>
-            <a href="/checkout" class="btn-primary mt-2">Proceed to checkout</a>
+        <div class="mt-6 flex flex-col gap-1 sm:items-end" data-testid="cart-totals">
+            <p class="flex justify-between gap-4 sm:justify-end">Subtotal <span>@cart.Subtotal.ToString("C")</span></p>
+            <p class="flex justify-between gap-4 text-ink-light text-sm sm:justify-end" data-testid="cart-shipping">Shipping <span>@cart.ShippingCost.ToString("C") &middot; or free local pickup</span></p>
+            <p class="flex justify-between gap-4 text-lg font-bold sm:justify-end" data-testid="cart-estimated-total">Estimated total <span>@cart.TotalFor(FulfillmentMethod.Shipping).ToString("C")</span></p>
+            <a href="/checkout" class="btn-primary mt-2 w-full sm:w-auto">Proceed to checkout</a>
         </div>
     }
 </div>
