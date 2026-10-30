@@ -30,7 +30,7 @@ public class CheckoutPickupPaymentTests
         Assert.Contains("value=\"Cash\"", radios[1]);
         Assert.DoesNotMatch("\\schecked[\\s>/]", radios[1]);
 
-        var text = Text(html);
+        var text = CheckoutOrderSummaryTests.Text(html);
         Assert.Contains("How would you like to pay?", text);
         Assert.Contains("Card now", text);
         Assert.Contains("Cash when you collect", text);
@@ -98,7 +98,7 @@ public class CheckoutPickupPaymentTests
     [Fact]
     public void ReviewPage_UsesTheChoiceForPickup_AndKeepsTheSingleContinueLinkForShipping()
     {
-        var page = File.ReadAllText(Path.Combine(WebProjectDirectory(), "Pages", "Checkout", "Review.cshtml"));
+        var page = File.ReadAllText(Path.Combine(CheckoutPaymentFormTests.WebProjectDirectory(), "Pages", "Checkout", "Review.cshtml"));
 
         var form = Regex.Match(page, "<form\\b[^>]*>(.*?)</form>", RegexOptions.Singleline);
         Assert.Contains("method=\"post\"", form.Value);
@@ -131,7 +131,7 @@ public class CheckoutPickupPaymentTests
 
     private static ReviewModel CreateReviewPage(CheckoutAddress address, IOrderService orders, out RecordingCartService cart)
     {
-        var httpContext = new DefaultHttpContext { Session = new CheckoutOrderSummaryTests.InMemorySession() };
+        var httpContext = new DefaultHttpContext { Session = new InMemorySession() };
         var sessionStore = new CheckoutSessionStore(new HttpContextAccessor { HttpContext = httpContext });
         sessionStore.SaveAddress(address);
         cart = new RecordingCartService();
@@ -144,24 +144,6 @@ public class CheckoutPickupPaymentTests
 
     private static Task<string> RenderAsync() =>
         RazorViewToStringRendererTests.CreateRenderer().RenderAsync(PartialPath, 55.50m);
-
-    // Visible text with tags stripped, entities decoded and whitespace collapsed.
-    private static string Text(string html) =>
-        Regex.Replace(WebUtility.HtmlDecode(Regex.Replace(html, "<[^>]+>", " ")), "\\s+", " ");
-
-    private static string WebProjectDirectory()
-    {
-        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
-        {
-            var candidate = Path.Combine(dir.FullName, "src", "GlimpsesOfGlory.Web");
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        throw new DirectoryNotFoundException("Could not find src/GlimpsesOfGlory.Web above the test output directory.");
-    }
 
     private sealed class NullTempDataProvider : ITempDataProvider
     {
