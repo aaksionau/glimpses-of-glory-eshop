@@ -113,8 +113,14 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         return order is null ? null : ToDetail(order);
     }
 
-    public async Task<OrderUpdateResult> MarkShippedAsync(int id, string? trackingNumber, CancellationToken cancellationToken)
+    public async Task<OrderUpdateResult> MarkShippedAsync(int id, string? trackingNumber, ShippingCarrier carrier, CancellationToken cancellationToken)
     {
+        // The page validates the posted carrier; this keeps an undefined value from ever being stored.
+        if (!Enum.IsDefined(carrier))
+        {
+            throw new ArgumentOutOfRangeException(nameof(carrier), carrier, null);
+        }
+
         // Loaded up front because the shipping email needs the full order and its lines.
         var order = await LoadWithLinesAsync(id, cancellationToken);
         if (order is null)
@@ -128,11 +134,14 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
 
         // Guarded on the status we just checked, so a double-click (or two admins at once)
         // only ships - and emails the buyer - once.
-        var tracking = string.IsNullOrWhiteSpace(trackingNumber) ? null : trackingNumber;
+        var tracking = string.IsNullOrWhiteSpace(trackingNumber) ? null : trackingNumber.Trim();
+        // A carrier without a tracking number has nothing to link to, so it isn't recorded.
+        ShippingCarrier? shippedWith = tracking is null ? null : carrier;
         var now = timeProvider.GetUtcNow();
         var result = await UpdateIfStatusAsync(id, order.Status, setters => setters
             .SetProperty(o => o.Status, OrderStatus.Shipped)
             .SetProperty(o => o.TrackingNumber, tracking)
+            .SetProperty(o => o.Carrier, shippedWith)
             .SetProperty(o => o.ShippedAt, o => o.ShippedAt ?? now), cancellationToken);
         if (result != OrderUpdateResult.Updated)
         {
@@ -141,6 +150,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
 
         order.Status = OrderStatus.Shipped;
         order.TrackingNumber = tracking;
+        order.Carrier = shippedWith;
         try
         {
             await emailSender.SendShippedNotificationAsync(order.ToShippedView(), cancellationToken);
@@ -324,6 +334,8 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         order.Total,
         order.Status,
         order.TrackingNumber,
+        order.Carrier,
+        CarrierTrackingLinks.TrackingUrl(order.Carrier, order.TrackingNumber),
         order.InternalNote,
         order.CreatedAt,
         order.PaidAt,

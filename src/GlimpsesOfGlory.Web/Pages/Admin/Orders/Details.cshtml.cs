@@ -15,6 +15,11 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
     [StringLength(200)]
     public string? TrackingNumber { get; set; }
 
+    // Only recorded when a tracking number is entered. EnumDataType rejects posted values outside the enum.
+    [BindProperty]
+    [EnumDataType(typeof(ShippingCarrier))]
+    public ShippingCarrier Carrier { get; set; } = ShippingCarrier.Usps;
+
     // Length is checked in OnPostSaveNoteAsync on the normalized note (what gets stored), not the raw post.
     [BindProperty]
     [Display(Name = "Internal note")]
@@ -100,7 +105,7 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
             return Partial("_OrderStatus", this);
         }
 
-        var result = await adminOrderService.MarkShippedAsync(id, TrackingNumber, cancellationToken);
+        var result = await adminOrderService.MarkShippedAsync(id, TrackingNumber, Carrier, cancellationToken);
 
         return await OrderStatusPartialAsync(
             id,
@@ -208,6 +213,7 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
     {
         Order = order;
         TrackingNumber = order.TrackingNumber;
+        Carrier = order.Carrier ?? ShippingCarrier.Usps;
         InternalNote = order.InternalNote;
     }
 }
