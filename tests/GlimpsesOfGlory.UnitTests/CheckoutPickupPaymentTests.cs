@@ -46,10 +46,11 @@ public class CheckoutPickupPaymentTests
         Assert.Contains("type=\"submit\"", button.Value);
         Assert.Contains("x-bind:disabled=\"submitting\"", button.Value);
         var label = WebUtility.HtmlDecode(button.Groups[1].Value);
-        Assert.Contains("'Place order'", label);
-        Assert.Contains("'Continue to payment'", label);
+        // Both labels are rendered and the checked radio picks one through CSS, so it's right without JS.
+        Assert.Contains("<span class=\"group-has-[#payment-cash:checked]:hidden\">Continue to payment</span>", label);
+        Assert.Matches("<span class=\"hidden group-has-\\[#payment-cash:checked\\]:inline\"[^>]*>Place order</span>", label);
         Assert.Contains("'Placing order…'", label);
-        Assert.Contains(">Continue to payment</span>", label);
+        Assert.Contains("id=\"payment-cash\"", html);
     }
 
     [Fact]
@@ -103,7 +104,7 @@ public class CheckoutPickupPaymentTests
         var form = Regex.Match(page, "<form\\b[^>]*>(.*?)</form>", RegexOptions.Singleline);
         Assert.Contains("method=\"post\"", form.Value);
         Assert.Contains("asp-page-handler=\"PickupPayment\"", form.Value);
-        Assert.Contains("payment: '@PaymentMethod.Card', submitting: false", form.Value);
+        Assert.Contains("x-data=\"{ submitting: false }\"", form.Value);
         Assert.Contains("x-on:submit=\"submitting = true\"", form.Value);
         Assert.Contains("x-on:pageshow.window=\"submitting = false\"", form.Value);
         Assert.Equal("<partial name=\"_PickupPaymentChoice\" model=\"Model.Total\" />", form.Groups[1].Value.Trim());
