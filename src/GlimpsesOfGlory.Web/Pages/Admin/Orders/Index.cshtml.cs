@@ -25,7 +25,7 @@ public class IndexModel(IAdminOrderService adminOrderService) : PageModel
 
     public AdminOrderListState State { get; private set; } = AdminOrderListState.FromQuery(null, null, false, null);
 
-    public AdminOrderTabLink CurrentTab { get; private set; } = AdminOrderTabs.FromQuery(null);
+    public AdminOrderTabLink CurrentTab => AdminOrderTabs.For(State.Tab);
 
     public AdminOrderTabCounts Counts { get; private set; } = new(0, 0, 0, 0);
 
@@ -34,7 +34,6 @@ public class IndexModel(IAdminOrderService adminOrderService) : PageModel
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
         State = AdminOrderListState.FromQuery(Status, Search, Preorder, PageNumber);
-        CurrentTab = AdminOrderTabs.FromQuery(Status);
         Counts = await adminOrderService.GetOrderTabCountsAsync(State.Filter, cancellationToken);
         Orders = await adminOrderService.GetOrdersAsync(State.Tab, State.Filter, State.Page, AdminOrderListState.PageSize, cancellationToken);
         // The service falls back to the last page when the requested one is past the end.

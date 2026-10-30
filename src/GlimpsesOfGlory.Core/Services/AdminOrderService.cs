@@ -22,7 +22,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
 
         var orders = Filtered(InTab(db.Orders.AsNoTracking(), tab), filter);
         var totalCount = await orders.CountAsync(cancellationToken);
-        var lastPage = Math.Max(1, (totalCount + pageSize - 1) / pageSize);
+        var lastPage = AdminOrderPage.PageCount(totalCount, pageSize);
         page = Math.Clamp(page, 1, lastPage);
 
         // Id breaks CreatedAt ties so an order can't appear on two pages, or on none.

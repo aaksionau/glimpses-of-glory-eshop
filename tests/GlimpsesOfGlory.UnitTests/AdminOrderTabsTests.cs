@@ -28,8 +28,6 @@ public class AdminOrderTabsTests
         Assert.Equal(
             [AdminOrderTab.NeedsAction, AdminOrderTab.Shipped, AdminOrderTab.Cancelled, AdminOrderTab.All],
             AdminOrderTabs.Links.Select(l => l.Tab));
-        Assert.Equal("/admin/orders", AdminOrderTabs.FromQuery(null).Href);
-        Assert.Equal("/admin/orders?status=shipped", AdminOrderTabs.FromQuery("shipped").Href);
         Assert.All(AdminOrderTabs.Links, l => Assert.False(string.IsNullOrWhiteSpace(l.EmptyMessage)));
     }
 

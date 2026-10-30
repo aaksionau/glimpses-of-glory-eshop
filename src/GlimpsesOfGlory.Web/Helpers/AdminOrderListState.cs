@@ -35,7 +35,7 @@ public sealed record AdminOrderListState(AdminOrderTab Tab, string? Search, bool
             var query = QueryString.Empty;
             if (Tab != AdminOrderTabs.Default)
             {
-                query = query.Add("status", AdminOrderTabs.Links.First(l => l.Tab == Tab).Slug);
+                query = query.Add("status", AdminOrderTabs.For(Tab).Slug);
             }
             if (Search is not null)
             {

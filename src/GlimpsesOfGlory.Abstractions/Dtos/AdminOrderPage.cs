@@ -4,7 +4,10 @@ namespace GlimpsesOfGlory.Abstractions.Dtos;
 // may differ from the one asked for when that was out of range.
 public sealed record AdminOrderPage(IReadOnlyList<AdminOrderSummary> Orders, int Page, int PageSize, int TotalCount)
 {
-    public int TotalPages => TotalCount == 0 ? 1 : (TotalCount + PageSize - 1) / PageSize;
+    public int TotalPages => PageCount(TotalCount, PageSize);
+
+    // An empty list still has one (empty) page.
+    public static int PageCount(int totalCount, int pageSize) => Math.Max(1, (totalCount + pageSize - 1) / pageSize);
 
     public bool HasPrevious => Page > 1;
 
