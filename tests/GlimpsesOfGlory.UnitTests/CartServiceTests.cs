@@ -25,10 +25,12 @@ public class CartServiceTests
             => Task.FromResult(product);
     }
 
-    private sealed class FakeShippingSettingsService : IShippingSettingsService
+    private sealed class FakeShippingSettingsService(params ShippingTierView[] tiers) : IShippingSettingsService
     {
+        private readonly IReadOnlyList<ShippingTierView> tiers = tiers.Length > 0 ? tiers : [new ShippingTierView(1, 1, 7.50m)];
+
         public Task<IReadOnlyList<ShippingTierView>> GetTiersAsync(CancellationToken cancellationToken)
-            => Task.FromResult<IReadOnlyList<ShippingTierView>>([new ShippingTierView(1, 1, 7.50m)]);
+            => Task.FromResult(tiers);
 
         public Task UpdateTiersAsync(IReadOnlyList<ShippingTierUpdate> tiers, CancellationToken cancellationToken)
             => Task.CompletedTask;
@@ -39,6 +41,66 @@ public class CartServiceTests
 
     private static CartService CreateService(FakeCartStore cartStore, ProductDetail? product) =>
         new(cartStore, new FakeProductCatalogService(product), new FakeShippingSettingsService());
+
+    // $8 for 1-2 items, $5 from 3 items.
+    private static CartService CreateTieredService(FakeCartStore cartStore, ProductDetail? product) =>
+        new(cartStore, new FakeProductCatalogService(product), new FakeShippingSettingsService(
+            new ShippingTierView(1, 1, 8.00m), new ShippingTierView(2, 3, 5.00m)));
+
+    [Fact]
+    public async Task GetSummaryAsync_IncludesShippingCostForCurrentQuantity()
+    {
+        var cartStore = new FakeCartStore();
+        var service = CreateTieredService(cartStore, CreateProduct(stockQuantity: 10));
+        await service.AddLineAsync("widget", 2, CancellationToken.None);
+
+        var summary = await service.GetSummaryAsync(CancellationToken.None);
+
+        Assert.Equal(8.00m, summary.ShippingCost);
+    }
+
+    [Fact]
+    public async Task GetSummaryAsync_ShippingCostFollowsQuantityChange()
+    {
+        var cartStore = new FakeCartStore();
+        var service = CreateTieredService(cartStore, CreateProduct(stockQuantity: 10));
+        await service.AddLineAsync("widget", 1, CancellationToken.None);
+
+        await service.UpdateLineQuantityAsync("widget", 3, CancellationToken.None);
+        var summary = await service.GetSummaryAsync(CancellationToken.None);
+
+        Assert.Equal(5.00m, summary.ShippingCost);
+    }
+
+    [Fact]
+    public async Task GetSummaryAsync_ShippingCostIsZero_AfterLastLineRemoved()
+    {
+        var cartStore = new FakeCartStore();
+        var service = CreateTieredService(cartStore, CreateProduct(stockQuantity: 10));
+        await service.AddLineAsync("widget", 2, CancellationToken.None);
+
+        await service.RemoveLineAsync("widget", CancellationToken.None);
+        var summary = await service.GetSummaryAsync(CancellationToken.None);
+
+        Assert.Equal(0m, summary.ShippingCost);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(7)]
+    public async Task GetSummaryAsync_ShippingCostMatchesShippingCostAtCheckout(int quantity)
+    {
+        var cartStore = new FakeCartStore();
+        var service = CreateTieredService(cartStore, CreateProduct(stockQuantity: 10));
+        await service.AddLineAsync("widget", quantity, CancellationToken.None);
+
+        var summary = await service.GetSummaryAsync(CancellationToken.None);
+        var checkoutCost = await service.GetShippingCostAsync(FulfillmentMethod.Shipping, CancellationToken.None);
+
+        Assert.Equal(checkoutCost, summary.ShippingCost);
+    }
 
     [Fact]
     public async Task GetShippingCostAsync_UsesShippingTiers_WhenShipping()
