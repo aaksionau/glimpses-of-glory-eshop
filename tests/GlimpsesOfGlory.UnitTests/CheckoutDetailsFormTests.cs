@@ -1,21 +1,48 @@
+using System.Text.Encodings.Web;
 using System.Text.RegularExpressions;
 using GlimpsesOfGlory.Web.Dtos;
+using GlimpsesOfGlory.Web.Pages.Checkout;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Abstractions;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.TagHelpers;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.AspNetCore.Mvc.ViewFeatures.Buffers;
+using Microsoft.AspNetCore.Razor.TagHelpers;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace GlimpsesOfGlory.UnitTests;
 
 public class CheckoutDetailsFormTests
 {
+    // Stands in for Index.cshtml as the view hosting the <partial> tag; never rendered itself.
+    private sealed class HostPageView : IView
+    {
+        public string Path => "/Pages/Checkout/Index.cshtml";
+
+        public Task RenderAsync(ViewContext context) => Task.CompletedTask;
+    }
+
     // The standard autofill tokens browsers and password managers use to fill the
-    // contact and address fields in one go.
+    // contact and address fields in one go, keyed by CheckoutAddress property.
+    public static TheoryData<string, string> AutocompleteTokens => new()
+    {
+        { "Email", "email" },
+        { "FullName", "name" },
+        { "AddressLine1", "address-line1" },
+        { "AddressLine2", "address-line2" },
+        { "City", "address-level2" },
+        { "State", "address-level1" },
+        { "PostalCode", "postal-code" },
+        { "Country", "country-name" },
+    };
+
     [Theory]
-    [InlineData("Email", "email")]
-    [InlineData("FullName", "name")]
-    [InlineData("AddressLine1", "address-line1")]
-    [InlineData("AddressLine2", "address-line2")]
-    [InlineData("City", "address-level2")]
-    [InlineData("State", "address-level1")]
-    [InlineData("PostalCode", "postal-code")]
-    [InlineData("Country", "country-name")]
+    [MemberData(nameof(AutocompleteTokens))]
     public async Task DetailsInput_HasAutocompleteToken(string fieldName, string token)
     {
         var input = FindInput(await RenderAsync(), fieldName);
@@ -28,12 +55,35 @@ public class CheckoutDetailsFormTests
     {
         var inputs = Inputs(await RenderAsync()).ToList();
 
-        Assert.Equal(8, inputs.Count);
+        Assert.Equal(AutocompleteTokens.Count, inputs.Count);
         Assert.All(inputs, i => Assert.Contains("autocomplete=\"", i));
     }
 
-    private static string FindInput(string html, string fieldName) =>
-        Assert.Single(Inputs(html), i => i.Contains($"name=\"{fieldName}\""));
+    // The checkout page renders the fields with <partial for="Address">, so they must post
+    // under the "Address." prefix that IndexModel's [BindProperty] Address binds from.
+    [Theory]
+    [MemberData(nameof(AutocompleteTokens))]
+    public async Task DetailsInput_OnCheckoutPage_KeepsAddressPrefix(string fieldName, string token)
+    {
+        var input = FindInput(await RenderOnCheckoutPageAsync(new ModelStateDictionary()), $"Address.{fieldName}");
+
+        Assert.Contains($"id=\"Address_{fieldName}\"", input);
+        Assert.Contains($"autocomplete=\"{token}\"", input);
+    }
+
+    [Fact]
+    public async Task ValidationMessage_OnCheckoutPage_ShowsErrorForPrefixedField()
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("Address.Email", "Enter your email.");
+
+        var html = await RenderOnCheckoutPageAsync(modelState);
+
+        Assert.Matches("<span [^>]*data-valmsg-for=\"Address.Email\"[^>]*>Enter your email.</span>", html);
+    }
+
+    private static string FindInput(string html, string name) =>
+        Assert.Single(Inputs(html), i => i.Contains($"name=\"{name}\""));
 
     private static IEnumerable<string> Inputs(string html) =>
         Regex.Matches(html, "<input\\b[^>]*>").Select(m => m.Value);
@@ -41,4 +91,42 @@ public class CheckoutDetailsFormTests
     private static Task<string> RenderAsync() =>
         RazorViewToStringRendererTests.CreateRenderer()
             .RenderAsync("~/Pages/Checkout/_CheckoutDetailsFields.cshtml", new CheckoutAddress());
+
+    // Runs the partial tag helper exactly as Index.cshtml's <partial for="Address"> does,
+    // against the page's own IndexModel and ModelState.
+    private static async Task<string> RenderOnCheckoutPageAsync(ModelStateDictionary modelState)
+    {
+        var services = RazorViewToStringRendererTests.CreateRazorServices();
+        var httpContext = new DefaultHttpContext { RequestServices = services };
+        var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor(), modelState);
+
+        var viewData = new ViewDataDictionary<IndexModel>(services.GetRequiredService<IModelMetadataProvider>(), modelState)
+        {
+            Model = new IndexModel(cartService: null!, checkoutSessionStore: null!),
+        };
+        var viewContext = new ViewContext(
+            actionContext,
+            new HostPageView(),
+            viewData,
+            new TempDataDictionary(httpContext, services.GetRequiredService<ITempDataProvider>()),
+            TextWriter.Null,
+            new HtmlHelperOptions());
+
+        var partial = new PartialTagHelper(
+            services.GetRequiredService<ICompositeViewEngine>(),
+            services.GetRequiredService<IViewBufferScope>())
+        {
+            Name = "~/Pages/Checkout/_CheckoutDetailsFields.cshtml",
+            For = services.GetRequiredService<ModelExpressionProvider>().CreateModelExpression(viewData, m => m.Address),
+            ViewContext = viewContext,
+        };
+
+        var context = new TagHelperContext([], new Dictionary<object, object>(), "partial");
+        var output = new TagHelperOutput("partial", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+        await partial.ProcessAsync(context, output);
+
+        await using var writer = new StringWriter();
+        output.WriteTo(writer, HtmlEncoder.Default);
+        return writer.ToString();
+    }
 }
