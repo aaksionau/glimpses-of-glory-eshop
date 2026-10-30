@@ -9,7 +9,8 @@ namespace GlimpsesOfGlory.Web.Helpers;
 // short line. With no line-level detail it falls back to the generic ItemsUnavailable banner.
 public static class CartLineErrorsTempData
 {
-    public const string ErrorKey = "Error";
+    // Matches the cart page's [TempData] Error property.
+    private const string ErrorKey = "Error";
 
     private const string LineErrorsKey = "CartLineErrors";
 

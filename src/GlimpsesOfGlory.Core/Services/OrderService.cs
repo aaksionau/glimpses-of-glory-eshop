@@ -258,10 +258,9 @@ public sealed class OrderService(
     // The cart lines whose product is gone or can no longer fulfil the requested quantity.
     private static List<UnavailableCartLine> FindUnavailableLines(CartSummary cart, Dictionary<string, Product> products) =>
         cart.Lines
-            .Where(line => !products.TryGetValue(line.ProductSlug, out var product) || !product.CanFulfill(line.Quantity))
-            .Select(line => new UnavailableCartLine(
-                line.ProductSlug,
-                products.TryGetValue(line.ProductSlug, out var product) ? Math.Max(0, product.StockQuantity) : 0))
+            .Select(line => (line, product: products.GetValueOrDefault(line.ProductSlug)))
+            .Where(x => x.product is null || !x.product.CanFulfill(x.line.Quantity))
+            .Select(x => new UnavailableCartLine(x.line.ProductSlug, Math.Max(0, x.product?.StockQuantity ?? 0)))
             .ToList();
 
     private sealed record CartPricing(

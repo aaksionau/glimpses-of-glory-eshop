@@ -105,10 +105,7 @@ public sealed class CheckoutUnavailableItemsTests : IDisposable
     [Fact]
     public async Task ReviewPage_CashOrderThatRanShort_SendsEachShortLineToTheCart()
     {
-        var httpContext = new DefaultHttpContext { Session = new InMemorySession() };
-        var sessionStore = new CheckoutSessionStore(new HttpContextAccessor { HttpContext = httpContext });
-        sessionStore.SaveAddress(new CheckoutAddress { FulfillmentMethod = FulfillmentMethod.Pickup, Email = "shopper@example.com", FullName = "Sam Shopper" });
-        var tempData = TempData(httpContext);
+        var (httpContext, sessionStore, tempData) = PickupCheckout();
         var page = new ReviewModel(
             new StubCartService(Cart(("sunrise", 3))),
             new StubOrderService(cashOrder: CashOrderResult.Failed([new UnavailableCartLine("sunrise", 2)])),
@@ -190,10 +187,7 @@ public sealed class CheckoutUnavailableItemsTests : IDisposable
 
     private static (PaymentModel Page, ITempDataDictionary TempData) PaymentPage(CheckoutPaymentResult result)
     {
-        var httpContext = new DefaultHttpContext { Session = new InMemorySession() };
-        var sessionStore = new CheckoutSessionStore(new HttpContextAccessor { HttpContext = httpContext });
-        sessionStore.SaveAddress(new CheckoutAddress { FulfillmentMethod = FulfillmentMethod.Pickup, Email = "shopper@example.com", FullName = "Sam Shopper" });
-        var tempData = TempData(httpContext);
+        var (httpContext, sessionStore, tempData) = PickupCheckout();
         var page = new PaymentModel(
             new StubCartService(Cart(("sunrise", 3))),
             sessionStore,
@@ -204,6 +198,15 @@ public sealed class CheckoutUnavailableItemsTests : IDisposable
             TempData = tempData,
         };
         return (page, tempData);
+    }
+
+    // A session with a pickup address already entered, as the checkout pages expect.
+    private static (HttpContext HttpContext, CheckoutSessionStore SessionStore, ITempDataDictionary TempData) PickupCheckout()
+    {
+        var httpContext = new DefaultHttpContext { Session = new InMemorySession() };
+        var sessionStore = new CheckoutSessionStore(new HttpContextAccessor { HttpContext = httpContext });
+        sessionStore.SaveAddress(new CheckoutAddress { FulfillmentMethod = FulfillmentMethod.Pickup, Email = "shopper@example.com", FullName = "Sam Shopper" });
+        return (httpContext, sessionStore, TempData(httpContext));
     }
 
     private static CartIndexModel CartPage(CartSummary cart, IReadOnlyList<UnavailableCartLine> unavailableLines)
