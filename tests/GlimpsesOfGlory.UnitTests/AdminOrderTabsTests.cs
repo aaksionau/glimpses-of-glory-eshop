@@ -118,6 +118,17 @@ public class AdminOrderTabsTests
     }
 
     [Fact]
+    public async Task IndexPage_TakesNowForRelativeTimesFromTheInjectedClock()
+    {
+        var now = new DateTimeOffset(2026, 3, 14, 15, 9, 26, TimeSpan.Zero);
+        var model = new IndexModel(new RecordingAdminOrderService(), new FixedTimeProvider(now));
+
+        await model.OnGetAsync(CancellationToken.None);
+
+        Assert.Equal(now, model.Now);
+    }
+
+    [Fact]
     public async Task IndexPage_Export_StreamsTheRangeAsACsvAttachment()
     {
         var service = new RecordingAdminOrderService
