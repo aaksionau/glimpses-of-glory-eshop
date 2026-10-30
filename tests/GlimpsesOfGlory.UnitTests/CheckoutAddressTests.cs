@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using GlimpsesOfGlory.Abstractions.Constants;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Web.Dtos;
 
@@ -22,6 +23,46 @@ public class CheckoutAddressTests
 
         Assert.Contains(results, r => r.MemberNames.Contains(nameof(CheckoutAddress.AddressLine1)));
         Assert.Contains(results, r => r.MemberNames.Contains(nameof(CheckoutAddress.Country)));
+    }
+
+    private static CheckoutAddress ShippingAddress(string? country) => new()
+    {
+        FulfillmentMethod = FulfillmentMethod.Shipping,
+        Email = "shopper@example.com",
+        FullName = "Jane Shopper",
+        AddressLine1 = "123 Main St",
+        City = "Springfield",
+        State = "IL",
+        PostalCode = "62704",
+        Country = country,
+    };
+
+    [Theory]
+    [InlineData("USA")]
+    [InlineData("united states")]
+    [InlineData("Narnia")]
+    public void Validate_RejectsCountryOutsideSupportedList(string country)
+    {
+        var results = Validate(ShippingAddress(country));
+
+        var error = Assert.Single(results);
+        Assert.Equal([nameof(CheckoutAddress.Country)], error.MemberNames);
+        Assert.Equal("Choose a country we ship to.", error.ErrorMessage);
+    }
+
+    [Fact]
+    public void Validate_AcceptsSupportedCountry()
+    {
+        Assert.Empty(Validate(ShippingAddress(ShippingCountryPolicy.DefaultCountry)));
+    }
+
+    [Fact]
+    public void Validate_IgnoresCountry_WhenPickup()
+    {
+        var address = ShippingAddress("Narnia");
+        address.FulfillmentMethod = FulfillmentMethod.Pickup;
+
+        Assert.Empty(Validate(address));
     }
 
     [Fact]

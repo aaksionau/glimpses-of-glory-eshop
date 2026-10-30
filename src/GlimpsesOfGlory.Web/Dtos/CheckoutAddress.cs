@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using GlimpsesOfGlory.Abstractions.Constants;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 
@@ -67,6 +68,12 @@ public sealed class CheckoutAddress : IValidatableObject
             {
                 yield return new ValidationResult(message, [name]);
             }
+        }
+
+        // The form only offers supported countries, but the post can still carry anything.
+        if (!string.IsNullOrWhiteSpace(Country) && !ShippingCountryPolicy.IsSupported(Country))
+        {
+            yield return new ValidationResult("Choose a country we ship to.", [nameof(Country)]);
         }
     }
 }

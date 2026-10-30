@@ -1,5 +1,6 @@
 using System.Text.Encodings.Web;
 using System.Text.RegularExpressions;
+using GlimpsesOfGlory.Abstractions.Constants;
 using GlimpsesOfGlory.Web.Dtos;
 using GlimpsesOfGlory.Web.Pages.Checkout;
 using Microsoft.AspNetCore.Http;
@@ -43,32 +44,73 @@ public class CheckoutDetailsFormTests
 
     [Theory]
     [MemberData(nameof(AutocompleteTokens))]
-    public async Task DetailsInput_HasAutocompleteToken(string fieldName, string token)
+    public async Task DetailsField_HasAutocompleteToken(string fieldName, string token)
     {
-        var input = FindInput(await RenderAsync(), fieldName);
+        var field = FindField(await RenderAsync(), fieldName);
 
-        Assert.Contains($"autocomplete=\"{token}\"", input);
+        Assert.Contains($"autocomplete=\"{token}\"", field);
     }
 
     [Fact]
-    public async Task EveryDetailsInput_HasAnAutocompleteToken()
+    public async Task EveryDetailsField_HasAnAutocompleteToken()
     {
-        var inputs = Inputs(await RenderAsync()).ToList();
+        var fields = Fields(await RenderAsync()).ToList();
 
-        Assert.Equal(AutocompleteTokens.Count, inputs.Count);
-        Assert.All(inputs, i => Assert.Contains("autocomplete=\"", i));
+        Assert.Equal(AutocompleteTokens.Count, fields.Count);
+        Assert.All(fields, f => Assert.Contains("autocomplete=\"", f));
+    }
+
+    [Fact]
+    public async Task Country_IsASelectOfSupportedCountries_NotTyped()
+    {
+        var html = await RenderAsync();
+
+        Assert.StartsWith("<select", FindField(html, "Country"));
+        Assert.Equal(ShippingCountryPolicy.SupportedCountries, Options(html).Select(o => o.Value));
+    }
+
+    [Fact]
+    public async Task Country_DefaultsToUnitedStates_WhenNoCountrySet()
+    {
+        var options = Options(await RenderAsync(new CheckoutAddress { Country = null }));
+
+        var selected = Assert.Single(options, o => o.Selected);
+        Assert.Equal("United States", selected.Value);
+    }
+
+    public static TheoryData<string> SupportedCountries => new(ShippingCountryPolicy.SupportedCountries);
+
+    // A re-render after a failed post keeps the shopper's choice.
+    [Theory]
+    [MemberData(nameof(SupportedCountries))]
+    public async Task Country_KeepsPostedSupportedCountry_OnRerender(string country)
+    {
+        var options = Options(await RenderAsync(new CheckoutAddress { Country = country }));
+
+        var selected = Assert.Single(options, o => o.Selected);
+        Assert.Equal(country, selected.Value);
+    }
+
+    // E.g. a free-text "USA" left in the checkout session from before the select existed.
+    [Fact]
+    public async Task Country_FallsBackToDefault_WhenCountryIsUnsupported()
+    {
+        var options = Options(await RenderAsync(new CheckoutAddress { Country = "USA" }));
+
+        var selected = Assert.Single(options, o => o.Selected);
+        Assert.Equal(ShippingCountryPolicy.DefaultCountry, selected.Value);
     }
 
     // The checkout page renders the fields with <partial for="Address">, so they must post
     // under the "Address." prefix that IndexModel's [BindProperty] Address binds from.
     [Theory]
     [MemberData(nameof(AutocompleteTokens))]
-    public async Task DetailsInput_OnCheckoutPage_KeepsAddressPrefix(string fieldName, string token)
+    public async Task DetailsField_OnCheckoutPage_KeepsAddressPrefix(string fieldName, string token)
     {
-        var input = FindInput(await RenderOnCheckoutPageAsync(new ModelStateDictionary()), $"Address.{fieldName}");
+        var field = FindField(await RenderOnCheckoutPageAsync(new ModelStateDictionary()), $"Address.{fieldName}");
 
-        Assert.Contains($"id=\"Address_{fieldName}\"", input);
-        Assert.Contains($"autocomplete=\"{token}\"", input);
+        Assert.Contains($"id=\"Address_{fieldName}\"", field);
+        Assert.Contains($"autocomplete=\"{token}\"", field);
     }
 
     [Fact]
@@ -82,15 +124,37 @@ public class CheckoutDetailsFormTests
         Assert.Matches("<span [^>]*data-valmsg-for=\"Address.Email\"[^>]*>Enter your email.</span>", html);
     }
 
-    private static string FindInput(string html, string name) =>
-        Assert.Single(Inputs(html), i => i.Contains($"name=\"{name}\""));
+    // A failed post re-renders from ModelState's attempted values, which the select tag helper
+    // prefers over the model; exactly one option must end up selected either way.
+    [Theory]
+    [InlineData("United States", "United States")]
+    [InlineData("Narnia", "United States")]
+    public async Task Country_OnCheckoutPage_SelectsPostedCountryOrDefault(string posted, string expected)
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.SetModelValue("Address.Country", posted, posted);
 
-    private static IEnumerable<string> Inputs(string html) =>
-        Regex.Matches(html, "<input\\b[^>]*>").Select(m => m.Value);
+        var options = Options(await RenderOnCheckoutPageAsync(modelState));
 
-    private static Task<string> RenderAsync() =>
+        var selected = Assert.Single(options, o => o.Selected);
+        Assert.Equal(expected, selected.Value);
+    }
+
+    private static string FindField(string html, string name) =>
+        Assert.Single(Fields(html), f => f.Contains($"name=\"{name}\""));
+
+    // The opening tag of every form control: the text inputs and the country select.
+    private static IEnumerable<string> Fields(string html) =>
+        Regex.Matches(html, "<(?:input|select)\\b[^>]*>").Select(m => m.Value);
+
+    private static IEnumerable<(string Value, bool Selected)> Options(string html) =>
+        Regex.Matches(html, "<option\\b([^>]*)>").Select(m => (
+            Regex.Match(m.Groups[1].Value, "value=\"([^\"]*)\"").Groups[1].Value,
+            Regex.IsMatch(m.Groups[1].Value, "\\bselected\\b")));
+
+    private static Task<string> RenderAsync(CheckoutAddress? model = null) =>
         RazorViewToStringRendererTests.CreateRenderer()
-            .RenderAsync("~/Pages/Checkout/_CheckoutDetailsFields.cshtml", new CheckoutAddress());
+            .RenderAsync("~/Pages/Checkout/_CheckoutDetailsFields.cshtml", model ?? new CheckoutAddress());
 
     // Runs the partial tag helper exactly as Index.cshtml's <partial for="Address"> does,
     // against the page's own IndexModel and ModelState.
