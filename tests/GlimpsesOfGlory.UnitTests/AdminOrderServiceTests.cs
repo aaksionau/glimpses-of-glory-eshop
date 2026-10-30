@@ -179,7 +179,7 @@ public sealed class AdminOrderServiceTests : IDisposable
         var store = new FakeInventoryStore(new Dictionary<int, int> { [1] = 5, [2] = 0 });
         await store.TryReserveStockAsync(1, 2, CancellationToken.None);
         await store.ReservePreorderAsync(2, 3, CancellationToken.None);
-        var id = await AddOrderAsync(FulfillmentMethod.Pickup, lines: [LineOf(1, 2, isPreorder: false), LineOf(2, 3, isPreorder: true)]);
+        var id = await AddOrderAsync(FulfillmentMethod.Pickup, lines: [Line(productId: 1, quantity: 2), Line(isPreorder: true, productId: 2, quantity: 3)]);
 
         Assert.Equal(OrderUpdateResult.Updated, await Service(inventoryStore: store).MarkCancelledAsync(id, CancellationToken.None));
 
@@ -192,7 +192,7 @@ public sealed class AdminOrderServiceTests : IDisposable
     {
         var store = new FakeInventoryStore(new Dictionary<int, int> { [1] = 5 });
         await store.TryReserveStockAsync(1, 2, CancellationToken.None);
-        var id = await AddOrderAsync(FulfillmentMethod.Pickup, lines: [LineOf(1, 2, isPreorder: false)]);
+        var id = await AddOrderAsync(FulfillmentMethod.Pickup, lines: [Line(productId: 1, quantity: 2)]);
         await Service(inventoryStore: store).MarkCancelledAsync(id, CancellationToken.None);
 
         Assert.Equal(OrderUpdateResult.InvalidTransition, await Service(inventoryStore: store).MarkCancelledAsync(id, CancellationToken.None));
@@ -668,12 +668,12 @@ public sealed class AdminOrderServiceTests : IDisposable
         return page.Orders.Select(o => o.Id).Order().ToList();
     }
 
-    private static OrderLine Line(bool isPreorder = false, DateOnly? expectedAvailability = null) => new()
+    private static OrderLine Line(bool isPreorder = false, DateOnly? expectedAvailability = null, int productId = 1, int quantity = 1) => new()
     {
-        ProductId = 1,
+        ProductId = productId,
         ProductName = "Print",
         UnitPrice = 10m,
-        Quantity = 1,
+        Quantity = quantity,
         IsPreorder = isPreorder,
         ExpectedAvailabilityDate = expectedAvailability,
     };
@@ -754,15 +754,6 @@ public sealed class AdminOrderServiceTests : IDisposable
         await db.SaveChangesAsync();
         return order.Id;
     }
-
-    private static OrderLine LineOf(int productId, int quantity, bool isPreorder) => new()
-    {
-        ProductId = productId,
-        ProductName = $"Product {productId}",
-        UnitPrice = 10m,
-        Quantity = quantity,
-        IsPreorder = isPreorder,
-    };
 
     private async Task<Order> LoadAsync(int id)
     {
