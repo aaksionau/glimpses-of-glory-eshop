@@ -10,9 +10,22 @@
   --color-ink-light: #605c54;
   --color-gold: #b9862f;
   --color-gold-dark: #93691f;
+  --color-gold-darker: #7a5618;
   --color-gold-light: #f4e6c8;
   --color-sky: #3d5f7c;
   --color-sky-dark: #294156;
+}
+
+/* The one primary call-to-action look (Shop the Collection, Add to cart, Proceed to checkout, Pay, …).
+   White on gold-dark is about 4.9:1 and on gold-darker about 6.6:1, so the label meets WCAG AA (4.5:1)
+   at rest and on hover; plain `gold` (about 3.2:1) is too light for white text. Disabled turns grey
+   rather than just fading, so it reads as unavailable; a button that is disabled only because it is busy
+   (aria-busy="true": "Processing…", "Placing order…") keeps its gold look. Layout (width, margins) stays
+   with each page. */
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-gold-dark px-6 py-3 text-center font-semibold text-white transition-colors hover:bg-gold-darker focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-darker disabled:cursor-not-allowed disabled:not-aria-busy:bg-ink/15 disabled:not-aria-busy:text-ink-light aria-busy:cursor-wait;
+  }
 }
 
 [x-cloak] {
