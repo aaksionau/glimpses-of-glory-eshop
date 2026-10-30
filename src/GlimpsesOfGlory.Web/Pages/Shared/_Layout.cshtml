@@ -114,6 +114,8 @@
 
     @await RenderSectionAsync("Scripts", required: false)
     <script src="~/js/htmx.min.js" asp-append-version="true"></script>
+    @* Alpine plugins load before Alpine itself (x-trap comes from the focus plugin). *@
+    <script src="~/js/alpine-focus.min.js" defer asp-append-version="true"></script>
     <script src="~/js/alpine.min.js" defer asp-append-version="true"></script>
 </body>
 </html>

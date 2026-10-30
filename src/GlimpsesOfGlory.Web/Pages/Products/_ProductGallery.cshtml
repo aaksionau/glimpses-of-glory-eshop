@@ -1,0 +1,109 @@
+@model GlimpsesOfGlory.Abstractions.Dtos.ProductDetail
+@{
+    // A partial never takes a layout; this also keeps it renderable on its own (in tests).
+    Layout = null;
+    var photos = Model.PhotoFileNames;
+    var hasMany = photos.Count > 1;
+    const string lightboxButtonClass = "flex items-center justify-center w-12 h-12 rounded-full bg-black/60 text-white text-2xl leading-none hover:bg-black/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
+}
+
+@if (photos.Count == 0)
+{
+    <div class="w-full aspect-[3/4] bg-cream-dark flex items-center justify-center text-ink-light">No photos</div>
+}
+else
+{
+    @* One photo shows at a time. Swiping the main photo or the lightbox moves between photos; a swipe
+       isn't also taken as the tap that opens the lightbox. The lightbox traps focus (Alpine's x-trap),
+       closes on Escape, the close button or a tap on the backdrop, and hands focus back to the photo. *@
+    <div x-data="{
+             active: 0,
+             count: @photos.Count,
+             open: false,
+             touchX: null,
+             swiped: false,
+             show(i) { this.active = (i + this.count) % this.count; },
+             next() { this.show(this.active + 1); },
+             prev() { this.show(this.active - 1); },
+             openLightbox() { if (this.swiped) { this.swiped = false; return; } this.open = true; },
+             closeLightbox() { this.open = false; this.$nextTick(() => this.$refs.trigger.focus()); },
+             swipeStart(e) { this.touchX = e.changedTouches[0].clientX; this.swiped = false; },
+             swipeEnd(e) {
+                 if (this.touchX === null || this.count < 2) return;
+                 const dx = e.changedTouches[0].clientX - this.touchX;
+                 this.touchX = null;
+                 if (Math.abs(dx) > 40) { this.swiped = true; dx < 0 ? this.next() : this.prev(); }
+             }
+         }">
+        <button type="button"
+                x-ref="trigger"
+                aria-haspopup="dialog"
+                aria-label="Enlarge photos of @Model.Name"
+                class="relative block w-full aspect-[3/4] bg-cream-dark rounded-2xl overflow-hidden cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-dark"
+                x-on:click="openLightbox()"
+                x-on:touchstart.passive="swipeStart($event)"
+                x-on:touchend="swipeEnd($event)">
+            @for (var i = 0; i < photos.Count; i++)
+            {
+                <img src="/product-photos/@photos[i]"
+                     alt="@Model.Name photo @(i + 1)"
+                     class="absolute inset-0 w-full h-full object-cover"
+                     x-show="active === @i" />
+            }
+        </button>
+
+        @if (hasMany)
+        {
+            <div class="flex gap-2 mt-3">
+                @for (var i = 0; i < photos.Count; i++)
+                {
+                    <button type="button"
+                            aria-label="Show photo @(i + 1) of @photos.Count"
+                            class="w-16 h-16 rounded overflow-hidden border-2"
+                            x-bind:class="active === @i ? 'border-gold' : 'border-transparent'"
+                            x-bind:aria-current="active === @i ? 'true' : null"
+                            x-on:click="show(@i)">
+                        <img src="/product-photos/@photos[i]" alt="" class="w-full h-full object-cover" />
+                    </button>
+                }
+            </div>
+        }
+
+        <div x-show="open"
+             x-cloak
+             x-trap.inert.noscroll="open"
+             role="dialog"
+             aria-modal="true"
+             aria-label="Photos of @Model.Name"
+             data-lightbox
+             class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+             x-on:click.self="closeLightbox()"
+             x-on:keydown.escape.prevent.stop="closeLightbox()"
+             x-on:keydown.arrow-left="prev()"
+             x-on:keydown.arrow-right="next()"
+             x-on:touchstart.passive="swipeStart($event)"
+             x-on:touchend="swipeEnd($event)">
+            @for (var i = 0; i < photos.Count; i++)
+            {
+                <img src="/product-photos/@photos[i]"
+                     alt="@Model.Name photo @(i + 1)"
+                     class="max-w-full max-h-full object-contain"
+                     x-show="active === @i" />
+            }
+
+            <button type="button" data-lightbox-close aria-label="Close photos" x-on:click="closeLightbox()"
+                    class="absolute top-4 right-4 @lightboxButtonClass">&times;</button>
+
+            @if (hasMany)
+            {
+                <button type="button" data-lightbox-prev aria-label="Previous photo" x-on:click="prev()"
+                        class="absolute left-4 top-1/2 -translate-y-1/2 @lightboxButtonClass">&lsaquo;</button>
+                <button type="button" data-lightbox-next aria-label="Next photo" x-on:click="next()"
+                        class="absolute right-4 top-1/2 -translate-y-1/2 @lightboxButtonClass">&rsaquo;</button>
+                <p class="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm" aria-live="polite">
+                    Photo <span x-text="active + 1">1</span> of @photos.Count
+                </p>
+            }
+        </div>
+    </div>
+}

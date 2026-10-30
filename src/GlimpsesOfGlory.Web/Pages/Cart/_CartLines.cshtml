@@ -2,11 +2,11 @@
 @using GlimpsesOfGlory.Abstractions.Dtos
 @using GlimpsesOfGlory.Abstractions.Constants
 @using GlimpsesOfGlory.Web.Helpers
+@using GlimpsesOfGlory.Web.Dtos
 @{
     // A partial never takes a layout; this also keeps it renderable on its own (in tests).
     Layout = null;
     var cart = Model.Cart;
-    const string stepButtonClass = "w-11 h-11 rounded-full border border-ink/20 hover:border-gold-dark text-lg leading-none";
 }
 
 <div id="cart-lines">
@@ -42,6 +42,8 @@
             {
                 var lineError = Model.ErrorFor(line.ProductSlug);
                 var hasError = lineError is not null;
+                var stepper = new QuantityStepperView(line.ProductSlug, line.ProductName, line.Quantity,
+                    line.IsPreorder ? PreorderPolicy.MaxQuantityPerLine : null, hasError ? $"error-{line.ProductSlug}" : null);
                 <div class="flex flex-wrap items-center gap-4 border-b border-ink/10 pb-4@(hasError ? " border-l-4 border-l-red-600 pl-3" : "")" data-line-error="@(hasError ? "true" : null)">
                     @if (line.ThumbnailFileName is not null)
                     {
@@ -61,28 +63,17 @@
                         }
                     </div>
 
-                    @* The −/+ buttons step the input (within its min/max) and fire its change event when the value
-                       moves; their ids keep focus on them across the swap. The short delay lets a few quick taps go
-                       as one save, and the spinner shows while the line saves. Every cart form syncs on #cart-lines
-                       and drops a post while another is in flight: the session cart is last-write-wins, so two
-                       overlapping saves could lose one, and the later swap could show a stale cart. *@
+                    @* The shared stepper fires the input's change event when the value moves; its buttons' ids keep
+                       focus on them across the swap. The short delay lets a few quick taps go as one save, and the
+                       spinner shows while the line saves. Every cart form syncs on #cart-lines and drops a post
+                       while another is in flight: the session cart is last-write-wins, so two overlapping saves
+                       could lose one, and the later swap could show a stale cart. *@
                     <form class="flex items-center gap-1"
-                          x-data="{ step(up) { const q = this.$refs.qty, before = q.value; up ? q.stepUp() : q.stepDown(); if (q.value !== before) q.dispatchEvent(new Event('change', { bubbles: true })); } }"
                           hx-post="/cart?handler=UpdateQuantity" hx-target="#cart-lines" hx-swap="outerHTML" hx-trigger="change delay:400ms"
                           hx-sync="closest #cart-lines:drop"
                           hx-indicator="#saving-@line.ProductSlug" asp-antiforgery="true">
                         <input type="hidden" name="slug" value="@line.ProductSlug" />
-                        <button type="button" id="qty-down-@line.ProductSlug" aria-label="Decrease quantity of @line.ProductName" data-step="down"
-                                x-on:click="step(false)"
-                                class="@stepButtonClass">&minus;</button>
-                        <label for="qty-@line.ProductSlug" class="sr-only">Quantity for @line.ProductName</label>
-                        <input type="number" id="qty-@line.ProductSlug" name="quantity" value="@line.Quantity" min="1" max="@(line.IsPreorder ? PreorderPolicy.MaxQuantityPerLine : (int?)null)"
-                               x-ref="qty"
-                               aria-describedby="@(hasError ? $"error-{line.ProductSlug}" : null)" aria-invalid="@(hasError ? "true" : null)"
-                               class="w-14 border border-ink/20 rounded px-2 py-3 text-center" />
-                        <button type="button" id="qty-up-@line.ProductSlug" aria-label="Increase quantity of @line.ProductName" data-step="up"
-                                x-on:click="step(true)"
-                                class="@stepButtonClass">+</button>
+                        <partial name="_QuantityStepper" model="stepper" />
                         <svg id="saving-@line.ProductSlug" class="htmx-indicator h-5 w-5 animate-spin text-gold-dark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"></path>
