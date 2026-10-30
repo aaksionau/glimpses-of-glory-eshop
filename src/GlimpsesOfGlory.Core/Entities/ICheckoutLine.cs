@@ -1,7 +1,7 @@
 namespace GlimpsesOfGlory.Core.Entities;
 
 // Shared shape between OrderLine and PendingCheckoutLine.
-internal interface ICheckoutLine
+public interface ICheckoutLine
 {
     int ProductId { get; set; }
     string ProductName { get; set; }

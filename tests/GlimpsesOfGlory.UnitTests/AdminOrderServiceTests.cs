@@ -174,6 +174,33 @@ public sealed class AdminOrderServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task MarkCancelled_ReleasesEachLine()
+    {
+        var store = new FakeInventoryStore(new Dictionary<int, int> { [1] = 5, [2] = 0 });
+        await store.TryReserveStockAsync(1, 2, CancellationToken.None);
+        await store.ReservePreorderAsync(2, 3, CancellationToken.None);
+        var id = await AddOrderAsync(FulfillmentMethod.Pickup, lines: [LineOf(1, 2, isPreorder: false), LineOf(2, 3, isPreorder: true)]);
+
+        Assert.Equal(OrderUpdateResult.Updated, await Service(inventoryStore: store).MarkCancelledAsync(id, CancellationToken.None));
+
+        Assert.Equal(5, store.GetStock(1));
+        Assert.Equal(0, store.GetPreordered(2));
+    }
+
+    [Fact]
+    public async Task MarkCancelled_DoesNotReleaseAgain_WhenAlreadyCancelled()
+    {
+        var store = new FakeInventoryStore(new Dictionary<int, int> { [1] = 5 });
+        await store.TryReserveStockAsync(1, 2, CancellationToken.None);
+        var id = await AddOrderAsync(FulfillmentMethod.Pickup, lines: [LineOf(1, 2, isPreorder: false)]);
+        await Service(inventoryStore: store).MarkCancelledAsync(id, CancellationToken.None);
+
+        Assert.Equal(OrderUpdateResult.InvalidTransition, await Service(inventoryStore: store).MarkCancelledAsync(id, CancellationToken.None));
+
+        Assert.Equal(5, store.GetStock(1));
+    }
+
+    [Fact]
     public async Task GetOrder_ExposesTheStepTimestamps()
     {
         var id = await AddOrderAsync(FulfillmentMethod.Pickup);
@@ -686,8 +713,8 @@ public sealed class AdminOrderServiceTests : IDisposable
         Assert.Throws<ArgumentException>(() => Service().StreamOrdersForExportAsync(new DateOnly(2026, 10, 2), new DateOnly(2026, 10, 1), CancellationToken.None));
     }
 
-    private AdminOrderService Service(IEmailSender? emailSender = null) =>
-        new(CreateDb(), new FakeInventoryStore(new Dictionary<int, int>()), new FakePaymentGateway(), emailSender ?? new NullEmailSender(), clock, NullLogger<AdminOrderService>.Instance);
+    private AdminOrderService Service(IEmailSender? emailSender = null, FakeInventoryStore? inventoryStore = null) =>
+        new(CreateDb(), new OrderLineInventory(inventoryStore ?? new FakeInventoryStore(new Dictionary<int, int>())), new FakePaymentGateway(), emailSender ?? new NullEmailSender(), clock, NullLogger<AdminOrderService>.Instance);
 
     private async Task<int> AddOrderAsync(
         FulfillmentMethod fulfillmentMethod,
@@ -727,6 +754,15 @@ public sealed class AdminOrderServiceTests : IDisposable
         await db.SaveChangesAsync();
         return order.Id;
     }
+
+    private static OrderLine LineOf(int productId, int quantity, bool isPreorder) => new()
+    {
+        ProductId = productId,
+        ProductName = $"Product {productId}",
+        UnitPrice = 10m,
+        Quantity = quantity,
+        IsPreorder = isPreorder,
+    };
 
     private async Task<Order> LoadAsync(int id)
     {
