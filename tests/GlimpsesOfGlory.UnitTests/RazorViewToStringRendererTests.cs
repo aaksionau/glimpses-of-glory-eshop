@@ -30,6 +30,18 @@ public class RazorViewToStringRendererTests
     // Program.cs wires RazorViewToStringRenderer via AddRazorPages().
     internal static RazorViewToStringRenderer CreateRenderer()
     {
+        var provider = CreateRazorServices();
+
+        return new RazorViewToStringRenderer(
+            provider.GetRequiredService<IRazorViewEngine>(),
+            provider.GetRequiredService<ITempDataProvider>(),
+            provider);
+    }
+
+    // The Razor view-engine services behind CreateRenderer, for tests that need to drive
+    // other parts of the pipeline (e.g. the partial tag helper) directly.
+    internal static IServiceProvider CreateRazorServices()
+    {
         var webAssembly = typeof(RazorViewToStringRenderer).Assembly;
 
         var services = new ServiceCollection();
@@ -51,12 +63,7 @@ public class RazorViewToStringRendererTests
         services.AddLogging();
         services.AddRazorPages();
 
-        var provider = services.BuildServiceProvider();
-
-        return new RazorViewToStringRenderer(
-            provider.GetRequiredService<IRazorViewEngine>(),
-            provider.GetRequiredService<ITempDataProvider>(),
-            provider);
+        return services.BuildServiceProvider();
     }
 
     [Fact]
