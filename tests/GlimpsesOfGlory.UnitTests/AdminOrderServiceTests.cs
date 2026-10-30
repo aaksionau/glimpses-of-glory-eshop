@@ -146,7 +146,7 @@ public sealed class AdminOrderServiceTests : IDisposable
         Assert.Equal([cancelledUnpaid], await IdsAsync(service, AdminOrderTab.Cancelled));
         Assert.Equal(6, (await IdsAsync(service, AdminOrderTab.All)).Count);
 
-        Assert.Equal(new AdminOrderTabCounts(NeedsAction: 3, Shipped: 3, Cancelled: 1, All: 6), await service.GetOrderTabCountsAsync(CancellationToken.None));
+        Assert.Equal(new AdminOrderTabCounts(NeedsAction: 3, Shipped: 3, Cancelled: 1, All: 6), await service.GetOrderTabCountsAsync(AdminOrderFilter.None, CancellationToken.None));
     }
 
     [Fact]
@@ -158,7 +158,7 @@ public sealed class AdminOrderServiceTests : IDisposable
         await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Cancelled);
 
         var service = Service();
-        var all = await service.GetOrdersAsync(AdminOrderTab.All, CancellationToken.None);
+        var all = (await service.GetOrdersAsync(AdminOrderTab.All, AdminOrderFilter.None, 1, 50, CancellationToken.None)).Orders;
         var needsAction = await IdsAsync(service, AdminOrderTab.NeedsAction);
 
         Assert.Equal(all.Where(o => o.NeedsAction).Select(o => o.Id).Order(), needsAction);
@@ -170,23 +170,194 @@ public sealed class AdminOrderServiceTests : IDisposable
         var older = await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: T1);
         var newer = await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: T2);
 
-        var orders = await Service().GetOrdersAsync(AdminOrderTab.NeedsAction, CancellationToken.None);
+        var orders = await Service().GetOrdersAsync(AdminOrderTab.NeedsAction, AdminOrderFilter.None, 1, 25, CancellationToken.None);
 
-        Assert.Equal([newer, older], orders.Select(o => o.Id));
+        Assert.Equal([newer, older], orders.Orders.Select(o => o.Id));
     }
 
     [Fact]
     public async Task GetOrderTabCounts_WithNoOrders_IsAllZero()
     {
-        Assert.Equal(new AdminOrderTabCounts(0, 0, 0, 0), await Service().GetOrderTabCountsAsync(CancellationToken.None));
+        Assert.Equal(new AdminOrderTabCounts(0, 0, 0, 0), await Service().GetOrderTabCountsAsync(AdminOrderFilter.None, CancellationToken.None));
     }
 
-    private static async Task<List<int>> IdsAsync(AdminOrderService service, AdminOrderTab tab)
+    [Theory]
+    [InlineData("42")]
+    [InlineData("#42")]
+    [InlineData(" # 42 ")]
+    public async Task GetOrders_SearchByOrderNumber_FindsThatOrder(string search)
     {
-        var orders = await service.GetOrdersAsync(tab, CancellationToken.None);
-        // Same CreatedAt for most seeded orders, so compare by id to stay order-independent.
-        return orders.Select(o => o.Id).Order().ToList();
+        for (var i = 0; i < 42; i++)
+        {
+            await AddOrderAsync(FulfillmentMethod.Shipping);
+        }
+
+        var ids = await IdsAsync(Service(), AdminOrderTab.All, new AdminOrderFilter(search));
+
+        Assert.Equal([42], ids);
     }
+
+    [Fact]
+    public async Task GetOrders_HashSearch_MatchesOrderNumbersOnly()
+    {
+        var first = await AddOrderAsync(FulfillmentMethod.Shipping, email: "first@example.com");
+        var second = await AddOrderAsync(FulfillmentMethod.Shipping, email: "buyer1@example.com");
+        var service = Service();
+
+        Assert.Equal([first], await IdsAsync(service, AdminOrderTab.All, new AdminOrderFilter("#1")));
+        Assert.Empty(await IdsAsync(service, AdminOrderTab.All, new AdminOrderFilter("#buyer")));
+        // Without the "#", a number also matches emails that contain it.
+        Assert.Equal([first, second], await IdsAsync(service, AdminOrderTab.All, new AdminOrderFilter("1")));
+    }
+
+    [Fact]
+    public async Task GetOrders_SearchMatchesPartOfTheEmailOrName_IgnoringCase()
+    {
+        var alice = await AddOrderAsync(FulfillmentMethod.Shipping, email: "alice.walker@example.com", customerName: "Alice Walker");
+        var bob = await AddOrderAsync(FulfillmentMethod.Shipping, email: "bob@shop.test", customerName: "Robert Stone");
+        await AddOrderAsync(FulfillmentMethod.Shipping, email: "carol@example.com", customerName: "Carol King");
+        var service = Service();
+
+        Assert.Equal([alice], await IdsAsync(service, AdminOrderTab.All, new AdminOrderFilter("WALKER@")));
+        Assert.Equal([bob], await IdsAsync(service, AdminOrderTab.All, new AdminOrderFilter("shop.te")));
+        Assert.Equal([bob], await IdsAsync(service, AdminOrderTab.All, new AdminOrderFilter("rob")));
+        Assert.Equal([alice], await IdsAsync(service, AdminOrderTab.All, new AdminOrderFilter("ice wal")));
+        Assert.Equal(3, (await IdsAsync(service, AdminOrderTab.All, new AdminOrderFilter("   "))).Count);
+        Assert.Empty(await IdsAsync(service, AdminOrderTab.All, new AdminOrderFilter("nobody")));
+    }
+
+    [Fact]
+    public async Task GetOrders_SearchCombinesWithTheTab_AndTheCountsFollowIt()
+    {
+        var newJane = await AddOrderAsync(FulfillmentMethod.Shipping, customerName: "Jane Doe");
+        await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Cancelled, customerName: "Jane Doe");
+        await AddOrderAsync(FulfillmentMethod.Shipping, customerName: "John Roe");
+        var service = Service();
+        var filter = new AdminOrderFilter("jane");
+
+        Assert.Equal([newJane], await IdsAsync(service, AdminOrderTab.NeedsAction, filter));
+        Assert.Equal(new AdminOrderTabCounts(NeedsAction: 1, Shipped: 0, Cancelled: 1, All: 2), await service.GetOrderTabCountsAsync(filter, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GetOrders_PagesNewestFirst_WithTheTotalCount()
+    {
+        var ids = new List<int>();
+        for (var i = 0; i < 5; i++)
+        {
+            ids.Add(await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: T1.AddHours(i)));
+        }
+        ids.Reverse();
+        var service = Service();
+
+        var first = await service.GetOrdersAsync(AdminOrderTab.All, AdminOrderFilter.None, 1, 2, CancellationToken.None);
+        var last = await service.GetOrdersAsync(AdminOrderTab.All, AdminOrderFilter.None, 3, 2, CancellationToken.None);
+
+        Assert.Equal(ids[..2], first.Orders.Select(o => o.Id));
+        Assert.Equal((1, 5, 3, false, true), (first.Page, first.TotalCount, first.TotalPages, first.HasPrevious, first.HasNext));
+        Assert.Equal(ids[4..], last.Orders.Select(o => o.Id));
+        Assert.Equal((3, true, false, 5, 5), (last.Page, last.HasPrevious, last.HasNext, last.FirstItem, last.LastItem));
+    }
+
+    [Fact]
+    public async Task GetOrders_PagesThroughOrdersPlacedAtTheSameTime_WithoutRepeatsOrGaps()
+    {
+        for (var i = 0; i < 5; i++)
+        {
+            await AddOrderAsync(FulfillmentMethod.Shipping);
+        }
+        var service = Service();
+
+        var seen = new List<int>();
+        for (var page = 1; page <= 3; page++)
+        {
+            seen.AddRange((await service.GetOrdersAsync(AdminOrderTab.All, AdminOrderFilter.None, page, 2, CancellationToken.None)).Orders.Select(o => o.Id));
+        }
+
+        Assert.Equal([5, 4, 3, 2, 1], seen);
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(-3, 1)]
+    [InlineData(9, 2)]
+    public async Task GetOrders_OutOfRangePage_ReturnsTheNearestPage(int requested, int expected)
+    {
+        for (var i = 0; i < 3; i++)
+        {
+            await AddOrderAsync(FulfillmentMethod.Shipping);
+        }
+
+        var page = await Service().GetOrdersAsync(AdminOrderTab.All, AdminOrderFilter.None, requested, 2, CancellationToken.None);
+
+        Assert.Equal(expected, page.Page);
+        Assert.NotEmpty(page.Orders);
+    }
+
+    [Fact]
+    public async Task GetOrders_WithNoMatches_IsOneEmptyPage()
+    {
+        var page = await Service().GetOrdersAsync(AdminOrderTab.All, AdminOrderFilter.None, 4, 25, CancellationToken.None);
+
+        Assert.Equal((1, 1, 0, false, false), (page.Page, page.TotalPages, page.TotalCount, page.HasPrevious, page.HasNext));
+        Assert.Empty(page.Orders);
+    }
+
+    [Fact]
+    public async Task GetOrders_PreorderFilter_KeepsOrdersWithPreorderLines_AndCombinesWithSearchAndTab()
+    {
+        var preorderJane = await AddOrderAsync(FulfillmentMethod.Shipping, customerName: "Jane Doe", lines: [Line(isPreorder: true)]);
+        await AddOrderAsync(FulfillmentMethod.Shipping, customerName: "Jane Doe", lines: [Line()]);
+        var preorderJohn = await AddOrderAsync(FulfillmentMethod.Shipping, customerName: "John Roe", lines: [Line(), Line(isPreorder: true)]);
+        var shippedPreorderJane = await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Shipped, paidAt: T1, customerName: "Jane Doe", lines: [Line(isPreorder: true)]);
+        var service = Service();
+        var preorders = new AdminOrderFilter(PreorderOnly: true);
+        var janesPreorders = new AdminOrderFilter("jane", PreorderOnly: true);
+
+        Assert.Equal([preorderJane, preorderJohn, shippedPreorderJane], await IdsAsync(service, AdminOrderTab.All, preorders));
+        Assert.Equal([preorderJane, shippedPreorderJane], await IdsAsync(service, AdminOrderTab.All, janesPreorders));
+        Assert.Equal([preorderJane], await IdsAsync(service, AdminOrderTab.NeedsAction, janesPreorders));
+        Assert.Equal(new AdminOrderTabCounts(NeedsAction: 1, Shipped: 1, Cancelled: 0, All: 2), await service.GetOrderTabCountsAsync(janesPreorders, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GetOrders_ShowsTheEarliestExpectedAvailabilityOfThePreorderLines()
+    {
+        var mixed = await AddOrderAsync(FulfillmentMethod.Shipping, lines:
+        [
+            Line(isPreorder: true, expectedAvailability: new DateOnly(2026, 12, 1)),
+            Line(isPreorder: true, expectedAvailability: new DateOnly(2026, 11, 15)),
+            Line(isPreorder: true),
+            Line(expectedAvailability: new DateOnly(2026, 9, 1)),
+        ]);
+        var undated = await AddOrderAsync(FulfillmentMethod.Shipping, lines: [Line(isPreorder: true)]);
+        var inStock = await AddOrderAsync(FulfillmentMethod.Shipping, lines: [Line()]);
+
+        var orders = (await Service().GetOrdersAsync(AdminOrderTab.All, AdminOrderFilter.None, 1, 25, CancellationToken.None)).Orders.ToDictionary(o => o.Id);
+
+        Assert.Equal(new DateOnly(2026, 11, 15), orders[mixed].EarliestExpectedAvailability);
+        Assert.True(orders[undated].HasPreorderLines);
+        Assert.Null(orders[undated].EarliestExpectedAvailability);
+        Assert.False(orders[inStock].HasPreorderLines);
+        Assert.Null(orders[inStock].EarliestExpectedAvailability);
+    }
+
+    private static async Task<List<int>> IdsAsync(AdminOrderService service, AdminOrderTab tab, AdminOrderFilter? filter = null)
+    {
+        var page = await service.GetOrdersAsync(tab, filter ?? AdminOrderFilter.None, 1, 100, CancellationToken.None);
+        // Same CreatedAt for most seeded orders, so compare by id to stay order-independent.
+        return page.Orders.Select(o => o.Id).Order().ToList();
+    }
+
+    private static OrderLine Line(bool isPreorder = false, DateOnly? expectedAvailability = null) => new()
+    {
+        ProductId = 1,
+        ProductName = "Print",
+        UnitPrice = 10m,
+        Quantity = 1,
+        IsPreorder = isPreorder,
+        ExpectedAvailabilityDate = expectedAvailability,
+    };
 
     private AppDbContext CreateDb() =>
         new(new DbContextOptionsBuilder<AppDbContext>()
@@ -218,14 +389,18 @@ public sealed class AdminOrderServiceTests : IDisposable
         OrderStatus status = OrderStatus.New,
         PaymentMethod paymentMethod = PaymentMethod.Cash,
         DateTimeOffset? paidAt = null,
-        DateTimeOffset? createdAt = null)
+        DateTimeOffset? createdAt = null,
+        string email = "shopper@example.com",
+        string customerName = "Jane Shopper",
+        List<OrderLine>? lines = null)
     {
         await using var db = CreateDb();
         var order = new Order
         {
-            Email = "shopper@example.com",
+            Email = email,
             FulfillmentMethod = fulfillmentMethod,
-            ShippingAddress = new ShippingAddress { FullName = "Jane Shopper" },
+            ShippingAddress = new ShippingAddress { FullName = customerName },
+            Lines = lines ?? [],
             Status = status,
             PaymentMethod = paymentMethod,
             PaidAt = paidAt,

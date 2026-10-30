@@ -13,7 +13,7 @@
         {
             var isCurrent = tab.Tab == Model.CurrentTab.Tab;
             <li>
-                <a href="@tab.Href" aria-current="@(isCurrent ? "page" : null)"
+                <a href="@Model.State.HrefForTab(tab.Tab)" aria-current="@(isCurrent ? "page" : null)"
                    class="inline-flex items-center gap-2 px-3 py-2 border-b-2 text-sm @(isCurrent ? "border-black font-medium" : "border-transparent text-gray-600 hover:text-black hover:border-black/30")">
                     @tab.Label
                     <span class="rounded-full px-2 text-xs tabular-nums @(isCurrent ? "bg-black text-white" : "bg-gray-100 text-gray-700")">@Model.Counts.For(tab.Tab)</span>
@@ -23,10 +23,31 @@
     </ul>
 </nav>
 
-<div class="overflow-x-auto">
-    @if (Model.Orders.Count == 0)
+<form method="get" action="/admin/orders" role="search" class="mb-4 flex flex-wrap items-end gap-3">
+    @if (Model.State.Tab != AdminOrderTabs.Default)
     {
-        <p>@Model.CurrentTab.EmptyMessage</p>
+        <input type="hidden" name="status" value="@Model.CurrentTab.Slug" />
+    }
+    <div>
+        <label for="order-search" class="block text-sm text-gray-600">Search orders</label>
+        <input id="order-search" type="search" name="q" value="@Model.State.Search" placeholder="Order #, email or name"
+               class="w-72 max-w-full border border-black/30 px-2 py-1" />
+    </div>
+    <label class="inline-flex items-center gap-2 py-1 text-sm">
+        <input type="checkbox" name="preorder" value="true" checked="@Model.State.PreorderOnly" />
+        Preorders only
+    </label>
+    <button type="submit" class="border border-black px-3 py-1 text-sm hover:bg-black hover:text-white">Search</button>
+    @if (Model.State.IsFiltered)
+    {
+        <a href="@Model.State.ClearedHref" class="py-1 text-sm underline">Clear</a>
+    }
+</form>
+
+<div class="overflow-x-auto">
+    @if (Model.Orders.Orders.Count == 0)
+    {
+        <p>@(Model.State.IsFiltered ? "No orders match your search." : Model.CurrentTab.EmptyMessage)</p>
     }
     else
     {
@@ -43,7 +64,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var order in Model.Orders)
+                @foreach (var order in Model.Orders.Orders)
                 {
                     @* The order link stretches over the whole row (after:absolute inset-0), so the row is
                        clickable anywhere while the link stays the single keyboard focus stop. *@
@@ -61,6 +82,10 @@
                                 @if (order.HasPreorderLines)
                                 {
                                     <partial name="_Badge" model="OrderBadges.Preorder" />
+                                    @if (order.EarliestExpectedAvailability is { } availableFrom)
+                                    {
+                                        <span class="text-xs text-gray-600">@PreorderNoteFormatter.EarliestAvailability(availableFrom)</span>
+                                    }
                                 }
                                 @if (order.FulfillmentMethod == FulfillmentMethod.Pickup)
                                 {
@@ -87,5 +112,26 @@
                 }
             </tbody>
         </table>
+
+        <nav aria-label="Pagination" class="mt-4 flex items-center justify-between gap-4 text-sm">
+            <p class="text-gray-600">
+                Showing @Model.Orders.FirstItem&ndash;@Model.Orders.LastItem of @Model.Orders.TotalCount
+                @(Model.Orders.TotalCount == 1 ? "order" : "orders")
+            </p>
+            @if (Model.Orders.TotalPages > 1)
+            {
+                <div class="flex items-center gap-3">
+                    @if (Model.Orders.HasPrevious)
+                    {
+                        <a href="@Model.State.HrefForPage(Model.Orders.Page - 1)" rel="prev" class="border border-black/30 px-3 py-1 hover:border-black">Previous</a>
+                    }
+                    <span class="tabular-nums">Page @Model.Orders.Page of @Model.Orders.TotalPages</span>
+                    @if (Model.Orders.HasNext)
+                    {
+                        <a href="@Model.State.HrefForPage(Model.Orders.Page + 1)" rel="next" class="border border-black/30 px-3 py-1 hover:border-black">Next</a>
+                    }
+                </div>
+            }
+        </nav>
     }
 </div>

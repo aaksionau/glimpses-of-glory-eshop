@@ -5,10 +5,12 @@ namespace GlimpsesOfGlory.Abstractions.Services;
 
 public interface IAdminOrderService
 {
-    // Newest first, filtered to the tab in the database.
-    Task<IReadOnlyList<AdminOrderSummary>> GetOrdersAsync(AdminOrderTab tab, CancellationToken cancellationToken);
+    // Newest first, filtered to the tab and filter and paged in the database. A page past the end
+    // returns the last page instead.
+    Task<AdminOrderPage> GetOrdersAsync(AdminOrderTab tab, AdminOrderFilter filter, int page, int pageSize, CancellationToken cancellationToken);
 
-    Task<AdminOrderTabCounts> GetOrderTabCountsAsync(CancellationToken cancellationToken);
+    // How many orders each tab holds under the same filter, so the tab counts match the list.
+    Task<AdminOrderTabCounts> GetOrderTabCountsAsync(AdminOrderFilter filter, CancellationToken cancellationToken);
 
     Task<AdminOrderDetail?> GetOrderAsync(int id, CancellationToken cancellationToken);
 

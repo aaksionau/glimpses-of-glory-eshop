@@ -3,11 +3,7 @@ using GlimpsesOfGlory.Abstractions.Enums;
 namespace GlimpsesOfGlory.Web.Helpers;
 
 // One admin orders tab: its ?status= value, label, and what to say when it has no orders.
-public sealed record AdminOrderTabLink(AdminOrderTab Tab, string Slug, string Label, string EmptyMessage)
-{
-    // The default tab gets the bare /admin/orders URL so it has a single canonical address.
-    public string Href => Tab == AdminOrderTabs.Default ? "/admin/orders" : $"/admin/orders?status={Slug}";
-}
+public sealed record AdminOrderTabLink(AdminOrderTab Tab, string Slug, string Label, string EmptyMessage);
 
 // The single table of admin order tabs, driving both the tab strip and the ?status= parsing.
 public static class AdminOrderTabs
@@ -22,8 +18,10 @@ public static class AdminOrderTabs
         new(AdminOrderTab.All, "all", "All", "No orders yet."),
     ];
 
+    public static AdminOrderTabLink For(AdminOrderTab tab) => Links.First(l => l.Tab == tab);
+
     // Missing or unknown values fall back to the default tab rather than erroring.
     public static AdminOrderTabLink FromQuery(string? status) =>
         Links.FirstOrDefault(l => l.Slug.Equals(status?.Trim(), StringComparison.OrdinalIgnoreCase))
-        ?? Links.First(l => l.Tab == Default);
+        ?? For(Default);
 }
