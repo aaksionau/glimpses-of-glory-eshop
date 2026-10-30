@@ -84,7 +84,7 @@ public class AdminOrderTabsTests
     [InlineData(null, null, false, null, "/admin/orders")]
     [InlineData("needs-action", "", false, 1, "/admin/orders")]
     [InlineData("shipped", null, false, null, "/admin/orders?status=shipped")]
-    [InlineData("all", " #42 ", true, 2, "/admin/orders?status=all&q=%2342&preorder=true&page=2")]
+    [InlineData("all", " #42 ", true, 2, "/admin/orders?status=all&q=%2342&preorder=true&pageNumber=2")]
     [InlineData(null, "jane doe", false, 0, "/admin/orders?q=jane%20doe")]
     public void ListState_RoundTripsThroughTheQueryString(string? status, string? search, bool preorder, int? page, string expected)
     {
@@ -98,10 +98,25 @@ public class AdminOrderTabsTests
 
         Assert.Equal("/admin/orders?status=cancelled&q=jane&preorder=true", state.HrefForTab(AdminOrderTab.Cancelled));
         Assert.Equal("/admin/orders?q=jane&preorder=true", state.HrefForTab(AdminOrderTab.NeedsAction));
-        Assert.Equal("/admin/orders?status=shipped&q=jane&preorder=true&page=5", state.HrefForPage(5));
+        Assert.Equal("/admin/orders?status=shipped&q=jane&preorder=true&pageNumber=5", state.HrefForPage(5));
         Assert.Equal("/admin/orders?status=shipped", state.ClearedHref);
         Assert.True(state.IsFiltered);
         Assert.False(AdminOrderListState.FromQuery("shipped", " ", false, null).IsFiltered);
+    }
+
+    // The page links and the PageModel binding must agree on the key, and it must not be "page",
+    // which Razor Pages reserves for the page path (route values bind before the query string).
+    [Fact]
+    public void ListState_PageLinksUseTheKeyThePageModelBinds()
+    {
+        var binding = typeof(IndexModel).GetProperty(nameof(IndexModel.PageNumber))!
+            .GetCustomAttributes(typeof(Microsoft.AspNetCore.Mvc.BindPropertyAttribute), inherit: false)
+            .Cast<Microsoft.AspNetCore.Mvc.BindPropertyAttribute>()
+            .Single();
+
+        Assert.NotEqual("page", binding.Name, StringComparer.OrdinalIgnoreCase);
+        Assert.True(binding.SupportsGet);
+        Assert.EndsWith($"?{binding.Name}=2", AdminOrderListState.FromQuery(null, null, false, 1).HrefForPage(2));
     }
 
     private sealed class RecordingAdminOrderService : IAdminOrderService

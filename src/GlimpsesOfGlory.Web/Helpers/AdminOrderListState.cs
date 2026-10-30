@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Http;
 namespace GlimpsesOfGlory.Web.Helpers;
 
 // Everything that decides what the admin orders list shows, as carried in its query string
-// (?status=&q=&preorder=&page=), so a reload or a shared link lands on the same view.
+// (?status=&q=&preorder=&pageNumber=), so a reload or a shared link lands on the same view.
 public sealed record AdminOrderListState(AdminOrderTab Tab, string? Search, bool PreorderOnly, int Page)
 {
     public const int PageSize = 25;
@@ -47,7 +47,7 @@ public sealed record AdminOrderListState(AdminOrderTab Tab, string? Search, bool
             }
             if (Page > 1)
             {
-                query = query.Add("page", Page.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                query = query.Add("pageNumber", Page.ToString(System.Globalization.CultureInfo.InvariantCulture));
             }
             return "/admin/orders" + query.ToUriComponent();
         }

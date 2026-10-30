@@ -17,10 +17,9 @@ public class IndexModel(IAdminOrderService adminOrderService) : PageModel
     [BindProperty(SupportsGet = true)]
     public bool Preorder { get; set; }
 
-    // FromQuery because Razor Pages already has a "page" route value (the page path), which a plain
-    // binding would read first.
-    [BindProperty(SupportsGet = true)]
-    [FromQuery(Name = "page")]
+    // Not "page": Razor Pages reserves that route value for the page path, and route values are
+    // read before the query string.
+    [BindProperty(Name = "pageNumber", SupportsGet = true)]
     public int? PageNumber { get; set; }
 
     public AdminOrderListState State { get; private set; } = AdminOrderListState.FromQuery(null, null, false, null);
