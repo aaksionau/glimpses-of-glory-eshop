@@ -46,10 +46,7 @@ public class IndexModel(IAdminOrderService adminOrderService, TimeProvider timeP
 
     public AdminOrderPage Orders { get; private set; } = new([], 1, AdminOrderListState.PageSize, 0);
 
-    public async Task OnGetAsync(CancellationToken cancellationToken)
-    {
-        await LoadListAsync(cancellationToken);
-    }
+    public Task OnGetAsync(CancellationToken cancellationToken) => LoadListAsync(cancellationToken);
 
     public async Task<IActionResult> OnGetExportAsync(CancellationToken cancellationToken)
     {

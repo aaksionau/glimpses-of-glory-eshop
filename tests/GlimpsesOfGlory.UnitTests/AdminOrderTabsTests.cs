@@ -3,6 +3,9 @@ using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Web.Helpers;
 using GlimpsesOfGlory.Web.Pages.Admin.Orders;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace GlimpsesOfGlory.UnitTests;
 
@@ -125,7 +128,7 @@ public class AdminOrderTabsTests
 
         var result = await model.OnGetExportAsync(CancellationToken.None);
 
-        Assert.IsType<Microsoft.AspNetCore.Mvc.EmptyResult>(result);
+        Assert.IsType<EmptyResult>(result);
         Assert.Equal((new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31)), service.ExportedRange);
         Assert.Equal(OrderCsvExport.ContentType, model.Response.ContentType);
         Assert.Equal("attachment; filename=orders-2026-10-01-to-2026-10-31.csv", model.Response.Headers.ContentDisposition.ToString());
@@ -144,7 +147,7 @@ public class AdminOrderTabsTests
 
         var result = await model.OnGetExportAsync(CancellationToken.None);
 
-        Assert.IsType<Microsoft.AspNetCore.Mvc.RazorPages.PageResult>(result);
+        Assert.IsType<PageResult>(result);
         Assert.NotNull(model.ExportError);
         Assert.Null(service.ExportedRange);
         Assert.Equal(0, body.Length);
@@ -154,20 +157,15 @@ public class AdminOrderTabsTests
     private static (IndexModel Model, MemoryStream Body) ExportPage(RecordingAdminOrderService service, DateOnly? from, DateOnly? to)
     {
         var body = new MemoryStream();
-        var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+        var httpContext = new DefaultHttpContext();
         httpContext.Response.Body = body;
         var model = new IndexModel(service, TimeProvider.System)
         {
             ExportFrom = from,
             ExportTo = to,
-            PageContext = new Microsoft.AspNetCore.Mvc.RazorPages.PageContext { HttpContext = httpContext },
+            PageContext = new PageContext { HttpContext = httpContext },
         };
         return (model, body);
-    }
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
     }
 
     [Fact]
@@ -199,8 +197,8 @@ public class AdminOrderTabsTests
     public void ListState_PageLinksUseTheKeyThePageModelBinds()
     {
         var binding = typeof(IndexModel).GetProperty(nameof(IndexModel.PageNumber))!
-            .GetCustomAttributes(typeof(Microsoft.AspNetCore.Mvc.BindPropertyAttribute), inherit: false)
-            .Cast<Microsoft.AspNetCore.Mvc.BindPropertyAttribute>()
+            .GetCustomAttributes(typeof(BindPropertyAttribute), inherit: false)
+            .Cast<BindPropertyAttribute>()
             .Single();
 
         Assert.NotEqual("page", binding.Name, StringComparer.OrdinalIgnoreCase);

@@ -21,8 +21,6 @@ public static class OrderCsvExport
     public static string FileName(DateOnly from, DateOnly to) =>
         string.Create(CultureInfo.InvariantCulture, $"orders-{from:yyyy-MM-dd}-to-{to:yyyy-MM-dd}.csv");
 
-    private const char ByteOrderMark = (char)0xFEFF;
-
     private static readonly string[] Header =
     [
         "Order number", "Date (UTC)", "Customer name", "Customer email", "Fulfillment", "Status",
@@ -32,9 +30,8 @@ public static class OrderCsvExport
     // Rows are written as they arrive, so the whole export is never held in memory.
     public static async Task WriteAsync(IAsyncEnumerable<AdminOrderExportRow> rows, Stream output, CancellationToken cancellationToken)
     {
-        await using var writer = new StreamWriter(output, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), leaveOpen: true);
+        await using var writer = new StreamWriter(output, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), leaveOpen: true);
         writer.NewLine = "\r\n";
-        await writer.WriteAsync(ByteOrderMark);
         await WriteLineAsync(writer, Header);
 
         await foreach (var row in rows.WithCancellation(cancellationToken))
