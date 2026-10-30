@@ -65,10 +65,12 @@
                 <a href="/#about" class="hidden sm:inline hover:text-gold-dark transition-colors">About</a>
                 <a asp-area="" asp-page="/Cart/Index" class="relative flex items-center gap-1.5 hover:text-gold-dark transition-colors">
                     Cart
-                    @if (cartItemCount > 0)
-                    {
-                        <span class="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-gold text-white text-xs font-semibold">@cartItemCount</span>
-                    }
+                    <span id="cart-count">
+                        @if (cartItemCount > 0)
+                        {
+                            <span class="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-gold text-white text-xs font-semibold">@cartItemCount</span>
+                        }
+                    </span>
                 </a>
             </nav>
         </div>
