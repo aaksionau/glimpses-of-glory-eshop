@@ -19,10 +19,10 @@ public class PaymentModel(
 
     public string ClientSecret { get; private set; } = string.Empty;
 
-    // What the card will be charged: the PaymentIntent's amount, priced from the catalogue.
-    public decimal AmountDue { get; private set; }
-
+    // Built from the cart as priced for the PaymentIntent, so its total is what the card is charged.
     public CheckoutOrderSummary Summary { get; private set; } = null!;
+
+    public decimal AmountDue => Summary.Total;
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
@@ -50,8 +50,7 @@ public class PaymentModel(
         checkoutSessionStore.SavePaymentIntentId(setup.PaymentIntentId);
         PublishableKey = stripeOptions.Value.PublishableKey;
         ClientSecret = setup.ClientSecret;
-        AmountDue = setup.Amount;
-        Summary = new CheckoutOrderSummary(cart, address.FulfillmentMethod);
+        Summary = new CheckoutOrderSummary(setup.Cart, address.FulfillmentMethod);
         return Page();
     }
 }

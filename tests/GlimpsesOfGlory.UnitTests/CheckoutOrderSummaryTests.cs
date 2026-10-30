@@ -67,7 +67,7 @@ public class CheckoutOrderSummaryTests
 
         Assert.Contains("x-data=\"{ summaryOpen: false }\"", html);
         var content = Tag(html, "order-summary-content");
-        Assert.Contains("lg:block", content);
+        Assert.Matches("class=\"hidden [^\"]*lg:block", content);
         Assert.Contains("{ &#x27;hidden&#x27;: !summaryOpen }", content);
     }
 
@@ -103,8 +103,15 @@ public class CheckoutOrderSummaryTests
     }
 
     [Fact]
-    public async Task PaymentPage_ChargesAndSummarisesTheOrderTotal()
+    public async Task PaymentPage_SummarisesAndShowsTheAmountCharged_EvenWhenAPriceChangedSinceAddingToCart()
     {
+        // The catalogue price of "sunrise" went from $20 to $25 after it was added to the cart:
+        // 2 × $25 + $15.50 = $65.50 subtotal, + $8 shipping = $73.50 charged.
+        var pricedCart = Cart with
+        {
+            Lines = [Cart.Lines[0] with { UnitPrice = 25m }, Cart.Lines[1]],
+            Subtotal = 65.50m,
+        };
         var address = new CheckoutAddress
         {
             FulfillmentMethod = FulfillmentMethod.Shipping,
@@ -122,7 +129,7 @@ public class CheckoutOrderSummaryTests
         var page = new PaymentModel(
             new StubCartService(Cart),
             sessionStore,
-            new StubOrderService(new PaymentIntentSetup("pi_1", "secret_1", 63.50m)),
+            new StubOrderService(new CheckoutPaymentSetup("pi_1", "secret_1", pricedCart)),
             Options.Create(new StripeOptions { PublishableKey = "pk_test" }))
         {
             PageContext = new PageContext { HttpContext = httpContext },
@@ -130,9 +137,10 @@ public class CheckoutOrderSummaryTests
 
         await page.OnGetAsync(CancellationToken.None);
 
-        Assert.Equal(63.50m, page.AmountDue);
         Assert.Equal(FulfillmentMethod.Shipping, page.Summary.FulfillmentMethod);
-        Assert.Equal(63.50m, page.Summary.Total);
+        Assert.Same(pricedCart, page.Summary.Cart);
+        Assert.Equal(73.50m, page.Summary.Total);
+        Assert.Equal(73.50m, page.AmountDue);
     }
 
     private static Task<string> RenderAsync(CheckoutOrderSummary model) =>
@@ -162,10 +170,10 @@ public class CheckoutOrderSummaryTests
         public Task ClearAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
-    private sealed class StubOrderService(PaymentIntentSetup setup) : IOrderService
+    private sealed class StubOrderService(CheckoutPaymentSetup setup) : IOrderService
     {
-        public Task<PaymentIntentSetup?> CreatePaymentIntentAsync(FulfillmentMethod fulfillmentMethod, ShippingAddressInfo address, string? existingPaymentIntentId, CancellationToken cancellationToken) =>
-            Task.FromResult<PaymentIntentSetup?>(setup);
+        public Task<CheckoutPaymentSetup?> CreatePaymentIntentAsync(FulfillmentMethod fulfillmentMethod, ShippingAddressInfo address, string? existingPaymentIntentId, CancellationToken cancellationToken) =>
+            Task.FromResult<CheckoutPaymentSetup?>(setup);
 
         public Task ConfirmPaymentAsync(string paymentIntentId, CancellationToken cancellationToken) => throw new NotSupportedException();
 

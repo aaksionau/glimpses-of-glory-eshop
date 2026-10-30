@@ -7,8 +7,8 @@ namespace GlimpsesOfGlory.Web.Dtos;
 // FollowsChoice is set on Details, where the shopper is still choosing how to receive the order:
 // the summary then renders the shipping line and total for every method, starting on
 // FulfillmentMethod, and the enclosing Alpine `method` (the selected radio) shows the matching one.
-// Collapsible summaries start closed on small screens behind "Show order summary · $X";
-// on large screens they are always open.
+// Collapsible summaries start closed on small screens behind "Show order summary · $X"
+// (closed from the server, so there's no flash before Alpine); on large screens they are always open.
 public sealed record CheckoutOrderSummary(
     CartSummary Cart,
     FulfillmentMethod FulfillmentMethod,
@@ -19,7 +19,5 @@ public sealed record CheckoutOrderSummary(
     public IReadOnlyList<FulfillmentMethod> Methods =>
         FollowsChoice ? Enum.GetValues<FulfillmentMethod>() : [FulfillmentMethod];
 
-    public decimal TotalFor(FulfillmentMethod method) => Cart.Subtotal + Cart.ShippingCostFor(method);
-
-    public decimal Total => TotalFor(FulfillmentMethod);
+    public decimal Total => Cart.TotalFor(FulfillmentMethod);
 }
