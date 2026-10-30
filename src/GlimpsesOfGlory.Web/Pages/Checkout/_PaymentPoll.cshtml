@@ -1,0 +1,30 @@
+@model GlimpsesOfGlory.Web.Pages.Checkout.ConfirmationModel
+@{
+    // A partial never takes a layout; this also keeps it renderable on its own (in tests).
+    Layout = null;
+}
+@*
+    Polls for the payment result without reloading the page. Each poll replaces this poller with the
+    next attempt's; once there's a result (or the attempts run out) the response holds no poller, which
+    stops polling, and fills the #confirmation-status live region out of band so it's announced politely.
+*@
+
+@if (Model.IsPolling)
+{
+    <div id="payment-poll" hx-get="@Model.NextPollUrl" hx-trigger="every 2s" hx-swap="outerHTML">
+        <noscript>
+            <p class="mt-4 text-center"><a href="@Model.NextPollUrl" class="text-gold-dark hover:underline">Check again</a></p>
+        </noscript>
+    </div>
+}
+else if (Model.IsHtmxUpdate)
+{
+    <div id="confirmation-status" hx-swap-oob="innerHTML">
+        <partial name="/Pages/Checkout/_ConfirmationResult.cshtml" model="Model" />
+    </div>
+    @if (Model.Order is not null)
+    {
+        @* The cart was emptied when the order was found; clear the header's cart count to match. *@
+        <span id="cart-count" hx-swap-oob="innerHTML"></span>
+    }
+}

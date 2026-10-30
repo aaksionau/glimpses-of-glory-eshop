@@ -16,6 +16,12 @@ public static class FulfillmentLabels
     public static string ShippedEmailName(FulfillmentMethod fulfillmentMethod) =>
         fulfillmentMethod == FulfillmentMethod.Pickup ? "ready-for-pickup email" : "shipping email";
 
+    // What happens next, as the order confirmation page tells the buyer.
+    public static string NextSteps(FulfillmentMethod fulfillmentMethod) =>
+        fulfillmentMethod == FulfillmentMethod.Pickup
+            ? "We'll email you when your order is ready to collect."
+            : "We'll email you a tracking number as soon as your order ships.";
+
     public static string Status(OrderStatus status, FulfillmentMethod fulfillmentMethod) => status switch
     {
         OrderStatus.Shipped => ShippedStatus(fulfillmentMethod),

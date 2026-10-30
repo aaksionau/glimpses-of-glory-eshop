@@ -1,0 +1,93 @@
+@model GlimpsesOfGlory.Web.Pages.Checkout.ConfirmationModel
+@using GlimpsesOfGlory.Abstractions.Enums
+@using GlimpsesOfGlory.Web.Helpers
+@{
+    // A partial never takes a layout; this also keeps it renderable on its own (in tests).
+    Layout = null;
+}
+@* The confirmation page's content: the order once it's placed, otherwise where payment confirmation stands. *@
+
+@if (Model.Order is { } order)
+{
+    <h1 class="text-3xl font-bold mb-2 font-display">Thank you for your order!</h1>
+    <p class="text-ink-light mb-6">Order #@order.OrderId &middot; @order.CreatedAt.ToLocalTime().ToString("f")</p>
+
+    <section class="mb-6">
+        <h2 class="font-semibold text-lg">What happens next</h2>
+        <p class="text-ink-light mt-1">A confirmation has been sent to <span class="font-medium text-ink">@order.Address.Email</span>.</p>
+        <p class="text-ink-light">@FulfillmentLabels.NextSteps(order.FulfillmentMethod)</p>
+        @if (order.FulfillmentMethod == FulfillmentMethod.Pickup && !order.IsPaid)
+        {
+            <p class="font-medium mt-2">@PaymentLabels.CashDueNote(order.Total)</p>
+        }
+    </section>
+
+    <section class="mb-6">
+        @if (order.FulfillmentMethod == FulfillmentMethod.Pickup)
+        {
+            <h2 class="font-semibold text-lg">Local pickup</h2>
+            <p class="text-ink-light mt-1">@order.Address.FullName</p>
+        }
+        else
+        {
+            <h2 class="font-semibold text-lg">Shipping to</h2>
+            <p class="text-ink-light mt-1">
+                @order.Address.FullName<br />
+                @order.Address.AddressLine1<br />
+                @if (!string.IsNullOrWhiteSpace(order.Address.AddressLine2))
+                {
+                    @order.Address.AddressLine2<br />
+                }
+                @order.Address.City, @order.Address.State @order.Address.PostalCode<br />
+                @order.Address.Country
+            </p>
+        }
+    </section>
+
+    <section>
+        <h2 class="font-semibold text-lg mb-2">Order summary</h2>
+        <div class="flex flex-col gap-3">
+            @foreach (var line in order.Lines)
+            {
+                <div class="flex items-center justify-between border-b border-ink/10 pb-3">
+                    <div>
+                        <p class="font-medium">@line.ProductName</p>
+                        <p class="text-ink-light text-sm">Qty @line.Quantity &times; @line.UnitPrice.ToString("C")</p>
+                        @if (PreorderNoteFormatter.Format(line.IsPreorder, line.ExpectedAvailabilityDate) is { } note)
+                        {
+                            <p class="text-gold-dark text-sm font-medium">@note</p>
+                        }
+                    </div>
+                    <p class="font-medium">@((line.UnitPrice * line.Quantity).ToString("C"))</p>
+                </div>
+            }
+        </div>
+
+        <div class="mt-4 flex flex-col items-end gap-1">
+            <p>Subtotal: <span class="font-medium">@order.Subtotal.ToString("C")</span></p>
+            <p>@FulfillmentLabels.CostLabel(order.FulfillmentMethod): <span class="font-medium">@order.ShippingCost.ToString("C")</span></p>
+            <p class="text-lg font-bold">Total: @order.Total.ToString("C")</p>
+        </div>
+    </section>
+
+    <p class="mt-8 text-center">
+        <a href="/products" class="inline-block rounded-full bg-gold px-8 py-3 font-semibold text-white transition-colors hover:bg-gold-dark">Continue shopping</a>
+    </p>
+}
+else if (Model.IsPolling)
+{
+    <div class="text-center">
+        <h1 class="text-2xl font-bold mb-2 font-display">Confirming your payment&hellip;</h1>
+        <p class="text-ink-light">This usually takes just a moment. Please don't close this page.</p>
+    </div>
+}
+else
+{
+    <div class="text-center">
+        <h1 class="text-2xl font-bold mb-2 font-display">Payment received</h1>
+        <p class="text-ink-light">We're still finalizing your order. You'll receive a confirmation email shortly.</p>
+        <p class="mt-8">
+            <a href="/products" class="inline-block rounded-full bg-gold px-8 py-3 font-semibold text-white transition-colors hover:bg-gold-dark">Continue shopping</a>
+        </p>
+    </div>
+}

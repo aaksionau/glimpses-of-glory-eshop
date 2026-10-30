@@ -16,6 +16,14 @@ public class ConfirmationModel(IOrderService orderService, ICartService cartServ
 
     public OrderConfirmationView? Order { get; private set; }
 
+    // True when htmx is polling for the payment result: only the status fragment is rendered.
+    public bool IsHtmxUpdate { get; private set; }
+
+    public bool IsPolling => Order is null && Attempt < MaxPollAttempts;
+
+    public string NextPollUrl =>
+        $"/checkout/confirmation?payment_intent={Uri.EscapeDataString(PaymentIntentId)}&attempt={Attempt + 1}";
+
     public async Task<IActionResult> OnGetAsync(
         [FromQuery(Name = "payment_intent")] string? paymentIntent,
         [FromQuery(Name = "order")] int? orderId,
@@ -41,6 +49,7 @@ public class ConfirmationModel(IOrderService orderService, ICartService cartServ
 
         PaymentIntentId = paymentIntent;
         Attempt = attempt;
+        IsHtmxUpdate = Request.Headers["HX-Request"] == "true";
         Order = await orderService.GetOrderConfirmationAsync(paymentIntent, cancellationToken);
 
         if (Order is not null)
@@ -49,6 +58,6 @@ public class ConfirmationModel(IOrderService orderService, ICartService cartServ
             checkoutSessionStore.Clear();
         }
 
-        return Page();
+        return IsHtmxUpdate ? Partial("_PaymentPoll", this) : Page();
     }
 }
