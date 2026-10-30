@@ -5,7 +5,10 @@ namespace GlimpsesOfGlory.Abstractions.Services;
 
 public interface IAdminOrderService
 {
-    Task<IReadOnlyList<AdminOrderSummary>> GetAllOrdersAsync(CancellationToken cancellationToken);
+    // Newest first, filtered to the tab in the database.
+    Task<IReadOnlyList<AdminOrderSummary>> GetOrdersAsync(AdminOrderTab tab, CancellationToken cancellationToken);
+
+    Task<AdminOrderTabCounts> GetOrderTabCountsAsync(CancellationToken cancellationToken);
 
     Task<AdminOrderDetail?> GetOrderAsync(int id, CancellationToken cancellationToken);
 

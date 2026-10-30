@@ -7,10 +7,26 @@
     var now = DateTimeOffset.UtcNow;
 }
 
+<nav aria-label="Order status" class="mb-4 border-b border-black/20">
+    <ul class="flex flex-wrap gap-1 -mb-px">
+        @foreach (var tab in AdminOrderTabs.Links)
+        {
+            var isCurrent = tab.Tab == Model.CurrentTab.Tab;
+            <li>
+                <a href="@tab.Href" aria-current="@(isCurrent ? "page" : null)"
+                   class="inline-flex items-center gap-2 px-3 py-2 border-b-2 text-sm @(isCurrent ? "border-black font-medium" : "border-transparent text-gray-600 hover:text-black hover:border-black/30")">
+                    @tab.Label
+                    <span class="rounded-full px-2 text-xs tabular-nums @(isCurrent ? "bg-black text-white" : "bg-gray-100 text-gray-700")">@Model.Counts.For(tab.Tab)</span>
+                </a>
+            </li>
+        }
+    </ul>
+</nav>
+
 <div class="overflow-x-auto">
     @if (Model.Orders.Count == 0)
     {
-        <p>No orders yet.</p>
+        <p>@Model.CurrentTab.EmptyMessage</p>
     }
     else
     {
