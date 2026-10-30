@@ -5,10 +5,7 @@ using GlimpsesOfGlory.Core;
 using GlimpsesOfGlory.Core.Entities;
 using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Core.ValueObjects;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace GlimpsesOfGlory.UnitTests;
@@ -20,17 +17,10 @@ public sealed class AdminOrderServiceTests : IDisposable
     private static readonly DateTimeOffset T1 = new(2026, 8, 2, 10, 0, 0, TimeSpan.Zero);
     private static readonly DateTimeOffset T2 = new(2026, 8, 3, 12, 0, 0, TimeSpan.Zero);
 
-    private readonly SqliteConnection connection = new("Data Source=:memory:");
+    private readonly SqliteTestDatabase database = new();
     private readonly ManualTimeProvider clock = new(T1);
 
-    public AdminOrderServiceTests()
-    {
-        connection.Open();
-        using var db = CreateDb();
-        db.Database.EnsureCreated();
-    }
-
-    public void Dispose() => connection.Dispose();
+    public void Dispose() => database.Dispose();
 
     [Fact]
     public async Task MarkShipped_StampsShippedAt()
@@ -321,6 +311,27 @@ public sealed class AdminOrderServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetOrders_ToFulfillAndUnpaidCashFilters_NarrowTheList()
+    {
+        var newCash = await AddOrderAsync(FulfillmentMethod.Pickup);
+        var newCard = await AddOrderAsync(FulfillmentMethod.Shipping, paymentMethod: PaymentMethod.Card, paidAt: T1);
+        var readyUnpaidCash = await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.Shipped);
+        await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.PickedUp, paidAt: T1);
+        await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.Cancelled);
+        await AddOrderAsync(FulfillmentMethod.Shipping, paymentMethod: PaymentMethod.Card, status: OrderStatus.Shipped);
+        var service = Service();
+        var toFulfill = new AdminOrderFilter(ToFulfillOnly: true);
+        var unpaidCash = new AdminOrderFilter(UnpaidCashOnly: true);
+
+        Assert.Equal([newCash, newCard], await IdsAsync(service, AdminOrderTab.All, toFulfill));
+        Assert.Equal([newCash, readyUnpaidCash], await IdsAsync(service, AdminOrderTab.All, unpaidCash));
+        Assert.Equal([newCash], await IdsAsync(service, AdminOrderTab.All, new AdminOrderFilter(ToFulfillOnly: true, UnpaidCashOnly: true)));
+        // Both are subsets of the default tab, so the dashboard links can land there.
+        Assert.Equal(2, (await service.GetOrderTabCountsAsync(toFulfill, CancellationToken.None)).NeedsAction);
+        Assert.Equal(2, (await service.GetOrderTabCountsAsync(unpaidCash, CancellationToken.None)).NeedsAction);
+    }
+
+    [Fact]
     public async Task GetOrders_ShowsTheEarliestExpectedAvailabilityOfThePreorderLines()
     {
         var mixed = await AddOrderAsync(FulfillmentMethod.Shipping, lines:
@@ -359,26 +370,7 @@ public sealed class AdminOrderServiceTests : IDisposable
         ExpectedAvailabilityDate = expectedAvailability,
     };
 
-    private AppDbContext CreateDb() =>
-        new(new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(connection)
-            .ReplaceService<IModelCustomizer, SqliteDateTimeOffsetCustomizer>()
-            .Options);
-
-    // SQLite can't ORDER BY a DateTimeOffset (production runs on Postgres, which can), so the test
-    // model stores them as sortable binary values instead.
-    private sealed class SqliteDateTimeOffsetCustomizer(ModelCustomizerDependencies dependencies) : RelationalModelCustomizer(dependencies)
-    {
-        public override void Customize(ModelBuilder modelBuilder, DbContext context)
-        {
-            base.Customize(modelBuilder, context);
-            foreach (var property in modelBuilder.Model.GetEntityTypes().SelectMany(t => t.GetProperties())
-                .Where(p => p.ClrType == typeof(DateTimeOffset) || p.ClrType == typeof(DateTimeOffset?)))
-            {
-                property.SetValueConverter(new DateTimeOffsetToBinaryConverter());
-            }
-        }
-    }
+    private AppDbContext CreateDb() => database.CreateDb();
 
     private AdminOrderService Service() =>
         new(CreateDb(), new FakeInventoryStore(new Dictionary<int, int>()), new FakePaymentGateway(), new NullEmailSender(), clock, NullLogger<AdminOrderService>.Instance);

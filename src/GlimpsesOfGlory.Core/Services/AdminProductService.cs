@@ -7,10 +7,15 @@ namespace GlimpsesOfGlory.Core.Services;
 
 public sealed class AdminProductService(AppDbContext db, ProductPhotoStorage photoStorage) : IAdminProductService
 {
-    public async Task<IReadOnlyList<AdminProductSummary>> GetAllProductsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<AdminProductSummary>> GetProductsAsync(bool lowStockOnly, CancellationToken cancellationToken)
     {
-        return await db.Products
-            .AsNoTracking()
+        var products = db.Products.AsNoTracking();
+        if (lowStockOnly)
+        {
+            products = products.Where(AdminQueryFilters.LowStock);
+        }
+
+        return await products
             .OrderBy(p => p.Name)
             .Select(p => new AdminProductSummary(
                 p.Id,

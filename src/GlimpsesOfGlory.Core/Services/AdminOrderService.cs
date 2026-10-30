@@ -67,6 +67,14 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         {
             orders = orders.Where(o => o.Lines.Any(l => l.IsPreorder));
         }
+        if (filter.ToFulfillOnly)
+        {
+            orders = orders.Where(AdminQueryFilters.ToFulfill);
+        }
+        if (filter.UnpaidCashOnly)
+        {
+            orders = orders.Where(AdminQueryFilters.UnpaidCash);
+        }
 
         var search = filter.Search?.Trim();
         if (string.IsNullOrEmpty(search))

@@ -92,6 +92,28 @@ public class AdminOrderTabsTests
     }
 
     [Fact]
+    public async Task IndexPage_PassesTheToFulfillAndUnpaidCashFiltersThrough()
+    {
+        var service = new RecordingAdminOrderService();
+        var model = new IndexModel(service) { ToFulfill = true, UnpaidCash = true };
+
+        await model.OnGetAsync(CancellationToken.None);
+
+        Assert.Equal(new AdminOrderFilter(ToFulfillOnly: true, UnpaidCashOnly: true), service.RequestedFilter);
+        Assert.Equal(new AdminOrderFilter(ToFulfillOnly: true, UnpaidCashOnly: true), service.CountedFilter);
+    }
+
+    [Fact]
+    public void ListState_CarriesTheToFulfillAndUnpaidCashFilters_AndClearDropsThem()
+    {
+        var state = AdminOrderListState.FromQuery("all", null, false, null, toFulfillOnly: true, unpaidCashOnly: true);
+
+        Assert.Equal("/admin/orders?status=all&tofulfill=true&unpaidcash=true", state.Href);
+        Assert.True(state.IsFiltered);
+        Assert.Equal("/admin/orders?status=all", state.ClearedHref);
+    }
+
+    [Fact]
     public void ListState_TabLinksKeepTheSearchButResetThePage()
     {
         var state = AdminOrderListState.FromQuery("shipped", "jane", true, 4);

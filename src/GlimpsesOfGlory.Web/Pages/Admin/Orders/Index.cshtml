@@ -37,6 +37,14 @@
         <input type="checkbox" name="preorder" value="true" checked="@Model.State.PreorderOnly" />
         Preorders only
     </label>
+    <label class="inline-flex items-center gap-2 py-1 text-sm">
+        <input type="checkbox" name="tofulfill" value="true" checked="@Model.State.ToFulfillOnly" />
+        To fulfill
+    </label>
+    <label class="inline-flex items-center gap-2 py-1 text-sm">
+        <input type="checkbox" name="unpaidcash" value="true" checked="@Model.State.UnpaidCashOnly" />
+        Unpaid cash
+    </label>
     <button type="submit" class="border border-black px-3 py-1 text-sm hover:bg-black hover:text-white">Search</button>
     @if (Model.State.IsFiltered)
     {

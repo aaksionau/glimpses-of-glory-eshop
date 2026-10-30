@@ -4,8 +4,19 @@
     ViewData["Title"] = "Products";
 }
 
-<div class="flex justify-end items-center mb-4">
+<div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+    <nav aria-label="Product filter" class="flex gap-3 text-sm">
+        @if (Model.LowStock)
+        {
+            <span class="font-medium">Low stock (@GlimpsesOfGlory.Abstractions.Constants.StockPolicy.LowStockThreshold or fewer)</span>
+            <a href="/admin/products" class="underline">Show all products</a>
+        }
+        else
+        {
+            <a href="/admin/products?lowStock=true" class="underline">Show low stock only</a>
+        }
+    </nav>
     <a asp-page="/Admin/Products/New" class="bg-black text-white px-4 py-2 rounded-lg font-semibold">Add product</a>
 </div>
 
-<partial name="_ProductTable" model="Model.Products" />
+<partial name="_ProductTable" model="Model.Table" />
