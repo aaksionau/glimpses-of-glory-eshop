@@ -1,0 +1,75 @@
+@model GlimpsesOfGlory.Web.Dtos.CheckoutOrderSummary
+@using GlimpsesOfGlory.Abstractions.Enums
+@using GlimpsesOfGlory.Web.Helpers
+@{
+    // A partial never takes a layout; this also keeps it renderable on its own (in tests).
+    Layout = null;
+    // While the shopper is choosing (Details), every method gets its own shipping/total rows:
+    // Alpine shows the one matching the selected radio, and the server hides the others up front
+    // so the page is right before (or without) Alpine. Otherwise only one row is rendered.
+    string? ShowFor(FulfillmentMethod method) =>
+        Model.FollowsChoice ? $"method === '{method}'" : null;
+    string? InitialStyle(FulfillmentMethod method) =>
+        method == Model.FulfillmentMethod ? null : "display: none;";
+}
+
+<section aria-labelledby="order-summary-heading" x-data="{ summaryOpen: false }">
+    @if (Model.Collapsible)
+    {
+        @* Small screens only: the summary starts closed behind this toggle. *@
+        <button type="button"
+                class="lg:hidden flex w-full items-center justify-between gap-3 rounded-lg border border-ink/20 bg-white px-4 py-3 text-left font-medium"
+                aria-controls="order-summary-content"
+                aria-expanded="false"
+                x-bind:aria-expanded="summaryOpen.toString()"
+                x-on:click="summaryOpen = !summaryOpen">
+            <span>
+                <span x-text="summaryOpen ? 'Hide order summary' : 'Show order summary'">Show order summary</span>
+                @foreach (var method in Model.Methods)
+                {
+                    <span x-show="@ShowFor(method)" style="@InitialStyle(method)">&middot; @Model.Cart.TotalFor(method).ToString("C")</span>
+                }
+            </span>
+            <svg class="h-4 w-4 flex-shrink-0 transition-transform" x-bind:class="{ 'rotate-180': summaryOpen }" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M5.3 7.3a1 1 0 0 1 1.4 0L10 10.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.4Z" clip-rule="evenodd" />
+            </svg>
+        </button>
+    }
+
+    <div id="order-summary-content"
+         class="@(Model.Collapsible ? "hidden mt-3 lg:mt-0 lg:block" : null)"
+         x-bind:class="@(Model.Collapsible ? "{ 'hidden': !summaryOpen }" : null)">
+        <h2 id="order-summary-heading" class="font-semibold text-lg mb-2 @(Model.Collapsible ? "sr-only lg:not-sr-only" : null)">Order summary</h2>
+        <div class="flex flex-col gap-3">
+            @foreach (var line in Model.Cart.Lines)
+            {
+                <div class="flex items-center gap-4 border-b border-ink/10 pb-3">
+                    @if (line.ThumbnailFileName is not null)
+                    {
+                        <img src="/product-photos/@line.ThumbnailFileName" alt="" class="w-14 h-14 object-cover rounded-lg flex-shrink-0" />
+                    }
+                    else
+                    {
+                        <div class="w-14 h-14 bg-cream-dark rounded-lg flex-shrink-0"></div>
+                    }
+                    <div class="flex-1">
+                        <p class="font-medium">@line.ProductName</p>
+                        <p class="text-ink-light text-sm">Qty @line.Quantity &times; @line.UnitPrice.ToString("C")</p>
+                    </div>
+                    <p class="font-medium">@((line.UnitPrice * line.Quantity).ToString("C"))</p>
+                </div>
+            }
+        </div>
+
+        <div class="mt-4 flex flex-col items-end gap-1">
+            <p>Subtotal: <span class="font-medium">@Model.Cart.Subtotal.ToString("C")</span></p>
+            @foreach (var method in Model.Methods)
+            {
+                <div class="flex flex-col items-end gap-1" x-show="@ShowFor(method)" style="@InitialStyle(method)">
+                    <p>@FulfillmentLabels.CostLabel(method): <span class="font-medium">@Model.Cart.ShippingCostFor(method).ToString("C")</span></p>
+                    <p class="text-lg font-bold">Total: @Model.Cart.TotalFor(method).ToString("C")</p>
+                </div>
+            }
+        </div>
+    </div>
+</section>

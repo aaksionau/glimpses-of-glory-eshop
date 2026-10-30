@@ -13,9 +13,10 @@ public class ReviewModel(ICartService cartService, IOrderService orderService, C
 
     public CheckoutAddress Address { get; private set; } = null!;
 
-    public decimal ShippingCost { get; private set; }
+    // Review is where the shopper checks the order, so its summary is never collapsed.
+    public CheckoutOrderSummary Summary => new(Cart, Address.FulfillmentMethod, Collapsible: false);
 
-    public decimal Total => Cart.Subtotal + ShippingCost;
+    public decimal Total => Summary.Total;
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
@@ -33,7 +34,6 @@ public class ReviewModel(ICartService cartService, IOrderService orderService, C
 
         Cart = cart;
         Address = address;
-        ShippingCost = cart.ShippingCostFor(address.FulfillmentMethod);
         return Page();
     }
 

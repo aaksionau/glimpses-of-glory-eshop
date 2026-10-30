@@ -20,9 +20,9 @@ public sealed class OrderService(
     TimeProvider timeProvider,
     ILogger<OrderService> logger) : IOrderService
 {
-    public async Task<PaymentIntentSetup?> CreatePaymentIntentAsync(FulfillmentMethod fulfillmentMethod, ShippingAddressInfo address, string? existingPaymentIntentId, CancellationToken cancellationToken)
+    public async Task<CheckoutPaymentSetup?> CreatePaymentIntentAsync(FulfillmentMethod fulfillmentMethod, ShippingAddressInfo address, string? existingPaymentIntentId, CancellationToken cancellationToken)
     {
-        if (await PriceCartAsync(fulfillmentMethod, cancellationToken) is not (var lines, var subtotal, var shippingCost))
+        if (await PriceCartAsync(fulfillmentMethod, cancellationToken) is not (var lines, var subtotal, var shippingCost, var pricedCart))
         {
             return null;
         }
@@ -50,7 +50,7 @@ public sealed class OrderService(
                 existingPendingCheckout.Lines = lines;
 
                 await dbContext.SaveChangesAsync(cancellationToken);
-                return updatedPaymentIntent;
+                return new CheckoutPaymentSetup(updatedPaymentIntent.PaymentIntentId, updatedPaymentIntent.ClientSecret, pricedCart);
             }
             catch (PaymentIntentUnavailableException)
             {
@@ -74,7 +74,7 @@ public sealed class OrderService(
         });
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return paymentIntent;
+        return new CheckoutPaymentSetup(paymentIntent.PaymentIntentId, paymentIntent.ClientSecret, pricedCart);
     }
 
     public async Task ConfirmPaymentAsync(string paymentIntentId, CancellationToken cancellationToken)
@@ -145,7 +145,7 @@ public sealed class OrderService(
     public async Task<int?> PlaceCashOrderAsync(ShippingAddressInfo address, CancellationToken cancellationToken)
     {
         // Cash is only offered for local pickup.
-        if (await PriceCartAsync(FulfillmentMethod.Pickup, cancellationToken) is not (var lines, var subtotal, var shippingCost))
+        if (await PriceCartAsync(FulfillmentMethod.Pickup, cancellationToken) is not (var lines, var subtotal, var shippingCost, _))
         {
             return null;
         }
@@ -193,8 +193,9 @@ public sealed class OrderService(
         return order is null ? null : order.ToConfirmationView();
     }
 
-    // Returns null when the cart is empty or can't be fulfilled as it stands.
-    private async Task<(List<PendingCheckoutLine> Lines, decimal Subtotal, decimal ShippingCost)?> PriceCartAsync(FulfillmentMethod fulfillmentMethod, CancellationToken cancellationToken)
+    // Returns null when the cart is empty or can't be fulfilled as it stands. PricedCart is the
+    // session cart with its lines repriced from the catalogue, for showing what's charged.
+    private async Task<(List<PendingCheckoutLine> Lines, decimal Subtotal, decimal ShippingCost, CartSummary PricedCart)?> PriceCartAsync(FulfillmentMethod fulfillmentMethod, CancellationToken cancellationToken)
     {
         var cart = await cartService.GetSummaryAsync(cancellationToken);
         if (cart.Lines.Count == 0)
@@ -211,7 +212,14 @@ public sealed class OrderService(
         // Shipping only depends on item quantity (and fulfillment method), which the
         // session-cached cart already has correct - only prices/stock need re-deriving
         // from the DB above.
-        return (lines, lines.Sum(l => l.UnitPrice * l.Quantity), cart.ShippingCostFor(fulfillmentMethod));
+        var subtotal = lines.Sum(l => l.UnitPrice * l.Quantity);
+        // BuildCheckoutLinesAsync keeps the cart's line order, so the lines pair up by index.
+        var pricedCart = cart with
+        {
+            Lines = cart.Lines.Select((l, i) => l with { ProductName = lines[i].ProductName, UnitPrice = lines[i].UnitPrice }).ToList(),
+            Subtotal = subtotal,
+        };
+        return (lines, subtotal, cart.ShippingCostFor(fulfillmentMethod), pricedCart);
     }
 
     // Re-derives prices/stock from the DB rather than trusting the session-cached cart,

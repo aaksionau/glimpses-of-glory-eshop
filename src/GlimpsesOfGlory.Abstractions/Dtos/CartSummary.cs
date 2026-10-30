@@ -13,9 +13,12 @@ public sealed record CartLineView(
 
 // ShippingCost is what shipping to an address costs for the cart's current quantity
 // (from the admin shipping tiers); ShippingCostFor applies the chosen fulfillment
-// method (local pickup is always free).
+// method (local pickup is always free), and TotalFor adds it to the subtotal.
 public sealed record CartSummary(IReadOnlyList<CartLineView> Lines, decimal Subtotal, decimal ShippingCost)
 {
     public decimal ShippingCostFor(FulfillmentMethod fulfillmentMethod) =>
         fulfillmentMethod == FulfillmentMethod.Pickup ? 0m : ShippingCost;
+
+    public decimal TotalFor(FulfillmentMethod fulfillmentMethod) =>
+        Subtotal + ShippingCostFor(fulfillmentMethod);
 }

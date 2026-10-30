@@ -12,8 +12,13 @@ public class IndexModel(ICartService cartService, CheckoutSessionStore checkoutS
     [BindProperty]
     public CheckoutAddress Address { get; set; } = new();
 
+    public CartSummary Cart { get; private set; } = null!;
+
     // Cost of the "Ship to my address" option; local pickup is free.
-    public decimal ShippingCost { get; private set; }
+    public decimal ShippingCost => Cart.ShippingCost;
+
+    // The delivery choice is still open here, so the summary follows the selected radio.
+    public CheckoutOrderSummary Summary => new(Cart, Address.FulfillmentMethod, FollowsChoice: true);
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
@@ -23,7 +28,7 @@ public class IndexModel(ICartService cartService, CheckoutSessionStore checkoutS
             return RedirectToPage("/Cart/Index");
         }
 
-        ShippingCost = cart.ShippingCost;
+        Cart = cart;
         Address = checkoutSessionStore.GetAddress() ?? new CheckoutAddress();
         return Page();
     }
@@ -36,7 +41,7 @@ public class IndexModel(ICartService cartService, CheckoutSessionStore checkoutS
             return RedirectToPage("/Cart/Index");
         }
 
-        ShippingCost = cart.ShippingCost;
+        Cart = cart;
         if (!ModelState.IsValid)
         {
             return Page();
