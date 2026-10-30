@@ -157,8 +157,9 @@ public sealed class OrderService(
         if (!await orderLineInventory.TryReserveAsync(lines, cancellationToken))
         {
             await transaction.RollbackAsync(cancellationToken);
-            // Another order took the stock between pricing and reserving: re-read it to say
-            // which lines are now short.
+            // Another order took the stock between pricing and reserving: re-read it (outside the
+            // rolled-back transaction) to say which lines are now short. If stock came back in the
+            // meantime the list is empty and the cart falls back to the generic banner.
             var products = await LoadProductsAsync(pricedCart, cancellationToken);
             return CashOrderResult.Failed(FindUnavailableLines(pricedCart, products));
         }

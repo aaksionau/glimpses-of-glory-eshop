@@ -1,6 +1,8 @@
+using System.Data.Common;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
+using GlimpsesOfGlory.Core;
 using GlimpsesOfGlory.Core.Entities;
 using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Web.Configuration;
@@ -11,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using CartIndexModel = GlimpsesOfGlory.Web.Pages.Cart.IndexModel;
@@ -52,6 +55,24 @@ public sealed class CheckoutUnavailableItemsTests : IDisposable
         Assert.Equal([new UnavailableCartLine("sunrise", 2)], result.UnavailableLines);
         await using var db = database.CreateDb();
         Assert.Empty(db.Orders);
+    }
+
+    [Fact]
+    public async Task PlaceCashOrder_WhenAnotherOrderTakesTheStockBeforeReserving_RollsBackAndListsTheShortLine()
+    {
+        await SeedProductsAsync();
+        // Prices fine (sunrise has 2), but another order takes one sunrise just as the transaction starts.
+        var db = database.CreateDb(new CompetingOrderInterceptor("UPDATE Products SET StockQuantity = 1 WHERE Slug = 'sunrise'"));
+        var cart = Cart(("harbour", 1), ("sunrise", 2));
+
+        var result = await OrderService(db, cart).PlaceCashOrderAsync(PickupAddress, CancellationToken.None);
+
+        Assert.Null(result.OrderId);
+        Assert.Equal([new UnavailableCartLine("sunrise", 1)], result.UnavailableLines);
+        await using var check = database.CreateDb();
+        Assert.Empty(check.Orders);
+        // harbour was reserved before sunrise failed; the rollback must put it back.
+        Assert.Equal(5, check.Products.Single(p => p.Slug == "harbour").StockQuantity);
     }
 
     [Fact]
@@ -169,10 +190,10 @@ public sealed class CheckoutUnavailableItemsTests : IDisposable
         await db.SaveChangesAsync();
     }
 
-    private OrderService OrderService(CartSummary cart)
-    {
-        var db = database.CreateDb();
-        return new OrderService(
+    private OrderService OrderService(CartSummary cart) => OrderService(database.CreateDb(), cart);
+
+    private static OrderService OrderService(AppDbContext db, CartSummary cart) =>
+        new(
             db,
             new StubCartService(cart),
             new FakePaymentGateway(),
@@ -180,6 +201,18 @@ public sealed class CheckoutUnavailableItemsTests : IDisposable
             new NullEmailSender(),
             TimeProvider.System,
             NullLogger<OrderService>.Instance);
+
+    // Runs a write just before checkout's transaction begins, as a competing order committing
+    // between pricing the cart and reserving its stock.
+    private sealed class CompetingOrderInterceptor(string sql) : DbTransactionInterceptor
+    {
+        public override async ValueTask<InterceptionResult<DbTransaction>> TransactionStartingAsync(DbConnection connection, TransactionStartingEventData eventData, InterceptionResult<DbTransaction> result, CancellationToken cancellationToken = default)
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = sql;
+            await command.ExecuteNonQueryAsync(cancellationToken);
+            return result;
+        }
     }
 
     private static CartSummary Cart(params (string Slug, int Quantity)[] lines) =>
