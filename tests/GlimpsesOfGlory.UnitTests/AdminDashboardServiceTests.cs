@@ -87,7 +87,7 @@ public sealed class AdminDashboardServiceTests : IDisposable
         await AddOrderAsync(OrderStatus.Shipped, PaymentMethod.Cash);
         await AddOrderAsync(OrderStatus.Cancelled, PaymentMethod.Cash);
         var metrics = await Service().GetMetricsAsync(CancellationToken.None);
-        var orders = new AdminOrderService(database.CreateDb(), new FakeInventoryStore(new Dictionary<int, int>()), null!, null!, TimeProvider.System, NullLogger<AdminOrderService>.Instance);
+        var orders = new AdminOrderService(database.CreateDb(), new FakeInventoryStore(new Dictionary<int, int>()), new FakePaymentGateway(), new NullEmailSender(), TimeProvider.System, NullLogger<AdminOrderService>.Instance);
 
         var toFulfill = await orders.GetOrdersAsync(AdminOrderTab.NeedsAction, new AdminOrderFilter(ToFulfillOnly: true), 1, 100, CancellationToken.None);
         var unpaidCash = await orders.GetOrdersAsync(AdminOrderTab.NeedsAction, new AdminOrderFilter(UnpaidCashOnly: true), 1, 100, CancellationToken.None);

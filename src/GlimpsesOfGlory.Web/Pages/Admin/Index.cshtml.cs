@@ -11,10 +11,10 @@ public class IndexModel(IAdminDashboardService dashboardService) : PageModel
 {
     // Both order filters are subsets of the default (Needs action) tab, so its count matches the tile.
     private static readonly string OrdersToFulfillHref =
-        new AdminOrderListState(AdminOrderTabs.Default, null, false, 1, ToFulfillOnly: true).Href;
+        new AdminOrderListState(AdminOrderTabs.Default, Search: null, PreorderOnly: false, Page: 1, ToFulfillOnly: true).Href;
 
     private static readonly string UnpaidCashOrdersHref =
-        new AdminOrderListState(AdminOrderTabs.Default, null, false, 1, UnpaidCashOnly: true).Href;
+        new AdminOrderListState(AdminOrderTabs.Default, Search: null, PreorderOnly: false, Page: 1, UnpaidCashOnly: true).Href;
 
     public IReadOnlyList<DashboardTile> Tiles { get; private set; } = [];
 
@@ -28,9 +28,11 @@ public class IndexModel(IAdminDashboardService dashboardService) : PageModel
         new("Orders to fulfill", Count(metrics.OrdersToFulfill), "New orders not yet shipped or ready for pickup.", OrdersToFulfillHref),
         new("Unpaid cash orders", Count(metrics.UnpaidCashOrders), "Cash still to collect on orders that aren't cancelled.", UnpaidCashOrdersHref),
         new("Low-stock products", Count(metrics.LowStockProducts), $"Visible products with {StockPolicy.LowStockThreshold} or fewer in stock, excluding preorders.", Products.IndexModel.LowStockHref),
-        new("Revenue, last 7 days", metrics.RevenueLast7Days.ToString("C"), "Paid orders, excluding cancelled ones.", null),
-        new("Revenue, last 30 days", metrics.RevenueLast30Days.ToString("C"), "Paid orders, excluding cancelled ones.", null),
+        new("Revenue, last 7 days", Money(metrics.RevenueLast7Days), "Paid orders, excluding cancelled ones.", null),
+        new("Revenue, last 30 days", Money(metrics.RevenueLast30Days), "Paid orders, excluding cancelled ones.", null),
     ];
 
     private static string Count(int value) => value.ToString(CultureInfo.CurrentCulture);
+
+    private static string Money(decimal value) => value.ToString("C", CultureInfo.CurrentCulture);
 }

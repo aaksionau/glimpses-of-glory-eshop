@@ -9,7 +9,12 @@ namespace GlimpsesOfGlory.Core.Services;
 // number always matches the list it links to.
 internal static class AdminQueryFilters
 {
-    // Placed but not yet shipped, ready for pickup, or cancelled.
+    // SQL-translatable twin of OrderTransitionPolicy.NeedsAction - keep the two in step. ToFulfill and
+    // UnpaidCash are both subsets of it, so their dashboard links land on the Needs action tab.
+    public static readonly Expression<Func<Order, bool>> NeedsAction =
+        o => o.Status == OrderStatus.New || (o.PaidAt == null && o.Status != OrderStatus.Cancelled);
+
+    // Placed and still waiting to be shipped or made ready for pickup.
     public static readonly Expression<Func<Order, bool>> ToFulfill =
         o => o.Status == OrderStatus.New;
 

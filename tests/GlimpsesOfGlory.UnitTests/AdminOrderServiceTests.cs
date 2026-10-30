@@ -416,25 +416,4 @@ public sealed class AdminOrderServiceTests : IDisposable
 
         public override DateTimeOffset GetUtcNow() => Now;
     }
-
-    private sealed class NullEmailSender : IEmailSender
-    {
-        public Task SendOrderConfirmationAsync(OrderConfirmationView order, CancellationToken cancellationToken) => Task.CompletedTask;
-
-        public Task SendShippedNotificationAsync(OrderShippedView order, CancellationToken cancellationToken) => Task.CompletedTask;
-    }
-
-    private sealed class FakePaymentGateway : IPaymentGateway
-    {
-        public Task<PaymentIntentSetup> CreatePaymentIntentAsync(decimal amount, string? receiptEmail, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
-
-        public Task<PaymentIntentSetup> UpdatePaymentIntentAsync(string paymentIntentId, decimal amount, string? receiptEmail, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
-
-        public PaymentWebhookResult HandleWebhookEvent(string payload, string signatureHeader) =>
-            throw new NotSupportedException();
-
-        public string GetPaymentDashboardUrl(string paymentIntentId) => $"https://dashboard.example/{paymentIntentId}";
-    }
 }
