@@ -625,25 +625,18 @@ public sealed class AdminOrderServiceTests : IDisposable
         // Simulates the email provider rejecting the send.
         public bool Fail { get; init; }
 
-        public Task SendOrderConfirmationAsync(OrderConfirmationView order, CancellationToken cancellationToken)
+        public Task SendOrderConfirmationAsync(OrderConfirmationView order, CancellationToken cancellationToken) => Record(Confirmations, order);
+
+        public Task SendShippedNotificationAsync(OrderShippedView order, CancellationToken cancellationToken) => Record(Shipped, order);
+
+        private Task Record<T>(List<T> sent, T email)
         {
             if (Fail)
             {
                 throw new HttpRequestException("Resend rejected email (500)");
             }
 
-            Confirmations.Add(order);
-            return Task.CompletedTask;
-        }
-
-        public Task SendShippedNotificationAsync(OrderShippedView order, CancellationToken cancellationToken)
-        {
-            if (Fail)
-            {
-                throw new HttpRequestException("Resend rejected email (500)");
-            }
-
-            Shipped.Add(order);
+            sent.Add(email);
             return Task.CompletedTask;
         }
     }

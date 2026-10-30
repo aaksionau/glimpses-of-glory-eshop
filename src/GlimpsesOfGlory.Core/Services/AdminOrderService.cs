@@ -246,7 +246,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
     public Task<EmailResendResult> ResendConfirmationAsync(int id, CancellationToken cancellationToken) =>
         ResendAsync(
             id,
-            order => OrderTransitionPolicy.CanResendConfirmation(order.Status),
+            OrderTransitionPolicy.CanResendConfirmation,
             order => emailSender.SendOrderConfirmationAsync(order.ToConfirmationView(), cancellationToken),
             "order confirmation",
             cancellationToken);
@@ -254,21 +254,21 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
     public Task<EmailResendResult> ResendShippedEmailAsync(int id, CancellationToken cancellationToken) =>
         ResendAsync(
             id,
-            order => OrderTransitionPolicy.CanResendShippedEmail(order.Status),
+            OrderTransitionPolicy.CanResendShippedEmail,
             order => emailSender.SendShippedNotificationAsync(order.ToShippedView(), cancellationToken),
             "shipping-notification",
             cancellationToken);
 
     // Read-only: the order is loaded untracked and nothing is written, so a resend never touches
     // the status or the step timestamps. A failed send is logged and reported, not thrown.
-    private async Task<EmailResendResult> ResendAsync(int id, Func<Order, bool> isAllowed, Func<Order, Task> send, string emailKind, CancellationToken cancellationToken)
+    private async Task<EmailResendResult> ResendAsync(int id, Func<OrderStatus, bool> isAllowed, Func<Order, Task> send, string emailKind, CancellationToken cancellationToken)
     {
         var order = await LoadWithLinesAsync(id, cancellationToken);
         if (order is null)
         {
             return EmailResendResult.NotFound;
         }
-        if (!isAllowed(order))
+        if (!isAllowed(order.Status))
         {
             return EmailResendResult.NotAllowed;
         }
