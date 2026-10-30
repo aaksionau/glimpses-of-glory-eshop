@@ -71,6 +71,17 @@ public class CartMobileLayoutTests
     }
 
     [Fact]
+    public async Task Totals_FromSm_SitInAFixedWidthColumn_SoValuesAlign()
+    {
+        var html = await RenderAsync(Cart(Short));
+
+        // items-end would shrink each row to its content and break the justify-between columns.
+        var totals = Regex.Match(html, "<div class=\"([^\"]*)\" data-testid=\"cart-totals\"").Groups[1].Value;
+        Assert.Contains("sm:w-96", totals);
+        Assert.DoesNotContain("items-end", totals);
+    }
+
+    [Fact]
     public async Task CheckoutCta_IsFullWidthOnMobile()
     {
         var html = await RenderAsync(Cart(Short));

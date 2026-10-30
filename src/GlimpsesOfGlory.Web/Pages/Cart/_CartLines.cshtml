@@ -107,11 +107,12 @@
             }
         </div>
 
-        <div class="mt-6 flex flex-col gap-1 sm:items-end" data-testid="cart-totals">
+        @* A fixed width from sm: keeps the label/value rows aligned in one right-hand column. *@
+        <div class="mt-6 flex flex-col gap-1 sm:ml-auto sm:w-96" data-testid="cart-totals">
             <p class="flex justify-between gap-4">Subtotal <span>@cart.Subtotal.ToString("C")</span></p>
             <p class="flex justify-between gap-4 text-ink-light text-sm" data-testid="cart-shipping">Shipping <span>@cart.ShippingCost.ToString("C") &middot; or free local pickup</span></p>
             <p class="flex justify-between gap-4 text-lg font-bold" data-testid="cart-estimated-total">Estimated total <span>@cart.TotalFor(FulfillmentMethod.Shipping).ToString("C")</span></p>
-            <a href="/checkout" class="btn-primary mt-2 w-full sm:w-auto">Proceed to checkout</a>
+            <a href="/checkout" class="btn-primary mt-2 sm:self-end w-full sm:w-auto">Proceed to checkout</a>
         </div>
     }
 </div>
