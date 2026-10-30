@@ -115,6 +115,12 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
 
     public async Task<OrderUpdateResult> MarkShippedAsync(int id, string? trackingNumber, ShippingCarrier carrier, CancellationToken cancellationToken)
     {
+        // The page validates the posted carrier; this keeps an undefined value from ever being stored.
+        if (!Enum.IsDefined(carrier))
+        {
+            throw new ArgumentOutOfRangeException(nameof(carrier), carrier, null);
+        }
+
         // Loaded up front because the shipping email needs the full order and its lines.
         var order = await LoadWithLinesAsync(id, cancellationToken);
         if (order is null)

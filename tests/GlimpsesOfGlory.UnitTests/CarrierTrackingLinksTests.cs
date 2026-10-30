@@ -21,6 +21,14 @@ public class CarrierTrackingLinksTests
             CarrierTrackingLinks.TrackingUrl(ShippingCarrier.Usps, "94 26&x=1"));
     }
 
+    [Fact]
+    public void Usps_TrimsTheTrackingNumber()
+    {
+        Assert.Equal(
+            "https://tools.usps.com/go/TrackConfirmAction?tLabels=9400111899223",
+            CarrierTrackingLinks.TrackingUrl(ShippingCarrier.Usps, " 9400111899223 "));
+    }
+
     [Theory]
     [InlineData(ShippingCarrier.Other, "ABC123")]
     [InlineData(null, "ABC123")]

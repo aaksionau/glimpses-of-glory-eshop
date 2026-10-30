@@ -78,6 +78,19 @@ public sealed class AdminOrderServiceTests : IDisposable
         Assert.Null(order.Carrier);
     }
 
+    [Fact]
+    public async Task MarkShipped_UndefinedCarrier_Throws_AndShipsNothing()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Shipping);
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            Service().MarkShippedAsync(id, "TRACK1", (ShippingCarrier)99, CancellationToken.None));
+
+        var order = await LoadAsync(id);
+        Assert.NotEqual(OrderStatus.Shipped, order.Status);
+        Assert.Null(order.Carrier);
+    }
+
     [Theory]
     [InlineData(ShippingCarrier.Usps, "https://tools.usps.com/go/TrackConfirmAction?tLabels=TRACK1")]
     [InlineData(ShippingCarrier.Other, null)]

@@ -15,8 +15,9 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
     [StringLength(200)]
     public string? TrackingNumber { get; set; }
 
-    // Only recorded when a tracking number is entered.
+    // Only recorded when a tracking number is entered. EnumDataType rejects posted values outside the enum.
     [BindProperty]
+    [EnumDataType(typeof(ShippingCarrier))]
     public ShippingCarrier Carrier { get; set; } = ShippingCarrier.Usps;
 
     // Length is checked in OnPostSaveNoteAsync on the normalized note (what gets stored), not the raw post.
