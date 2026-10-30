@@ -39,10 +39,20 @@ public class IndexModel(ICartService cartService) : PageModel
         return Partial("_CartLines", new CartLinesView(Cart, errors));
     }
 
+    // The removed line comes back with an Undo, so a mis-tap doesn't silently lose it.
     public async Task<IActionResult> OnPostRemoveAsync(string slug, CancellationToken cancellationToken)
     {
+        var removed = (await cartService.GetSummaryAsync(cancellationToken)).Lines.FirstOrDefault(l => l.ProductSlug == slug);
         await cartService.RemoveLineAsync(slug, cancellationToken);
         Cart = await cartService.GetSummaryAsync(cancellationToken);
-        return Partial("_CartLines", new CartLinesView(Cart, []));
+        return Partial("_CartLines", new CartLinesView(Cart, [], RemovedLine: removed));
+    }
+
+    // Puts a removed line back. It's re-added like any add to cart, so stock and price are checked again.
+    public async Task<IActionResult> OnPostUndoRemoveAsync(string slug, int quantity, CancellationToken cancellationToken)
+    {
+        var result = await cartService.AddLineAsync(slug, quantity, cancellationToken);
+        Cart = await cartService.GetSummaryAsync(cancellationToken);
+        return Partial("_CartLines", new CartLinesView(Cart, [], Message: result.Success ? null : result.ErrorMessage));
     }
 }
