@@ -43,7 +43,7 @@ public sealed class AdminOrderServiceTests : IDisposable
         var id = await AddOrderAsync(FulfillmentMethod.Shipping);
         var emailSender = new RecordingEmailSender();
 
-        await Service(emailSender).MarkShippedAsync(id, "9400111899223", ShippingCarrier.Usps, CancellationToken.None);
+        await Service(emailSender).MarkShippedAsync(id, " 9400111899223 ", ShippingCarrier.Usps, CancellationToken.None);
 
         var order = await LoadAsync(id);
         Assert.Equal(ShippingCarrier.Usps, order.Carrier);

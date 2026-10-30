@@ -128,7 +128,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
 
         // Guarded on the status we just checked, so a double-click (or two admins at once)
         // only ships - and emails the buyer - once.
-        var tracking = string.IsNullOrWhiteSpace(trackingNumber) ? null : trackingNumber;
+        var tracking = string.IsNullOrWhiteSpace(trackingNumber) ? null : trackingNumber.Trim();
         // A carrier without a tracking number has nothing to link to, so it isn't recorded.
         ShippingCarrier? shippedWith = tracking is null ? null : carrier;
         var now = timeProvider.GetUtcNow();

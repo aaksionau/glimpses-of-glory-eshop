@@ -13,7 +13,7 @@ public static class CarrierTrackingLinks
             return null;
         }
 
-        var number = Uri.EscapeDataString(trackingNumber.Trim());
+        var number = Uri.EscapeDataString(trackingNumber);
         return carrier switch
         {
             ShippingCarrier.Usps => $"https://tools.usps.com/go/TrackConfirmAction?tLabels={number}",

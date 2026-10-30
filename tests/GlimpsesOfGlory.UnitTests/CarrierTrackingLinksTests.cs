@@ -10,7 +10,7 @@ public class CarrierTrackingLinksTests
     {
         Assert.Equal(
             "https://tools.usps.com/go/TrackConfirmAction?tLabels=9400111899223",
-            CarrierTrackingLinks.TrackingUrl(ShippingCarrier.Usps, " 9400111899223 "));
+            CarrierTrackingLinks.TrackingUrl(ShippingCarrier.Usps, "9400111899223"));
     }
 
     [Fact]
