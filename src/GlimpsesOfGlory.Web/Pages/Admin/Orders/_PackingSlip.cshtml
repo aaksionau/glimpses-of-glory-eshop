@@ -27,16 +27,7 @@
         else
         {
             <h2 id="packing-slip-recipient-heading" class="font-semibold">Ship to</h2>
-            <p>
-                @Model.Address.FullName<br />
-                @Model.Address.AddressLine1<br />
-                @if (!string.IsNullOrWhiteSpace(Model.Address.AddressLine2))
-                {
-                    @Model.Address.AddressLine2<text><br /></text>
-                }
-                @Model.Address.City, @Model.Address.State @Model.Address.PostalCode<br />
-                @Model.Address.Country
-            </p>
+            <partial name="~/Pages/Admin/Orders/_ShippingAddress.cshtml" model="Model.Address" />
         }
     </section>
 

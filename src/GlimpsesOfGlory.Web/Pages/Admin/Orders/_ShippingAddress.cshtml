@@ -1,0 +1,13 @@
+@model GlimpsesOfGlory.Abstractions.Dtos.ShippingAddressInfo
+
+@* The postal address block, shared by the fulfillment card and the packing slip so they always match. *@
+<p>
+    @Model.FullName<br />
+    @Model.AddressLine1<br />
+    @if (!string.IsNullOrWhiteSpace(Model.AddressLine2))
+    {
+        @Model.AddressLine2<text><br /></text>
+    }
+    @Model.City, @Model.State @Model.PostalCode<br />
+    @Model.Country
+</p>

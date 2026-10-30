@@ -32,11 +32,8 @@ h1, h2, h3, h4, .font-display {
   font-family: var(--font-display);
 }
 
-/* Printing from admin (e.g. the packing slip): the layout hides its chrome via print:hidden;
-   this keeps margins tight enough for a typical order to fit on one A4 or Letter page. */
-@media print {
-  @page {
-    size: auto;
-    margin: 12mm;
-  }
+/* Tight print margins so a typical admin printout (e.g. a packing slip) fits on one A4 or Letter page;
+   the admin layout hides its own chrome via print:hidden. */
+@page {
+  margin: 12mm;
 }
