@@ -6,9 +6,31 @@
     // A partial never takes a layout; this also keeps it renderable on its own (in tests).
     Layout = null;
     var cart = Model.Cart;
+    const string stepButtonClass = "w-11 h-11 rounded-full border border-ink/20 hover:border-gold-dark text-lg leading-none";
 }
 
 <div id="cart-lines">
+    @if (Model.Message is not null)
+    {
+        <p class="text-red-600 mb-4" role="alert">@Model.Message</p>
+    }
+
+    @if (Model.RemovedLine is { } removed)
+    {
+        @* Undo puts the line back with the quantity it had; the button is disabled while that posts
+           so a double click can't add it twice. It takes focus (htmx honours autofocus on swap): the
+           Remove button that had it is gone, and landing on Undo also reads the notice out. *@
+        <div class="flex flex-wrap items-center gap-2 mb-4 rounded-lg bg-cream-dark px-4 py-2" role="status" data-removed-line="@removed.ProductSlug">
+            <span>Removed @removed.ProductName</span>
+            <span aria-hidden="true">&middot;</span>
+            <form hx-post="/cart?handler=UndoRemove" hx-target="#cart-lines" hx-swap="outerHTML" hx-sync="closest #cart-lines:drop" hx-disabled-elt="find button" asp-antiforgery="true">
+                <input type="hidden" name="slug" value="@removed.ProductSlug" />
+                <input type="hidden" name="quantity" value="@removed.Quantity" />
+                <button type="submit" autofocus aria-label="Undo removing @removed.ProductName" class="font-semibold text-gold-dark hover:underline px-1 py-2 disabled:opacity-50">Undo</button>
+            </form>
+        </div>
+    }
+
     @if (cart.Lines.Count == 0)
     {
         <p>Your cart is empty. <a href="/products" class="text-gold-dark hover:underline">Browse products</a>.</p>
@@ -39,17 +61,37 @@
                         }
                     </div>
 
-                    <form hx-post="/cart?handler=UpdateQuantity" hx-target="#cart-lines" hx-swap="outerHTML" hx-trigger="change" asp-antiforgery="true">
+                    @* The −/+ buttons step the input (within its min/max) and fire its change event when the value
+                       moves; their ids keep focus on them across the swap. The short delay lets a few quick taps go
+                       as one save, and the spinner shows while the line saves. Every cart form syncs on #cart-lines
+                       and drops a post while another is in flight: the session cart is last-write-wins, so two
+                       overlapping saves could lose one, and the later swap could show a stale cart. *@
+                    <form class="flex items-center gap-1"
+                          x-data="{ step(up) { const q = this.$refs.qty, before = q.value; up ? q.stepUp() : q.stepDown(); if (q.value !== before) q.dispatchEvent(new Event('change', { bubbles: true })); } }"
+                          hx-post="/cart?handler=UpdateQuantity" hx-target="#cart-lines" hx-swap="outerHTML" hx-trigger="change delay:400ms"
+                          hx-sync="closest #cart-lines:drop"
+                          hx-indicator="#saving-@line.ProductSlug" asp-antiforgery="true">
                         <input type="hidden" name="slug" value="@line.ProductSlug" />
+                        <button type="button" id="qty-down-@line.ProductSlug" aria-label="Decrease quantity of @line.ProductName" data-step="down"
+                                x-on:click="step(false)"
+                                class="@stepButtonClass">&minus;</button>
                         <label for="qty-@line.ProductSlug" class="sr-only">Quantity for @line.ProductName</label>
                         <input type="number" id="qty-@line.ProductSlug" name="quantity" value="@line.Quantity" min="1" max="@(line.IsPreorder ? PreorderPolicy.MaxQuantityPerLine : (int?)null)"
+                               x-ref="qty"
                                aria-describedby="@(hasError ? $"error-{line.ProductSlug}" : null)" aria-invalid="@(hasError ? "true" : null)"
-                               class="w-16 border border-ink/20 rounded px-2 py-3 text-center" />
+                               class="w-14 border border-ink/20 rounded px-2 py-3 text-center" />
+                        <button type="button" id="qty-up-@line.ProductSlug" aria-label="Increase quantity of @line.ProductName" data-step="up"
+                                x-on:click="step(true)"
+                                class="@stepButtonClass">+</button>
+                        <svg id="saving-@line.ProductSlug" class="htmx-indicator h-5 w-5 animate-spin text-gold-dark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"></path>
+                        </svg>
                     </form>
 
                     <p class="w-24 text-right font-medium">@((line.UnitPrice * line.Quantity).ToString("C"))</p>
 
-                    <form hx-post="/cart?handler=Remove" hx-target="#cart-lines" hx-swap="outerHTML" asp-antiforgery="true">
+                    <form hx-post="/cart?handler=Remove" hx-target="#cart-lines" hx-swap="outerHTML" hx-sync="closest #cart-lines:drop" asp-antiforgery="true">
                         <input type="hidden" name="slug" value="@line.ProductSlug" />
                         <button type="submit" class="text-red-700 hover:underline px-2 py-3">Remove</button>
                     </form>

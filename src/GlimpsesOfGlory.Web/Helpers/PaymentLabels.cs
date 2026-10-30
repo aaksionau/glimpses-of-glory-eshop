@@ -17,6 +17,9 @@ public static class PaymentLabels
         _ => "Card",
     };
 
+    // The card brands Stripe takes by default, shown beside the Pay button.
+    public static readonly IReadOnlyList<string> AcceptedCards = ["Visa", "Mastercard", "American Express", "Discover"];
+
     // Shown wherever an unpaid order is still to be collected.
     public static string CashDueNote(decimal total) =>
         $"Please bring {total:C} in cash when you collect your order.";
