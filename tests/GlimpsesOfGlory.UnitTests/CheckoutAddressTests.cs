@@ -101,7 +101,6 @@ public class CheckoutAddressTests
     {
         var address = ShippingAddress(ShippingCountryPolicy.DefaultCountry);
         address.FulfillmentMethod = method;
-        address.Phone = null;
 
         Assert.Empty(Validate(address));
     }

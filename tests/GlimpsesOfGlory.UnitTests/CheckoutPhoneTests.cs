@@ -1,7 +1,5 @@
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
-using GlimpsesOfGlory.Abstractions.Services;
-using GlimpsesOfGlory.Core;
 using GlimpsesOfGlory.Core.Entities;
 using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Core.ValueObjects;
@@ -16,28 +14,18 @@ public sealed class CheckoutPhoneTests : IDisposable
 
     public void Dispose() => database.Dispose();
 
-    [Fact]
-    public async Task CashOrder_SavesThePhone_AndTheAdminSeesIt()
+    [Theory]
+    [InlineData("555-0100")]
+    [InlineData(null)]
+    public async Task CashOrder_SavesThePhone_AndTheAdminSeesIt(string? phone)
     {
         await SeedProductAsync();
-        var address = new ShippingAddressInfo("shopper@example.com", "Sam Shopper", null, null, null, null, null, null, "555-0100");
+        var address = new ShippingAddressInfo("shopper@example.com", "Sam Shopper", null, null, null, null, null, null, Phone: phone);
 
         var result = await OrderService().PlaceCashOrderAsync(address, CancellationToken.None);
 
         var detail = await AdminOrderService().GetOrderAsync(result.OrderId!.Value, CancellationToken.None);
-        Assert.Equal("555-0100", detail!.Address.Phone);
-    }
-
-    [Fact]
-    public async Task CashOrder_WithoutAPhone_StoresNone()
-    {
-        await SeedProductAsync();
-        var address = new ShippingAddressInfo("shopper@example.com", "Sam Shopper", null, null, null, null, null, null);
-
-        var result = await OrderService().PlaceCashOrderAsync(address, CancellationToken.None);
-
-        var detail = await AdminOrderService().GetOrderAsync(result.OrderId!.Value, CancellationToken.None);
-        Assert.Null(detail!.Address.Phone);
+        Assert.Equal(phone, detail!.Address.Phone);
     }
 
     // Card orders wait in a PendingCheckout until Stripe confirms payment; the phone must survive that copy.
@@ -53,7 +41,7 @@ public sealed class CheckoutPhoneTests : IDisposable
                 Email = "shopper@example.com",
                 FulfillmentMethod = FulfillmentMethod.Shipping,
                 ShippingAddress = ShippingAddress.FromInfo(new ShippingAddressInfo(
-                    "shopper@example.com", "Sam Shopper", "1 Main St", null, "Springfield", "IL", "62701", "United States", "+1 555 0100")),
+                    "shopper@example.com", "Sam Shopper", "1 Main St", null, "Springfield", "IL", "62701", "United States", Phone: "+1 555 0100")),
                 Subtotal = 20m,
                 ShippingCost = 8m,
                 Lines = [new PendingCheckoutLine { ProductId = productId, ProductName = "Sunrise", UnitPrice = 20m, Quantity = 1 }],
@@ -94,20 +82,7 @@ public sealed class CheckoutPhoneTests : IDisposable
 
     private AdminOrderService AdminOrderService()
     {
-        AppDbContext db = database.CreateDb();
+        var db = database.CreateDb();
         return new(db, new OrderLineInventory(new EfInventoryStore(db)), new FakePaymentGateway(), new NullEmailSender(), TimeProvider.System, NullLogger<AdminOrderService>.Instance);
-    }
-
-    private sealed class StubCartService(CartSummary cart) : ICartService
-    {
-        public Task<CartSummary> GetSummaryAsync(CancellationToken cancellationToken) => Task.FromResult(cart);
-
-        public Task<CartOperationResult> AddLineAsync(string slug, int quantity, CancellationToken cancellationToken) => throw new NotSupportedException();
-
-        public Task<CartOperationResult> UpdateLineQuantityAsync(string slug, int quantity, CancellationToken cancellationToken) => throw new NotSupportedException();
-
-        public Task RemoveLineAsync(string slug, CancellationToken cancellationToken) => throw new NotSupportedException();
-
-        public Task ClearAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }

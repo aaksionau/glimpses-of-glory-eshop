@@ -39,8 +39,7 @@
     <span asp-validation-for="FullName" class="text-red-600 text-sm"></span>
 </label>
 
-@* Optional for both delivery methods (outside the shipping fieldset): the shop's way to reach a
-   pickup customer, and passed to the carrier for a shipped order. *@
+@* Optional for both delivery methods, so it sits outside the shipping fieldset. *@
 <label class="block">
     <span class="block mb-1 font-medium">Phone <span class="text-ink-light font-normal">(optional)</span></span>
     <input asp-for="Phone" type="tel" autocomplete="tel" aria-describedby="@phoneHintId"

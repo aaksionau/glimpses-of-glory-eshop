@@ -273,7 +273,7 @@ public class AdminOrderDetailTests
     {
         var order = Order(fulfillmentMethod: FulfillmentMethod.Pickup) with
         {
-            Address = new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null, "555-0100"),
+            Address = new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null, Phone: "555-0100"),
         };
         var model = new DetailsModel(new FakeAdminOrderService(order));
         await model.OnGetAsync(42, CancellationToken.None);
