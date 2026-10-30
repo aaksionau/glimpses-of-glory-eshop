@@ -7,7 +7,7 @@ namespace GlimpsesOfGlory.Web.Helpers;
 
 // Wraps a server-side validation message in <span id="<field id>-error"> so the invalid field's
 // aria-describedby (see FieldValidationAriaTagHelper) can point at it. The id goes on an inner span
-// rather than the container because jQuery Validate unobtrusive replaces the container's contents
+// rather than the container because wwwroot/js/form-validation.js replaces the container's contents
 // with its own message under that same id when the field is re-checked in the browser.
 [HtmlTargetElement("span", Attributes = ForAttributeName)]
 public sealed class ValidationMessageIdTagHelper(IHtmlGenerator generator) : TagHelper

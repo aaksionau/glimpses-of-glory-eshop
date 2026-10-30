@@ -10,12 +10,11 @@
 
     <partial name="_CheckoutSteps" model="1" />
 
-    @* x-init: when the page comes back from a failed post, start the shopper on the first field
-       the server flagged. *@
-    <form method="post" asp-antiforgery="true" class="flex flex-col gap-4"
-          x-data="{ method: '@Model.Address.FulfillmentMethod' }"
-          x-init="$el.querySelector('.input-validation-error')?.focus()">
-        <div asp-validation-summary="ModelOnly" role="alert" class="text-red-600"></div>
+    @* data-validate: checked in the browser by form-validation.js, which also lists the errors in
+       the summary and focuses the first invalid field (including after a failed post). *@
+    <form method="post" asp-antiforgery="true" class="flex flex-col gap-4" data-validate
+          x-data="{ method: '@Model.Address.FulfillmentMethod' }">
+        <div asp-validation-summary="ModelOnly" role="alert" data-validation-summary class="text-red-600"></div>
 
         <fieldset class="flex flex-col gap-2">
             <legend class="mb-1 font-medium">Delivery</legend>
@@ -38,5 +37,5 @@
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/form-validation.js" asp-append-version="true"></script>
 }

@@ -125,7 +125,7 @@ public class CheckoutDetailsFormTests
         Assert.Matches("<span [^>]*data-valmsg-for=\"Address.Email\"[^>]*><span id=\"Address_Email-error\">Enter your email.</span></span>", html);
     }
 
-    // The id is the one jQuery Validate gives its own message when it re-checks the field, so
+    // The id is the one form-validation.js gives its own message when it re-checks the field, so
     // assistive tech stays pointed at the current message either way.
     [Theory]
     [MemberData(nameof(AutocompleteTokens))]
@@ -156,7 +156,7 @@ public class CheckoutDetailsFormTests
         Assert.Equal("id=\"Address_City-error\"", Assert.Single(Regex.Matches(html, "id=\"[^\"]*-error\"")).Value);
     }
 
-    // Each field has a message span for jQuery Validate unobtrusive to show its error in.
+    // Each field has a message span for form-validation.js to show its error in.
     [Theory]
     [MemberData(nameof(AutocompleteTokens))]
     public async Task DetailsField_HasAMessageSpan(string fieldName, string _)
@@ -177,10 +177,22 @@ public class CheckoutDetailsFormTests
         var field = FindField(await RenderAsync(), fieldName);
 
         Assert.Matches("\\srequired[\\s=>]", field);
-        Assert.Contains($"data-msg-required=\"{CheckoutAddress.ShippingRequiredMessages[fieldName]}\"", field);
+        Assert.Contains($"data-val-required=\"{CheckoutAddress.ShippingRequiredMessages[fieldName]}\"", field);
     }
 
-    // Pickup disables the address fieldset, which jQuery Validate skips along with hidden fields.
+    // The [Required]/[EmailAddress] fields get their wording from the generated data-val-* attributes.
+    [Fact]
+    public async Task ContactFields_CarryTheServersMessages_ForTheBrowser()
+    {
+        var html = await RenderAsync();
+
+        Assert.Contains("data-val-required=\"Email is required.\"", FindField(html, "Email"));
+        Assert.Contains("data-val-email=\"Enter a valid email address.\"", FindField(html, "Email"));
+        Assert.Contains("type=\"email\"", FindField(html, "Email"));
+        Assert.Contains("data-val-required=\"Full name is required.\"", FindField(html, "FullName"));
+    }
+
+    // Pickup disables the address fieldset, so the browser (and form-validation.js) skips its fields.
     [Fact]
     public async Task ShippingFields_SitInAFieldsetDisabledForPickup()
     {

@@ -6,8 +6,9 @@ namespace GlimpsesOfGlory.Web.Helpers;
 
 // Marks a form control that failed server-side validation as aria-invalid and points its
 // aria-describedby at the message that ValidationMessageIdTagHelper renders for it, so assistive
-// tech reads the error out with the field. The id ("<field id>-error") is the one jQuery Validate
-// gives its own messages, so the link survives the field being re-checked in the browser.
+// tech reads the error out with the field. wwwroot/js/form-validation.js uses the same id
+// ("<field id>-error") for the messages it shows, so the link survives the field being re-checked
+// in the browser.
 [HtmlTargetElement("input", Attributes = ForAttributeName)]
 [HtmlTargetElement("select", Attributes = ForAttributeName)]
 [HtmlTargetElement("textarea", Attributes = ForAttributeName)]
