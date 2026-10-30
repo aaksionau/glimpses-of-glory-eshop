@@ -19,8 +19,6 @@ public sealed record CheckoutOrderSummary(
     public IReadOnlyList<FulfillmentMethod> Methods =>
         FollowsChoice ? Enum.GetValues<FulfillmentMethod>() : [FulfillmentMethod];
 
-    public decimal ShippingCostFor(FulfillmentMethod method) => Cart.ShippingCostFor(method);
-
     public decimal TotalFor(FulfillmentMethod method) => Cart.Subtotal + Cart.ShippingCostFor(method);
 
     public decimal Total => TotalFor(FulfillmentMethod);

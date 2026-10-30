@@ -85,8 +85,8 @@ public class CheckoutOrderSummaryTests
     {
         var html = await RenderAsync(new CheckoutOrderSummary(Cart, FulfillmentMethod.Shipping, FollowsChoice: true));
 
-        var shippingTotal = Regex.Match(html, "<p\\b[^>]*>Total: \\$63\\.50</p>").Value;
-        var pickupTotal = Regex.Match(html, "<p\\b[^>]*>Total: \\$55\\.50</p>").Value;
+        var shippingTotal = MethodRows(html, "Total: \\$63\\.50");
+        var pickupTotal = MethodRows(html, "Total: \\$55\\.50");
         Assert.Contains("x-show=\"method === &#x27;Shipping&#x27;\"", shippingTotal);
         Assert.DoesNotContain("display: none", shippingTotal);
         Assert.Contains("x-show=\"method === &#x27;Pickup&#x27;\"", pickupTotal);
@@ -137,6 +137,10 @@ public class CheckoutOrderSummaryTests
 
     private static Task<string> RenderAsync(CheckoutOrderSummary model) =>
         RazorViewToStringRendererTests.CreateRenderer().RenderAsync(PartialPath, model);
+
+    // The opening tag of the per-method shipping/total rows whose content matches the pattern.
+    private static string MethodRows(string html, string pattern) =>
+        Regex.Match(html, $"<div\\b[^>]*x-show[^>]*>(?=(?:(?!</div>).)*{pattern})", RegexOptions.Singleline).Value;
 
     private static string Tag(string html, string id) =>
         Regex.Match(html, $"<[a-z]+\\b[^>]*id=\"{id}\"[^>]*>").Value;
