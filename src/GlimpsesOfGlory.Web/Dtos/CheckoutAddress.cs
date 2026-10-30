@@ -18,8 +18,8 @@ public sealed class CheckoutAddress : IValidatableObject
     [StringLength(200)]
     public string FullName { get; set; } = string.Empty;
 
-    // Optional for both delivery methods: lets the shop reach a pickup customer, and goes to the
-    // carrier with a shipped order.
+    // Optional for both delivery methods: lets the shop reach the customer about the order
+    // (shown on the admin order details).
     [Phone(ErrorMessage = "Enter a valid phone number.")]
     [StringLength(30, ErrorMessage = "Enter a valid phone number.")]
     public string? Phone { get; set; }
