@@ -35,6 +35,7 @@ public class CheckoutDetailsFormTests
     {
         { "Email", "email" },
         { "FullName", "name" },
+        { "Phone", "tel" },
         { "AddressLine1", "address-line1" },
         { "AddressLine2", "address-line2" },
         { "City", "address-level2" },
@@ -138,7 +139,7 @@ public class CheckoutDetailsFormTests
         var field = FindField(html, $"Address.{fieldName}");
 
         Assert.Contains("aria-invalid=\"true\"", field);
-        Assert.Contains($"aria-describedby=\"Address_{fieldName}-error\"", field);
+        Assert.Contains($"Address_{fieldName}-error", DescribedBy(field));
         Assert.Matches($"<span (?=[^>]*data-valmsg-for=\"Address.{fieldName}\")[^>]*id=\"Address_{fieldName}-error\"[^>]*>Something is wrong.</span>", html);
     }
 
@@ -152,7 +153,11 @@ public class CheckoutDetailsFormTests
 
         Assert.All(
             Fields(html).Where(f => !f.Contains("name=\"Address.City\"")),
-            f => Assert.DoesNotContain("aria-", f));
+            f =>
+            {
+                Assert.DoesNotContain("aria-invalid", f);
+                Assert.DoesNotContain(DescribedBy(f), id => id.EndsWith("-error"));
+            });
         Assert.Equal("id=\"Address_City-error\"", Assert.Single(Regex.Matches(html, "id=\"[^\"]*-error\"")).Value);
     }
 
@@ -192,6 +197,42 @@ public class CheckoutDetailsFormTests
         Assert.Contains("data-val-required=\"Full name is required.\"", FindField(html, "FullName"));
     }
 
+    // Tells a shopper wary of marketing what the email is for, read out with the field.
+    [Fact]
+    public async Task Email_OnCheckoutPage_HasAHintLinkedByAriaDescribedBy()
+    {
+        var html = await RenderOnCheckoutPageAsync(new ModelStateDictionary());
+
+        Assert.Equal(["Address_Email-hint"], DescribedBy(FindField(html, "Address.Email")));
+        Assert.Matches("<span id=\"Address_Email-hint\"[^>]*>We'll send your order confirmation here.</span>", html);
+    }
+
+    // An error message joins the hint rather than replacing it.
+    [Fact]
+    public async Task InvalidEmail_OnCheckoutPage_KeepsItsHintAlongsideTheError()
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("Address.Email", "Enter a valid email address.");
+
+        var html = await RenderOnCheckoutPageAsync(modelState);
+
+        Assert.Equal(["Address_Email-hint", "Address_Email-error"], DescribedBy(FindField(html, "Address.Email")));
+    }
+
+    // Optional for both delivery methods, so it sits outside the shipping-only fieldset.
+    [Fact]
+    public async Task Phone_IsAnOptionalTelField_ShownForPickupAndShipping()
+    {
+        var html = await RenderAsync();
+        var field = FindField(html, "Phone");
+        var fieldset = Regex.Match(html, "<fieldset\\b[^>]*>(.*?)</fieldset>", RegexOptions.Singleline);
+
+        Assert.Contains("type=\"tel\"", field);
+        Assert.DoesNotMatch("\\srequired[\\s=>]", field);
+        Assert.DoesNotContain("name=\"Phone\"", fieldset.Value);
+        Assert.Contains("(optional)", html);
+    }
+
     // Pickup disables the address fieldset, so the browser (and form-validation.js) skips its fields.
     [Fact]
     public async Task ShippingFields_SitInAFieldsetDisabledForPickup()
@@ -225,6 +266,9 @@ public class CheckoutDetailsFormTests
     // The opening tag of every form control: the text inputs and the country select.
     private static IEnumerable<string> Fields(string html) =>
         Regex.Matches(html, "<(?:input|select)\\b[^>]*>").Select(m => m.Value);
+
+    private static string[] DescribedBy(string field) =>
+        Regex.Match(field, "aria-describedby=\"([^\"]*)\"").Groups[1].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
     private static IEnumerable<(string Value, bool Selected)> Options(string html) =>
         Regex.Matches(html, "<option\\b([^>]*)>").Select(m => (

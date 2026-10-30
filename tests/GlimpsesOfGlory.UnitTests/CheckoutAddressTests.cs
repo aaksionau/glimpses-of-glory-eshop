@@ -93,4 +93,50 @@ public class CheckoutAddressTests
         Assert.Null(info.AddressLine1);
         Assert.Null(info.City);
     }
+
+    [Theory]
+    [InlineData(FulfillmentMethod.Pickup)]
+    [InlineData(FulfillmentMethod.Shipping)]
+    public void Validate_PhoneIsOptional(FulfillmentMethod method)
+    {
+        var address = ShippingAddress(ShippingCountryPolicy.DefaultCountry);
+        address.FulfillmentMethod = method;
+        address.Phone = null;
+
+        Assert.Empty(Validate(address));
+    }
+
+    [Theory]
+    [InlineData("not a phone")]
+    [InlineData("1234567890123456789012345678901")]
+    public void Validate_RejectsAnInvalidPhone(string phone)
+    {
+        var address = ShippingAddress(ShippingCountryPolicy.DefaultCountry);
+        address.Phone = phone;
+
+        var error = Assert.Single(Validate(address));
+        Assert.Equal([nameof(CheckoutAddress.Phone)], error.MemberNames);
+        Assert.Equal("Enter a valid phone number.", error.ErrorMessage);
+    }
+
+    [Theory]
+    [InlineData(FulfillmentMethod.Pickup)]
+    [InlineData(FulfillmentMethod.Shipping)]
+    public void ToShippingAddressInfo_KeepsThePhone(FulfillmentMethod method)
+    {
+        var address = ShippingAddress(ShippingCountryPolicy.DefaultCountry);
+        address.FulfillmentMethod = method;
+        address.Phone = " (555) 010-0100 ";
+
+        Assert.Equal("(555) 010-0100", address.ToShippingAddressInfo().Phone);
+    }
+
+    [Fact]
+    public void ToShippingAddressInfo_StoresABlankPhoneAsNone()
+    {
+        var address = ShippingAddress(ShippingCountryPolicy.DefaultCountry);
+        address.Phone = "   ";
+
+        Assert.Null(address.ToShippingAddressInfo().Phone);
+    }
 }

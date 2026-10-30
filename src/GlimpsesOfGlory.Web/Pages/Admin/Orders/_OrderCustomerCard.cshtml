@@ -1,0 +1,13 @@
+@model GlimpsesOfGlory.Web.Pages.Admin.Orders.DetailsModel
+
+@* The customer's contact details; the phone is optional at checkout, so it only shows when given. *@
+<section class="rounded-lg border border-black/10 bg-white p-4" aria-labelledby="order-customer-heading">
+    <h2 id="order-customer-heading" class="font-semibold mb-2">Customer</h2>
+    <p>@Model.Order.Address.FullName</p>
+    <p><a href="mailto:@Model.Order.Address.Email" class="hover:underline">@Model.Order.Address.Email</a></p>
+    @if (!string.IsNullOrWhiteSpace(Model.Order.Address.Phone))
+    {
+        <p><a href="tel:@Model.Order.Address.Phone" class="hover:underline">@Model.Order.Address.Phone</a></p>
+    }
+    <p class="text-sm text-gray-500">Placed @Model.Order.CreatedAt.ToString("MMMM d, yyyy")</p>
+</section>
