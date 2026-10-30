@@ -17,6 +17,12 @@ public class IndexModel(IAdminOrderService adminOrderService) : PageModel
     [BindProperty(SupportsGet = true)]
     public bool Preorder { get; set; }
 
+    [BindProperty(SupportsGet = true)]
+    public bool ToFulfill { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public bool UnpaidCash { get; set; }
+
     // Not "page": Razor Pages reserves that route value for the page path, and route values are
     // read before the query string.
     [BindProperty(Name = "pageNumber", SupportsGet = true)]
@@ -32,7 +38,7 @@ public class IndexModel(IAdminOrderService adminOrderService) : PageModel
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
-        State = AdminOrderListState.FromQuery(Status, Search, Preorder, PageNumber);
+        State = AdminOrderListState.FromQuery(Status, Search, Preorder, PageNumber, ToFulfill, UnpaidCash);
         Counts = await adminOrderService.GetOrderTabCountsAsync(State.Filter, cancellationToken);
         Orders = await adminOrderService.GetOrdersAsync(State.Tab, State.Filter, State.Page, AdminOrderListState.PageSize, cancellationToken);
         // The service falls back to the last page when the requested one is past the end.

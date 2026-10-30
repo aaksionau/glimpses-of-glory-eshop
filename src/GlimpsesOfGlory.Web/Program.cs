@@ -81,6 +81,7 @@ builder.Services.AddScoped<IInventoryStore, EfInventoryStore>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IAdminOrderService, AdminOrderService>();
+builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
 
 builder.Services.Configure<ResendOptions>(builder.Configuration.GetSection("Resend"));
 builder.Services.AddScoped<RazorViewToStringRenderer>();

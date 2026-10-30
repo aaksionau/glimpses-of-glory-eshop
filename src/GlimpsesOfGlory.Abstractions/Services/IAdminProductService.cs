@@ -4,7 +4,9 @@ namespace GlimpsesOfGlory.Abstractions.Services;
 
 public interface IAdminProductService
 {
-    Task<IReadOnlyList<AdminProductSummary>> GetAllProductsAsync(CancellationToken cancellationToken);
+    // Ordered by name. lowStockOnly keeps visible, non-preorder products at or below
+    // StockPolicy.LowStockThreshold - the same rule as the admin dashboard's low-stock number.
+    Task<IReadOnlyList<AdminProductSummary>> GetProductsAsync(bool lowStockOnly, CancellationToken cancellationToken);
 
     Task<AdminProductDetail?> GetProductAsync(int id, CancellationToken cancellationToken);
 

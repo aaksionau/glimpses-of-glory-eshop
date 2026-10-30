@@ -4,17 +4,31 @@
     ViewData["Title"] = "Dashboard";
 }
 
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-    <a asp-page="/Admin/Products/Index" class="block border border-black/10 rounded-lg p-6 hover:shadow-lg transition-shadow">
-        <h2 class="text-lg font-semibold mb-1">Products</h2>
-        <p class="text-gray-700 text-sm">Add, edit, hide products and manage photos.</p>
-    </a>
-    <a asp-page="/Admin/Orders/Index" class="block border border-black/10 rounded-lg p-6 hover:shadow-lg transition-shadow">
-        <h2 class="text-lg font-semibold mb-1">Orders</h2>
-        <p class="text-gray-700 text-sm">View incoming orders and update fulfillment status.</p>
-    </a>
-    <a asp-page="/Admin/Shipping/Index" class="block border border-black/10 rounded-lg p-6 hover:shadow-lg transition-shadow">
-        <h2 class="text-lg font-semibold mb-1">Shipping rates</h2>
-        <p class="text-gray-700 text-sm">Edit the flat-rate shipping tier amounts.</p>
-    </a>
-</div>
+@{
+    void TileBody(DashboardTile tile)
+    {
+        <p class="text-sm font-medium text-gray-600">@tile.Label</p>
+        <p class="mt-1 text-3xl font-semibold tabular-nums">@tile.Value</p>
+        <p class="mt-2 text-sm text-gray-600">@tile.Description</p>
+    }
+}
+
+<ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    @foreach (var tile in Model.Tiles)
+    {
+        <li>
+            @if (tile.Href is not null)
+            {
+                <a href="@tile.Href" class="block h-full rounded-lg border border-black/10 bg-white p-5 hover:shadow-lg transition-shadow">
+                    @{ TileBody(tile); }
+                </a>
+            }
+            else
+            {
+                <div class="h-full rounded-lg border border-black/10 bg-white p-5">
+                    @{ TileBody(tile); }
+                </div>
+            }
+        </li>
+    }
+</ul>
