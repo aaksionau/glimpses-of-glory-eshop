@@ -172,7 +172,7 @@ public class AdminOrderTabsTests
 
         public Task<AdminOrderDetail?> GetOrderAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
 
-        public Task<OrderUpdateResult> MarkShippedAsync(int id, string? trackingNumber, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<OrderUpdateResult> MarkShippedAsync(int id, string? trackingNumber, ShippingCarrier carrier, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<OrderUpdateResult> MarkPickedUpAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
 

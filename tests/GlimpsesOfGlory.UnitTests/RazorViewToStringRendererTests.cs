@@ -1,3 +1,4 @@
+using System.Net;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using GlimpsesOfGlory.Abstractions.Dtos;
@@ -118,7 +119,8 @@ public class RazorViewToStringRendererTests
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
             Total: 30.00m,
-            TrackingNumber: "1Z999AA10123456784");
+            TrackingNumber: "1Z999AA10123456784",
+            TrackingUrl: null);
 
         var html = await renderer.RenderAsync("~/Emails/OrderShipped.cshtml", order);
 
@@ -127,6 +129,44 @@ public class RazorViewToStringRendererTests
         Assert.Contains("Ceramic Mug", html);
         Assert.Contains("1Z999AA10123456784", html);
         Assert.Contains("$30.00", html);
+    }
+
+    [Fact]
+    public async Task RenderAsync_RendersOrderShippedTemplate_WithTrackingLink()
+    {
+        const string url = "https://tools.usps.com/go/TrackConfirmAction?tLabels=9400111899223";
+        var order = new OrderShippedView(
+            OrderId: 44,
+            FulfillmentMethod: FulfillmentMethod.Shipping,
+            IsPaid: true,
+            Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
+            Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 1, false, null)],
+            Total: 17.50m,
+            TrackingNumber: "9400111899223",
+            TrackingUrl: url);
+
+        var html = WebUtility.HtmlDecode(await CreateRenderer().RenderAsync("~/Emails/OrderShipped.cshtml", order));
+
+        Assert.Contains($"<a href=\"{url}\"><strong>9400111899223</strong></a>", html);
+    }
+
+    [Fact]
+    public async Task RenderAsync_RendersOrderShippedTemplate_WithoutTrackingLink_ShowsPlainTrackingNumber()
+    {
+        var order = new OrderShippedView(
+            OrderId: 45,
+            FulfillmentMethod: FulfillmentMethod.Shipping,
+            IsPaid: true,
+            Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
+            Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 1, false, null)],
+            Total: 17.50m,
+            TrackingNumber: "ABC123",
+            TrackingUrl: null);
+
+        var html = await CreateRenderer().RenderAsync("~/Emails/OrderShipped.cshtml", order);
+
+        Assert.Contains("<strong>ABC123</strong>", html);
+        Assert.DoesNotContain("<a href", html);
     }
 
     [Fact]
@@ -140,7 +180,8 @@ public class RazorViewToStringRendererTests
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 1, false, null)],
             Total: 17.50m,
-            TrackingNumber: null);
+            TrackingNumber: null,
+            TrackingUrl: null);
 
         var html = await renderer.RenderAsync("~/Emails/OrderShipped.cshtml", order);
 
@@ -159,7 +200,8 @@ public class RazorViewToStringRendererTests
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
             Total: 25.00m,
-            TrackingNumber: null);
+            TrackingNumber: null,
+            TrackingUrl: null);
 
         var html = await renderer.RenderAsync("~/Emails/OrderShipped.cshtml", order);
 
@@ -180,7 +222,8 @@ public class RazorViewToStringRendererTests
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
             Total: 25.00m,
-            TrackingNumber: null);
+            TrackingNumber: null,
+            TrackingUrl: null);
 
         var html = await renderer.RenderAsync("~/Emails/OrderShipped.cshtml", order);
 

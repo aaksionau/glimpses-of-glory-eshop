@@ -1,5 +1,6 @@
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Core.Entities;
+using GlimpsesOfGlory.Core.Services;
 
 namespace GlimpsesOfGlory.Core.Extensions;
 
@@ -25,7 +26,8 @@ internal static class OrderEmailViewExtensions
         order.ShippingAddress.ToInfo(order.Email),
         order.Lines.Select(ToConfirmationLine).ToList(),
         order.Total,
-        order.TrackingNumber);
+        order.TrackingNumber,
+        CarrierTrackingLinks.TrackingUrl(order.Carrier, order.TrackingNumber));
 
     public static OrderConfirmationLine ToConfirmationLine(this OrderLine line) =>
         new(line.ProductName, line.UnitPrice, line.Quantity, line.IsPreorder, line.ExpectedAvailabilityDate);

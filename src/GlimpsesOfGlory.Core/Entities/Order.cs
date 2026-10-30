@@ -14,6 +14,8 @@ public sealed class Order : ICheckoutHeader
     public decimal Total => Subtotal + ShippingCost;
     public OrderStatus Status { get; set; } = OrderStatus.New;
     public string? TrackingNumber { get; set; }
+    // Recorded with the tracking number; null when there is none.
+    public ShippingCarrier? Carrier { get; set; }
     public PaymentMethod PaymentMethod { get; set; }
     // Set when the payment is confirmed: on the Stripe webhook for card orders, or by an
     // admin once the cash has been collected for cash orders.

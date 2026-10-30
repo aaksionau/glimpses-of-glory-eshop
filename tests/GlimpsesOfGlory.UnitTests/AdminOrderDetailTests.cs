@@ -36,6 +36,8 @@ public class AdminOrderDetailTests
             Total: 30.00m,
             Status: status,
             TrackingNumber: null,
+            Carrier: null,
+            TrackingUrl: null,
             InternalNote: null,
             CreatedAt: new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero),
             PaidAt: isPaid ? new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero) : null,
@@ -124,6 +126,75 @@ public class AdminOrderDetailTests
         Assert.Equal("_OrderStatus", partial.ViewName);
         Assert.Equal(OrderStatus.New, model.Order.Status);
         Assert.Equal(0, service.UpdateCount);
+    }
+
+    [Fact]
+    public async Task MarkShipped_PassesTheChosenCarrierWithTheTrackingNumber()
+    {
+        var service = new FakeAdminOrderService(Order()) { AfterUpdate = Order(status: OrderStatus.Shipped) };
+        var model = CreateModel(service);
+        model.TrackingNumber = "ABC123";
+        model.Carrier = ShippingCarrier.Other;
+
+        await model.OnPostMarkShippedAsync(42, CancellationToken.None);
+
+        Assert.Equal(("ABC123", ShippingCarrier.Other), service.ShippedWith);
+    }
+
+    [Fact]
+    public async Task ActionsFragment_MarkShippedForm_HasACarrierSelectNextToTheTrackingNumber()
+    {
+        var model = new DetailsModel(new FakeAdminOrderService(Order()));
+        await model.OnGetAsync(42, CancellationToken.None);
+
+        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderStatus.cshtml", model);
+
+        var form = Regex.Match(html, "<form[^>]*data-order-action=\"MarkShipped\".*?</form>", RegexOptions.Singleline).Value;
+        Assert.Matches("<select[^>]*name=\"Carrier\"", form);
+        Assert.Matches("<option[^>]*value=\"Usps\"[^>]*>USPS</option>", form);
+        Assert.Matches("<option[^>]*selected=\"selected\"[^>]*>USPS</option>", form);
+        Assert.Contains("<option value=\"Other\">Other</option>", form);
+        Assert.Contains("name=\"TrackingNumber\"", form);
+    }
+
+    [Fact]
+    public async Task ActionsFragment_PickupOrder_HasNoCarrierSelect()
+    {
+        var model = new DetailsModel(new FakeAdminOrderService(Order(fulfillmentMethod: FulfillmentMethod.Pickup)));
+        await model.OnGetAsync(42, CancellationToken.None);
+
+        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderStatus.cshtml", model);
+
+        Assert.DoesNotContain("name=\"Carrier\"", html);
+    }
+
+    [Fact]
+    public async Task FulfillmentCard_UspsTracking_IsALinkToTheCarrier()
+    {
+        const string url = "https://tools.usps.com/go/TrackConfirmAction?tLabels=9400111899223";
+        var order = Order(status: OrderStatus.Shipped) with { TrackingNumber = "9400111899223", Carrier = ShippingCarrier.Usps, TrackingUrl = url };
+        var model = new DetailsModel(new FakeAdminOrderService(order));
+        await model.OnGetAsync(42, CancellationToken.None);
+
+        var html = WebUtility.HtmlDecode(await RenderAsync("~/Pages/Admin/Orders/_OrderFulfillmentCard.cshtml", model));
+
+        Assert.Contains("(USPS)", html);
+        Assert.Matches($"<a href=\"{Regex.Escape(url)}\"[^>]*>9400111899223</a>", html);
+    }
+
+    [Fact]
+    public async Task FulfillmentCard_OtherCarrierTracking_IsPlainText()
+    {
+        var order = Order(status: OrderStatus.Shipped) with { TrackingNumber = "ABC123", Carrier = ShippingCarrier.Other };
+        var model = new DetailsModel(new FakeAdminOrderService(order));
+        await model.OnGetAsync(42, CancellationToken.None);
+
+        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderFulfillmentCard.cshtml", model);
+
+        var card = Regex.Match(html, "<section id=\"order-fulfillment\".*?</section>", RegexOptions.Singleline).Value;
+        Assert.Contains("(Other)", card);
+        Assert.Contains("<strong>ABC123</strong>", card);
+        Assert.DoesNotContain("<a ", card);
     }
 
     [Fact]
@@ -495,7 +566,13 @@ public class AdminOrderDetailTests
         public Task<AdminOrderDetail?> GetOrderAsync(int id, CancellationToken cancellationToken) =>
             Task.FromResult<AdminOrderDetail?>(id == current.Id ? current : null);
 
-        public Task<OrderUpdateResult> MarkShippedAsync(int id, string? trackingNumber, CancellationToken cancellationToken) => Update();
+        public Task<OrderUpdateResult> MarkShippedAsync(int id, string? trackingNumber, ShippingCarrier carrier, CancellationToken cancellationToken)
+        {
+            ShippedWith = (trackingNumber, carrier);
+            return Update();
+        }
+
+        public (string? TrackingNumber, ShippingCarrier Carrier)? ShippedWith { get; private set; }
 
         public Task<OrderUpdateResult> MarkPickedUpAsync(int id, CancellationToken cancellationToken) => Update();
 

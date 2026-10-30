@@ -28,7 +28,14 @@
 
     @if (!string.IsNullOrWhiteSpace(Model.TrackingNumber))
     {
-        <p>Tracking number: <strong>@Model.TrackingNumber</strong></p>
+        @if (Model.TrackingUrl is { } trackingUrl)
+        {
+            <p>Tracking number: <a href="@trackingUrl"><strong>@Model.TrackingNumber</strong></a></p>
+        }
+        else
+        {
+            <p>Tracking number: <strong>@Model.TrackingNumber</strong></p>
+        }
     }
 
     <table style="width: 100%; border-collapse: collapse;">

@@ -16,11 +16,22 @@
             @* Pickup orders have nothing to track. *@
             @if (action == OrderAction.MarkShipped && !isPickup)
             {
-                <label class="block">
-                    <span class="block mb-1 text-sm">Tracking number (optional)</span>
-                    <input asp-for="TrackingNumber" type="text" class="w-full border border-black/20 rounded px-3 py-2" />
-                    <span asp-validation-for="TrackingNumber" class="text-red-600 text-sm"></span>
-                </label>
+                <div class="flex gap-2">
+                    <label class="block">
+                        <span class="block mb-1 text-sm">Carrier</span>
+                        <select asp-for="Carrier" class="border border-black/20 rounded px-3 py-2 bg-white">
+                            @foreach (var carrier in CarrierLabels.All)
+                            {
+                                <option value="@carrier">@CarrierLabels.Name(carrier)</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="block flex-1">
+                        <span class="block mb-1 text-sm">Tracking number (optional)</span>
+                        <input asp-for="TrackingNumber" type="text" class="w-full border border-black/20 rounded px-3 py-2" />
+                        <span asp-validation-for="TrackingNumber" class="text-red-600 text-sm"></span>
+                    </label>
+                </div>
             }
             <button type="submit" class="@(isPrimary ? PrimaryButton : SecondaryButton)">@label</button>
         </form>

@@ -28,7 +28,7 @@ public sealed class AdminOrderServiceTests : IDisposable
     {
         var id = await AddOrderAsync(FulfillmentMethod.Shipping);
 
-        var result = await Service().MarkShippedAsync(id, "TRACK1", CancellationToken.None);
+        var result = await Service().MarkShippedAsync(id, "TRACK1", ShippingCarrier.Usps, CancellationToken.None);
 
         Assert.Equal(OrderUpdateResult.Updated, result);
         var order = await LoadAsync(id);
@@ -38,13 +38,69 @@ public sealed class AdminOrderServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task MarkShipped_StoresTheCarrier_AndEmailsTheTrackingLink()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Shipping);
+        var emailSender = new RecordingEmailSender();
+
+        await Service(emailSender).MarkShippedAsync(id, "9400111899223", ShippingCarrier.Usps, CancellationToken.None);
+
+        var order = await LoadAsync(id);
+        Assert.Equal(ShippingCarrier.Usps, order.Carrier);
+        Assert.Equal("9400111899223", order.TrackingNumber);
+        var sent = Assert.Single(emailSender.Shipped);
+        Assert.Equal("https://tools.usps.com/go/TrackConfirmAction?tLabels=9400111899223", sent.TrackingUrl);
+    }
+
+    [Fact]
+    public async Task MarkShipped_OtherCarrier_EmailsThePlainTrackingNumber()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Shipping);
+        var emailSender = new RecordingEmailSender();
+
+        await Service(emailSender).MarkShippedAsync(id, "ABC123", ShippingCarrier.Other, CancellationToken.None);
+
+        Assert.Equal(ShippingCarrier.Other, (await LoadAsync(id)).Carrier);
+        var sent = Assert.Single(emailSender.Shipped);
+        Assert.Equal("ABC123", sent.TrackingNumber);
+        Assert.Null(sent.TrackingUrl);
+    }
+
+    [Fact]
+    public async Task MarkShipped_WithoutTrackingNumber_RecordsNoCarrier()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Shipping);
+
+        await Service().MarkShippedAsync(id, "  ", ShippingCarrier.Usps, CancellationToken.None);
+
+        var order = await LoadAsync(id);
+        Assert.Null(order.TrackingNumber);
+        Assert.Null(order.Carrier);
+    }
+
+    [Theory]
+    [InlineData(ShippingCarrier.Usps, "https://tools.usps.com/go/TrackConfirmAction?tLabels=TRACK1")]
+    [InlineData(ShippingCarrier.Other, null)]
+    [InlineData(null, null)]
+    public async Task GetOrder_LinksTheTrackingNumberOnlyForKnownCarriers(ShippingCarrier? carrier, string? expectedUrl)
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Shipped, trackingNumber: "TRACK1", carrier: carrier);
+
+        var order = await Service().GetOrderAsync(id, CancellationToken.None);
+
+        Assert.NotNull(order);
+        Assert.Equal(carrier, order.Carrier);
+        Assert.Equal(expectedUrl, order.TrackingUrl);
+    }
+
+    [Fact]
     public async Task MarkShipped_RepeatCall_DoesNotMoveShippedAt()
     {
         var id = await AddOrderAsync(FulfillmentMethod.Shipping);
-        await Service().MarkShippedAsync(id, null, CancellationToken.None);
+        await Service().MarkShippedAsync(id, null, ShippingCarrier.Usps, CancellationToken.None);
 
         clock.Now = T2;
-        var result = await Service().MarkShippedAsync(id, null, CancellationToken.None);
+        var result = await Service().MarkShippedAsync(id, null, ShippingCarrier.Usps, CancellationToken.None);
 
         Assert.Equal(OrderUpdateResult.InvalidTransition, result);
         Assert.Equal(T1, (await LoadAsync(id)).ShippedAt);
@@ -57,7 +113,7 @@ public sealed class AdminOrderServiceTests : IDisposable
         var id = await AddOrderAsync(FulfillmentMethod.Shipping, shippedAt: T1);
         clock.Now = T2;
 
-        await Service().MarkShippedAsync(id, null, CancellationToken.None);
+        await Service().MarkShippedAsync(id, null, ShippingCarrier.Usps, CancellationToken.None);
 
         Assert.Equal(T1, (await LoadAsync(id)).ShippedAt);
     }
@@ -66,7 +122,7 @@ public sealed class AdminOrderServiceTests : IDisposable
     public async Task MarkPickedUp_StampsPickedUpAt_Once()
     {
         var id = await AddOrderAsync(FulfillmentMethod.Pickup);
-        await Service().MarkShippedAsync(id, null, CancellationToken.None);
+        await Service().MarkShippedAsync(id, null, ShippingCarrier.Usps, CancellationToken.None);
 
         clock.Now = T2;
         Assert.Equal(OrderUpdateResult.Updated, await Service().MarkPickedUpAsync(id, CancellationToken.None));
@@ -108,7 +164,7 @@ public sealed class AdminOrderServiceTests : IDisposable
     public async Task GetOrder_ExposesTheStepTimestamps()
     {
         var id = await AddOrderAsync(FulfillmentMethod.Pickup);
-        await Service().MarkShippedAsync(id, null, CancellationToken.None);
+        await Service().MarkShippedAsync(id, null, ShippingCarrier.Usps, CancellationToken.None);
         clock.Now = T2;
         await Service().MarkPickedUpAsync(id, CancellationToken.None);
 
@@ -438,7 +494,7 @@ public sealed class AdminOrderServiceTests : IDisposable
         var id = await AddOrderAsync(FulfillmentMethod.Shipping, internalNote: note);
         var emailSender = new RecordingEmailSender();
 
-        await Service(emailSender).MarkShippedAsync(id, "TRACK1", CancellationToken.None);
+        await Service(emailSender).MarkShippedAsync(id, "TRACK1", ShippingCarrier.Usps, CancellationToken.None);
 
         var sent = Assert.Single(emailSender.Shipped);
         var html = await RazorViewToStringRendererTests.CreateRenderer().RenderAsync("~/Emails/OrderShipped.cshtml", sent);
@@ -598,7 +654,8 @@ public sealed class AdminOrderServiceTests : IDisposable
         string customerName = "Jane Shopper",
         List<OrderLine>? lines = null,
         string? internalNote = null,
-        string? trackingNumber = null)
+        string? trackingNumber = null,
+        ShippingCarrier? carrier = null)
     {
         await using var db = CreateDb();
         var order = new Order
@@ -614,6 +671,7 @@ public sealed class AdminOrderServiceTests : IDisposable
             ShippedAt = shippedAt,
             InternalNote = internalNote,
             TrackingNumber = trackingNumber,
+            Carrier = carrier,
         };
         db.Orders.Add(order);
         await db.SaveChangesAsync();

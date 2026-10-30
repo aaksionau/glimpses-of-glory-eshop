@@ -9,4 +9,6 @@ public sealed record OrderShippedView(
     ShippingAddressInfo Address,
     IReadOnlyList<OrderConfirmationLine> Lines,
     decimal Total,
-    string? TrackingNumber);
+    string? TrackingNumber,
+    // Null for "Other" (and unknown) carriers, whose tracking number is shown as plain text.
+    string? TrackingUrl);

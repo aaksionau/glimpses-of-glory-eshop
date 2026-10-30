@@ -15,6 +15,10 @@ public sealed record AdminOrderDetail(
     decimal Total,
     OrderStatus Status,
     string? TrackingNumber,
+    // Null when there is no tracking number, or for orders shipped before carriers were recorded.
+    ShippingCarrier? Carrier,
+    // The carrier's tracking page; null for "Other" (and unknown) carriers, which show plain text.
+    string? TrackingUrl,
     // Admin-only; null when there is no note.
     string? InternalNote,
     DateTimeOffset CreatedAt,

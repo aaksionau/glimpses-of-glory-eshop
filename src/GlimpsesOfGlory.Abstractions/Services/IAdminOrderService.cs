@@ -15,7 +15,7 @@ public interface IAdminOrderService
     Task<AdminOrderDetail?> GetOrderAsync(int id, CancellationToken cancellationToken);
 
     // Sends a shipping-notification email to the buyer on success.
-    Task<OrderUpdateResult> MarkShippedAsync(int id, string? trackingNumber, CancellationToken cancellationToken);
+    Task<OrderUpdateResult> MarkShippedAsync(int id, string? trackingNumber, ShippingCarrier carrier, CancellationToken cancellationToken);
 
     // Pickup orders only, once the buyer has collected an order that was ready for pickup.
     Task<OrderUpdateResult> MarkPickedUpAsync(int id, CancellationToken cancellationToken);
