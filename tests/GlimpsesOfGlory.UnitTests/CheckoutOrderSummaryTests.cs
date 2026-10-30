@@ -112,6 +112,18 @@ public class CheckoutOrderSummaryTests
             Lines = [Cart.Lines[0] with { UnitPrice = 25m }, Cart.Lines[1]],
             Subtotal = 65.50m,
         };
+
+        var page = await CreatePaymentPageAsync(new CheckoutPaymentSetup("pi_1", "secret_1", pricedCart));
+
+        Assert.Equal(FulfillmentMethod.Shipping, page.Summary.FulfillmentMethod);
+        Assert.Same(pricedCart, page.Summary.Cart);
+        Assert.Equal(73.50m, page.Summary.Total);
+        Assert.Equal(73.50m, page.AmountDue);
+    }
+
+    // The Payment page after OnGetAsync for a shipping order, with the PaymentIntent set up as given.
+    internal static async Task<PaymentModel> CreatePaymentPageAsync(CheckoutPaymentSetup setup, string publishableKey = "pk_test")
+    {
         var address = new CheckoutAddress
         {
             FulfillmentMethod = FulfillmentMethod.Shipping,
@@ -129,18 +141,14 @@ public class CheckoutOrderSummaryTests
         var page = new PaymentModel(
             new StubCartService(Cart),
             sessionStore,
-            new StubOrderService(new CheckoutPaymentSetup("pi_1", "secret_1", pricedCart)),
-            Options.Create(new StripeOptions { PublishableKey = "pk_test" }))
+            new StubOrderService(setup),
+            Options.Create(new StripeOptions { PublishableKey = publishableKey }))
         {
             PageContext = new PageContext { HttpContext = httpContext },
         };
 
         await page.OnGetAsync(CancellationToken.None);
-
-        Assert.Equal(FulfillmentMethod.Shipping, page.Summary.FulfillmentMethod);
-        Assert.Same(pricedCart, page.Summary.Cart);
-        Assert.Equal(73.50m, page.Summary.Total);
-        Assert.Equal(73.50m, page.AmountDue);
+        return page;
     }
 
     private static Task<string> RenderAsync(CheckoutOrderSummary model) =>
