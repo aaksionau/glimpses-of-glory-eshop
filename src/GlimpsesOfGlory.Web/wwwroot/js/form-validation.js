@@ -15,9 +15,15 @@
 
     function messageFor(el) {
         var v = el.validity;
-        if (v.valueMissing) return el.dataset.valRequired || el.validationMessage;
+        if (v.valueMissing || blank(el)) return el.dataset.valRequired || el.validationMessage;
         if (v.typeMismatch && el.type === 'email') return el.dataset.valEmail || el.validationMessage;
         return el.validationMessage;
+    }
+
+    // The browser counts a whitespace-only value as filled in; the server ([Required],
+    // string.IsNullOrWhiteSpace) doesn't.
+    function blank(el) {
+        return el.required && el.value !== '' && el.value.trim() === '';
     }
 
     function messageSpan(form, el) {
@@ -35,6 +41,7 @@
 
     // Shows or clears the field's message; returns whether the field is valid.
     function check(form, el) {
+        el.setCustomValidity(blank(el) ? (el.dataset.valRequired || 'Please fill in this field.') : '');
         var valid = el.checkValidity();
         var span = messageSpan(form, el);
         var id = el.id + '-error';
@@ -72,24 +79,47 @@
         form.noValidate = true;
         var summary = form.querySelector('[data-validation-summary]');
         var edited = new WeakSet();
+        var summaryShown = false;
+
+        // Once a submit has listed the errors, keep the list in step as fields are fixed. Only
+        // rewritten when it changes, so the alert isn't re-announced on every blur.
+        function refreshSummary() {
+            if (!summaryShown || !summary) return;
+            var invalid = Array.from(form.elements).filter(function (el) {
+                return validatable(el) && el.getAttribute('aria-invalid') === 'true';
+            });
+            var shown = Array.from(summary.querySelectorAll('li'), function (li) { return li.textContent; });
+            if (shown.join('|') === invalid.map(messageFor).join('|')) return;
+            showSummary(summary, invalid);
+            summaryShown = invalid.length > 0;
+        }
 
         form.addEventListener('input', function (e) {
-            edited.add(e.target);
-            // Clear a shown error as soon as the field is fixed.
-            if (e.target.getAttribute('aria-invalid') === 'true') check(form, e.target);
-        });
-
-        // Check on blur once the shopper has typed in the field, or if it's already flagged,
-        // so tabbing through an untouched form doesn't light it up.
-        form.addEventListener('focusout', function (e) {
             var el = e.target;
             if (!validatable(el)) return;
-            if (edited.has(el) || el.getAttribute('aria-invalid') === 'true') check(form, el);
+            edited.add(el);
+            // Clear a shown error as soon as the field is fixed.
+            if (el.getAttribute('aria-invalid') === 'true') {
+                check(form, el);
+                refreshSummary();
+            }
+        });
+
+        // Check on blur only once the shopper has changed the field, so tabbing through an
+        // untouched form doesn't light it up, and leaving a field the server flagged (focused
+        // on load) without changing it doesn't wipe the server's message.
+        form.addEventListener('focusout', function (e) {
+            var el = e.target;
+            if (validatable(el) && edited.has(el)) {
+                check(form, el);
+                refreshSummary();
+            }
         });
 
         form.addEventListener('submit', function (e) {
             var invalid = Array.from(form.elements).filter(validatable).filter(function (el) { return !check(form, el); });
             showSummary(summary, invalid);
+            summaryShown = invalid.length > 0;
             if (invalid.length) {
                 e.preventDefault();
                 invalid[0].focus();
