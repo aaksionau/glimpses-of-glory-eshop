@@ -190,7 +190,7 @@ public sealed class OrderService(
             .Include(o => o.Lines)
             .FirstOrDefaultAsync(predicate, cancellationToken);
 
-        return order is null ? null : ToConfirmationView(order);
+        return order is null ? null : order.ToConfirmationView();
     }
 
     // Returns null when the cart is empty or can't be fulfilled as it stands.
@@ -272,7 +272,7 @@ public sealed class OrderService(
     {
         try
         {
-            await emailSender.SendOrderConfirmationAsync(ToConfirmationView(order), cancellationToken);
+            await emailSender.SendOrderConfirmationAsync(order.ToConfirmationView(), cancellationToken);
         }
         catch (Exception ex)
         {
@@ -291,15 +291,4 @@ public sealed class OrderService(
         IsPreorder = line.IsPreorder,
         ExpectedAvailabilityDate = line.ExpectedAvailabilityDate,
     };
-
-    private static OrderConfirmationView ToConfirmationView(Order order) => new(
-        order.Id,
-        order.FulfillmentMethod,
-        order.IsPaid,
-        order.ShippingAddress.ToInfo(order.Email),
-        order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity, l.IsPreorder, l.ExpectedAvailabilityDate)).ToList(),
-        order.Subtotal,
-        order.ShippingCost,
-        order.Total,
-        order.CreatedAt);
 }

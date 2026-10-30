@@ -46,7 +46,9 @@ public class AdminOrderDetailTests
             CanMarkPickedUp: status == OrderStatus.Shipped && fulfillmentMethod == FulfillmentMethod.Pickup,
             CanMarkPaid: !isPaid && status != OrderStatus.Cancelled,
             CanMarkCancelled: status == OrderStatus.New,
-            NeedsRefund: status == OrderStatus.Cancelled && paymentMethod == PaymentMethod.Card && isPaid);
+            NeedsRefund: status == OrderStatus.Cancelled && paymentMethod == PaymentMethod.Card && isPaid,
+            CanResendConfirmation: status != OrderStatus.Cancelled,
+            CanResendShippedEmail: status == OrderStatus.Shipped);
 
     [Fact]
     public void Primary_NewOrder_IsMarkShipped()
@@ -355,6 +357,93 @@ public class AdminOrderDetailTests
         Assert.DoesNotContain("Ship to", html);
     }
 
+    [Theory]
+    [InlineData(OrderStatus.New, FulfillmentMethod.Shipping, true, false)]
+    [InlineData(OrderStatus.Shipped, FulfillmentMethod.Shipping, true, true)]
+    [InlineData(OrderStatus.Shipped, FulfillmentMethod.Pickup, true, true)]
+    [InlineData(OrderStatus.PickedUp, FulfillmentMethod.Pickup, true, false)]
+    [InlineData(OrderStatus.Cancelled, FulfillmentMethod.Shipping, false, false)]
+    public async Task ActionsFragment_OffersResendsOnlyWhereTheyApply(OrderStatus status, FulfillmentMethod fulfillmentMethod, bool confirmation, bool shipped)
+    {
+        var model = new DetailsModel(new FakeAdminOrderService(Order(status: status, fulfillmentMethod: fulfillmentMethod)));
+        await model.OnGetAsync(42, CancellationToken.None);
+
+        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderStatus.cshtml", model);
+
+        Assert.Equal(confirmation, html.Contains("hx-post=\"/admin/orders/42?handler=ResendConfirmation\""));
+        Assert.Equal(shipped, html.Contains("hx-post=\"/admin/orders/42?handler=ResendShippedEmail\""));
+        Assert.Equal(!confirmation, html.Contains("No further actions for this order."));
+    }
+
+    [Theory]
+    [InlineData(FulfillmentMethod.Shipping, "Resend shipping email")]
+    [InlineData(FulfillmentMethod.Pickup, "Resend ready-for-pickup email")]
+    public async Task ActionsFragment_NamesTheShippedEmailByFulfillmentMethod(FulfillmentMethod fulfillmentMethod, string label)
+    {
+        var model = new DetailsModel(new FakeAdminOrderService(Order(status: OrderStatus.Shipped, fulfillmentMethod: fulfillmentMethod)));
+        await model.OnGetAsync(42, CancellationToken.None);
+
+        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderStatus.cshtml", model);
+
+        Assert.Contains(label, html);
+    }
+
+    [Fact]
+    public async Task ResendConfirmation_Sent_ShowsSuccessInTheActionsFragment()
+    {
+        var service = new FakeAdminOrderService(Order());
+        var model = CreateModel(service);
+
+        var result = await model.OnPostResendConfirmationAsync(42, CancellationToken.None);
+
+        var partial = Assert.IsType<PartialViewResult>(result);
+        Assert.Equal("_OrderStatus", partial.ViewName);
+        Assert.Equal(["confirmation"], service.Resent);
+        Assert.Equal(0, service.UpdateCount);
+        Assert.Null(model.ErrorMessage);
+
+        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderStatus.cshtml", model);
+        Assert.Contains("role=\"status\"", html);
+        Assert.Contains("The order confirmation email was resent to shopper@example.com.", WebUtility.HtmlDecode(html));
+        Assert.DoesNotContain("hx-swap-oob", html);
+    }
+
+    [Fact]
+    public async Task ResendShippedEmail_Failed_ShowsAnErrorInsteadOfFailingSilently()
+    {
+        var service = new FakeAdminOrderService(Order(status: OrderStatus.Shipped, fulfillmentMethod: FulfillmentMethod.Pickup)) { ResendResult = EmailResendResult.Failed };
+        var model = CreateModel(service);
+
+        var result = await model.OnPostResendShippedEmailAsync(42, CancellationToken.None);
+
+        Assert.IsType<PartialViewResult>(result);
+        Assert.Equal(["shipped"], service.Resent);
+        Assert.Null(model.StatusMessage);
+        Assert.Equal("The ready-for-pickup email couldn't be sent. Please try again later.", model.ErrorMessage);
+
+        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderStatus.cshtml", model);
+        Assert.Contains("role=\"alert\"", html);
+    }
+
+    [Fact]
+    public async Task ResendShippedEmail_NotAllowed_ShowsAnError()
+    {
+        var service = new FakeAdminOrderService(Order()) { ResendResult = EmailResendResult.NotAllowed };
+        var model = CreateModel(service);
+
+        await model.OnPostResendShippedEmailAsync(42, CancellationToken.None);
+
+        Assert.Equal("The shipping email can't be resent for this order's current status. Nothing was sent.", model.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task ResendConfirmation_UnknownOrder_IsNotFound()
+    {
+        var model = CreateModel(new FakeAdminOrderService(Order()));
+
+        Assert.IsType<NotFoundResult>(await model.OnPostResendConfirmationAsync(7, CancellationToken.None));
+    }
+
     // Runs the real MarkPaid handler, so the model is in the state its htmx response renders.
     private static async Task<DetailsModel> RunMarkPaidHandlerAsync(AdminOrderDetail before, AdminOrderDetail after)
     {
@@ -413,6 +502,26 @@ public class AdminOrderDetailTests
         public Task<OrderUpdateResult> MarkPaidAsync(int id, CancellationToken cancellationToken) => Update();
 
         public Task<OrderUpdateResult> MarkCancelledAsync(int id, CancellationToken cancellationToken) => Update();
+
+        // What the resend calls report; they never change the order.
+        public EmailResendResult ResendResult { get; init; } = EmailResendResult.Sent;
+
+        public List<string> Resent { get; } = [];
+
+        public Task<EmailResendResult> ResendConfirmationAsync(int id, CancellationToken cancellationToken) => Resend(id, "confirmation");
+
+        public Task<EmailResendResult> ResendShippedEmailAsync(int id, CancellationToken cancellationToken) => Resend(id, "shipped");
+
+        private Task<EmailResendResult> Resend(int id, string email)
+        {
+            if (id != current.Id)
+            {
+                return Task.FromResult(EmailResendResult.NotFound);
+            }
+
+            Resent.Add(email);
+            return Task.FromResult(ResendResult);
+        }
 
         public int NoteUpdateCount { get; private set; }
 

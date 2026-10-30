@@ -43,7 +43,9 @@ public class OrderTimelineTests
             CanMarkPickedUp: false,
             CanMarkPaid: false,
             CanMarkCancelled: false,
-            NeedsRefund: false);
+            NeedsRefund: false,
+            CanResendConfirmation: false,
+            CanResendShippedEmail: false);
 
     [Fact]
     public void NewUnpaidShippingOrder_HasPlacedCompleteAndTheRestPending()

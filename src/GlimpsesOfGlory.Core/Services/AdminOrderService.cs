@@ -4,6 +4,7 @@ using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Core.Entities;
+using GlimpsesOfGlory.Core.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Logging;
@@ -107,10 +108,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
 
     public async Task<AdminOrderDetail?> GetOrderAsync(int id, CancellationToken cancellationToken)
     {
-        var order = await db.Orders
-            .AsNoTracking()
-            .Include(o => o.Lines)
-            .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
+        var order = await LoadWithLinesAsync(id, cancellationToken);
 
         return order is null ? null : ToDetail(order);
     }
@@ -118,10 +116,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
     public async Task<OrderUpdateResult> MarkShippedAsync(int id, string? trackingNumber, CancellationToken cancellationToken)
     {
         // Loaded up front because the shipping email needs the full order and its lines.
-        var order = await db.Orders
-            .AsNoTracking()
-            .Include(o => o.Lines)
-            .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
+        var order = await LoadWithLinesAsync(id, cancellationToken);
         if (order is null)
         {
             return OrderUpdateResult.NotFound;
@@ -148,7 +143,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         order.TrackingNumber = tracking;
         try
         {
-            await emailSender.SendShippedNotificationAsync(ToShippedView(order), cancellationToken);
+            await emailSender.SendShippedNotificationAsync(order.ToShippedView(), cancellationToken);
         }
         catch (Exception ex)
         {
@@ -248,6 +243,54 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         return rows > 0 ? OrderUpdateResult.Updated : OrderUpdateResult.NotFound;
     }
 
+    public Task<EmailResendResult> ResendConfirmationAsync(int id, CancellationToken cancellationToken) =>
+        ResendAsync(
+            id,
+            order => OrderTransitionPolicy.CanResendConfirmation(order.Status),
+            order => emailSender.SendOrderConfirmationAsync(order.ToConfirmationView(), cancellationToken),
+            "order confirmation",
+            cancellationToken);
+
+    public Task<EmailResendResult> ResendShippedEmailAsync(int id, CancellationToken cancellationToken) =>
+        ResendAsync(
+            id,
+            order => OrderTransitionPolicy.CanResendShippedEmail(order.Status),
+            order => emailSender.SendShippedNotificationAsync(order.ToShippedView(), cancellationToken),
+            "shipping-notification",
+            cancellationToken);
+
+    // Read-only: the order is loaded untracked and nothing is written, so a resend never touches
+    // the status or the step timestamps. A failed send is logged and reported, not thrown.
+    private async Task<EmailResendResult> ResendAsync(int id, Func<Order, bool> isAllowed, Func<Order, Task> send, string emailKind, CancellationToken cancellationToken)
+    {
+        var order = await LoadWithLinesAsync(id, cancellationToken);
+        if (order is null)
+        {
+            return EmailResendResult.NotFound;
+        }
+        if (!isAllowed(order))
+        {
+            return EmailResendResult.NotAllowed;
+        }
+
+        try
+        {
+            await send(order);
+            return EmailResendResult.Sent;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Failed to resend {EmailKind} email for order {OrderId}", emailKind, order.Id);
+            return EmailResendResult.Failed;
+        }
+    }
+
+    private Task<Order?> LoadWithLinesAsync(int id, CancellationToken cancellationToken) =>
+        db.Orders
+            .AsNoTracking()
+            .Include(o => o.Lines)
+            .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
+
     private Task<OrderState?> GetStateAsync(int id, CancellationToken cancellationToken) =>
         db.Orders
             .Where(o => o.Id == id)
@@ -273,7 +316,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         order.IsPaid,
         order.StripePaymentIntentId is { } paymentIntentId ? paymentGateway.GetPaymentDashboardUrl(paymentIntentId) : null,
         order.ShippingAddress.ToInfo(order.Email),
-        order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity, l.IsPreorder, l.ExpectedAvailabilityDate)).ToList(),
+        order.Lines.Select(l => l.ToConfirmationLine()).ToList(),
         order.Subtotal,
         order.ShippingCost,
         order.Total,
@@ -289,16 +332,9 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         OrderTransitionPolicy.CanMarkPickedUp(order.Status, order.FulfillmentMethod),
         OrderTransitionPolicy.CanMarkPaid(order.Status, order.IsPaid),
         OrderTransitionPolicy.CanMarkCancelled(order.Status),
-        OrderTransitionPolicy.NeedsRefund(order.Status, order.PaymentMethod, order.IsPaid));
-
-    private static OrderShippedView ToShippedView(Order order) => new(
-        order.Id,
-        order.FulfillmentMethod,
-        order.IsPaid,
-        order.ShippingAddress.ToInfo(order.Email),
-        order.Lines.Select(l => new OrderConfirmationLine(l.ProductName, l.UnitPrice, l.Quantity, l.IsPreorder, l.ExpectedAvailabilityDate)).ToList(),
-        order.Total,
-        order.TrackingNumber);
+        OrderTransitionPolicy.NeedsRefund(order.Status, order.PaymentMethod, order.IsPaid),
+        OrderTransitionPolicy.CanResendConfirmation(order.Status),
+        OrderTransitionPolicy.CanResendShippedEmail(order.Status));
 
     private sealed record OrderState(OrderStatus Status, FulfillmentMethod FulfillmentMethod, bool IsPaid);
 }

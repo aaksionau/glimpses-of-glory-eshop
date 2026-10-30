@@ -130,6 +130,46 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
         return await OrderStatusPartialAsync(id, result, _ => "Order marked as cancelled.", cancellationToken);
     }
 
+    // Resends swap the same #order-status fragment, showing whether the email went out. They change
+    // nothing on the order, so there's nothing to swap out of band.
+    public Task<IActionResult> OnPostResendConfirmationAsync(int id, CancellationToken cancellationToken) =>
+        ResendEmailPartialAsync(id, adminOrderService.ResendConfirmationAsync, "order confirmation email", cancellationToken);
+
+    public Task<IActionResult> OnPostResendShippedEmailAsync(int id, CancellationToken cancellationToken) =>
+        ResendEmailPartialAsync(id, adminOrderService.ResendShippedEmailAsync, null, cancellationToken);
+
+    // emailName null means the shipped email, named by fulfillment method once the order is loaded.
+    private async Task<IActionResult> ResendEmailPartialAsync(int id, Func<int, CancellationToken, Task<EmailResendResult>> resend, string? emailName, CancellationToken cancellationToken)
+    {
+        var result = await resend(id, cancellationToken);
+        if (result == EmailResendResult.NotFound)
+        {
+            return NotFound();
+        }
+
+        var order = await adminOrderService.GetOrderAsync(id, cancellationToken);
+        if (order is null)
+        {
+            return NotFound();
+        }
+
+        ShowOrder(order);
+        var name = emailName ?? OrderEmails.ShippedEmailName(order.FulfillmentMethod);
+        switch (result)
+        {
+            case EmailResendResult.Sent:
+                StatusMessage = $"The {name} was resent to {order.Address.Email}.";
+                break;
+            case EmailResendResult.NotAllowed:
+                ErrorMessage = $"The {name} can't be resent for this order's current status. Nothing was sent.";
+                break;
+            default:
+                ErrorMessage = $"The {name} couldn't be sent. Please try again later.";
+                break;
+        }
+        return Partial("_OrderStatus", this);
+    }
+
     // statusMessage gets the reloaded order so the wording can depend on it (e.g. shipped vs. ready for pickup).
     private async Task<IActionResult> OrderStatusPartialAsync(int id, OrderUpdateResult result, Func<AdminOrderDetail, string> statusMessage, CancellationToken cancellationToken)
     {
