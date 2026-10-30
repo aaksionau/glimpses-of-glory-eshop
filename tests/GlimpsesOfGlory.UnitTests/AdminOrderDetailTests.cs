@@ -512,14 +512,14 @@ public class AdminOrderDetailTests
 
         public Task<EmailResendResult> ResendShippedEmailAsync(int id, CancellationToken cancellationToken) => Resend(id, "shipped");
 
-        private Task<EmailResendResult> Resend(int id, string email)
+        private Task<EmailResendResult> Resend(int id, string kind)
         {
             if (id != current.Id)
             {
                 return Task.FromResult(EmailResendResult.NotFound);
             }
 
-            Resent.Add(email);
+            Resent.Add(kind);
             return Task.FromResult(ResendResult);
         }
 

@@ -278,7 +278,9 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
             await send(order);
             return EmailResendResult.Sent;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        // Filtered on the caller's token, not the exception type: an HttpClient timeout is also an
+        // OperationCanceledException and must surface as Failed, not escape as a 500.
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             logger.LogError(ex, "Failed to resend {EmailKind} email for order {OrderId}", emailKind, order.Id);
             return EmailResendResult.Failed;

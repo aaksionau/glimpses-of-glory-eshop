@@ -534,6 +534,16 @@ public sealed class AdminOrderServiceTests : IDisposable
         AssertUnchanged(before, await LoadAsync(id));
     }
 
+    [Fact]
+    public async Task Resend_WhenTheEmailTimesOut_ReportsFailed()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Shipped, shippedAt: T1);
+        var service = Service(new RecordingEmailSender { TimeOut = true });
+
+        Assert.Equal(EmailResendResult.Failed, await service.ResendConfirmationAsync(id, CancellationToken.None));
+        Assert.Equal(EmailResendResult.Failed, await service.ResendShippedEmailAsync(id, CancellationToken.None));
+    }
+
     [Theory]
     [InlineData(OrderStatus.New, true, false)]
     [InlineData(OrderStatus.Shipped, true, true)]
@@ -625,6 +635,9 @@ public sealed class AdminOrderServiceTests : IDisposable
         // Simulates the email provider rejecting the send.
         public bool Fail { get; init; }
 
+        // Simulates an HttpClient timeout, which surfaces as a TaskCanceledException.
+        public bool TimeOut { get; init; }
+
         public Task SendOrderConfirmationAsync(OrderConfirmationView order, CancellationToken cancellationToken) => Record(Confirmations, order);
 
         public Task SendShippedNotificationAsync(OrderShippedView order, CancellationToken cancellationToken) => Record(Shipped, order);
@@ -634,6 +647,10 @@ public sealed class AdminOrderServiceTests : IDisposable
             if (Fail)
             {
                 throw new HttpRequestException("Resend rejected email (500)");
+            }
+            if (TimeOut)
+            {
+                throw new TaskCanceledException("The request was canceled due to the configured HttpClient.Timeout.");
             }
 
             sent.Add(email);
