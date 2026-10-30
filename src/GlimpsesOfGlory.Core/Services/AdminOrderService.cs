@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace GlimpsesOfGlory.Core.Services;
 
-public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventoryStore, IPaymentGateway paymentGateway, IEmailSender emailSender, TimeProvider timeProvider, ILogger<AdminOrderService> logger) : IAdminOrderService
+public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderLineInventory, IPaymentGateway paymentGateway, IEmailSender emailSender, TimeProvider timeProvider, ILogger<AdminOrderService> logger) : IAdminOrderService
 {
     public async Task<AdminOrderPage> GetOrdersAsync(AdminOrderTab tab, AdminOrderFilter filter, int page, int pageSize, CancellationToken cancellationToken)
     {
@@ -276,7 +276,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
             .AsNoTracking()
             .Where(l => l.OrderId == id)
             .ToListAsync(cancellationToken);
-        await CancelledOrderRestocker.RestockAsync(inventoryStore, lines, cancellationToken);
+        await orderLineInventory.ReleaseAsync(lines, cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
         return OrderUpdateResult.Updated;

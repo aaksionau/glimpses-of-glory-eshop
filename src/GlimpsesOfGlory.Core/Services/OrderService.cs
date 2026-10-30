@@ -15,7 +15,7 @@ public sealed class OrderService(
     AppDbContext dbContext,
     ICartService cartService,
     IPaymentGateway paymentGateway,
-    IInventoryStore inventoryStore,
+    OrderLineInventory orderLineInventory,
     IEmailSender emailSender,
     TimeProvider timeProvider,
     ILogger<OrderService> logger) : IOrderService
@@ -95,7 +95,7 @@ public sealed class OrderService(
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
-        if (!await TryReserveStockAsync(pendingCheckout.Lines, cancellationToken))
+        if (!await orderLineInventory.TryReserveAsync(pendingCheckout.Lines, cancellationToken))
         {
             await transaction.RollbackAsync(cancellationToken);
             // Payment succeeded but stock ran out before confirmation - only possible if stock
@@ -152,7 +152,7 @@ public sealed class OrderService(
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
-        if (!await TryReserveStockAsync(lines, cancellationToken))
+        if (!await orderLineInventory.TryReserveAsync(lines, cancellationToken))
         {
             await transaction.RollbackAsync(cancellationToken);
             return null;
@@ -245,27 +245,6 @@ public sealed class OrderService(
         }
 
         return lines;
-    }
-
-    // Must run inside a transaction - on false the caller rolls back so the lines
-    // already reserved don't stand.
-    private async Task<bool> TryReserveStockAsync(IEnumerable<ICheckoutLine> lines, CancellationToken cancellationToken)
-    {
-        foreach (var line in lines)
-        {
-            if (line.IsPreorder)
-            {
-                await inventoryStore.ReservePreorderAsync(line.ProductId, line.Quantity, cancellationToken);
-                continue;
-            }
-
-            if (!await inventoryStore.TryReserveStockAsync(line.ProductId, line.Quantity, cancellationToken))
-            {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     private async Task SendConfirmationEmailAsync(Order order, CancellationToken cancellationToken)

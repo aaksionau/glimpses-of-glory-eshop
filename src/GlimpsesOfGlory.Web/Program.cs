@@ -78,6 +78,7 @@ builder.Services.AddScoped<IPaymentGateway>(sp =>
     return new StripePaymentGateway(options.SecretKey, options.WebhookSecret);
 });
 builder.Services.AddScoped<IInventoryStore, EfInventoryStore>();
+builder.Services.AddScoped<OrderLineInventory>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IAdminOrderService, AdminOrderService>();
