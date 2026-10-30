@@ -124,6 +124,22 @@ public class CheckoutDetailsFormTests
         Assert.Matches("<span [^>]*data-valmsg-for=\"Address.Email\"[^>]*>Enter your email.</span>", html);
     }
 
+    // A failed post re-renders from ModelState's attempted values, which the select tag helper
+    // prefers over the model; exactly one option must end up selected either way.
+    [Theory]
+    [InlineData("United States", "United States")]
+    [InlineData("Narnia", "United States")]
+    public async Task Country_OnCheckoutPage_SelectsPostedCountryOrDefault(string posted, string expected)
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.SetModelValue("Address.Country", posted, posted);
+
+        var options = Options(await RenderOnCheckoutPageAsync(modelState));
+
+        var selected = Assert.Single(options, o => o.Selected);
+        Assert.Equal(expected, selected.Value);
+    }
+
     private static string FindField(string html, string name) =>
         Assert.Single(Fields(html), f => f.Contains($"name=\"{name}\""));
 

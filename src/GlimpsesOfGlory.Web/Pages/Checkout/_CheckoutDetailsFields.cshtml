@@ -7,7 +7,11 @@
 @{
     // A partial never takes a layout; this also keeps it renderable on its own (in tests).
     Layout = null;
-    var selectedCountry = ShippingCountryPolicy.SelectedOrDefault(Model?.Country);
+    // The select tag helper marks the option matching the posted value (ModelState first, then the
+    // model); read the same value here so the default only applies when that matches nothing and the
+    // two never select different options.
+    var postedCountry = ViewData.ModelState[Html.NameFor(m => m.Country)]?.AttemptedValue ?? Model?.Country;
+    var selectedCountry = ShippingCountryPolicy.SelectedOrDefault(postedCountry);
 }
 
 <label class="block">
