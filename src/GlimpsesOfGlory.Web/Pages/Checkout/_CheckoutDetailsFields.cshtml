@@ -1,4 +1,5 @@
 @model GlimpsesOfGlory.Web.Dtos.CheckoutAddress
+@using GlimpsesOfGlory.Abstractions.Constants
 @using GlimpsesOfGlory.Abstractions.Enums
 @* Contact and address fields of the checkout details form. Rendered with for="Address" so the
    inputs keep their "Address." name prefix; each carries its autofill token so browsers can fill
@@ -6,6 +7,7 @@
 @{
     // A partial never takes a layout; this also keeps it renderable on its own (in tests).
     Layout = null;
+    var selectedCountry = ShippingCountryPolicy.SelectedOrDefault(Model?.Country);
 }
 
 <label class="block">
@@ -64,8 +66,14 @@
 
         <label class="block">
             <span class="block mb-1 font-medium">Country</span>
-            <input asp-for="Country" type="text" autocomplete="country-name" required
-                   class="w-full border border-ink/20 rounded px-3 py-2" />
+            @* A select of the countries we ship to, so the stored value is always one of them. *@
+            <select asp-for="Country" autocomplete="country-name" required
+                    class="w-full border border-ink/20 rounded px-3 py-2 bg-white">
+                @foreach (var country in ShippingCountryPolicy.SupportedCountries)
+                {
+                    <option value="@country" selected="@(country == selectedCountry)">@country</option>
+                }
+            </select>
             <span asp-validation-for="Country" class="text-red-600 text-sm"></span>
         </label>
     </div>
