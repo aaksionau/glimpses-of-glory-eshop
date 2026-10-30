@@ -1,0 +1,14 @@
+@page "/admin/orders/{id:int}/packing-slip"
+@model GlimpsesOfGlory.Web.Pages.Admin.Orders.PackingSlipModel
+@{
+    ViewData["Title"] = $"Packing slip - Order #{Model.Order.Id}";
+}
+
+@* Toolbar for the screen only; the admin layout hides its own chrome when printing. *@
+<div class="mb-4 flex max-w-3xl flex-wrap items-center gap-3 print:hidden">
+    <a asp-page="/Admin/Orders/Details" asp-route-id="@Model.Order.Id" class="text-sm hover:underline">&larr; Back to order</a>
+    <button type="button" x-cloak x-on:click="window.print()"
+            class="ml-auto rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/80">Print</button>
+</div>
+
+<partial name="_PackingSlip" model="Model.Order" />

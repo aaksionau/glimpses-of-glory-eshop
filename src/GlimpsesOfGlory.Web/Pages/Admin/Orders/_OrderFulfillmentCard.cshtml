@@ -11,16 +11,7 @@
     else
     {
         <h2 id="order-fulfillment-heading" class="font-semibold mb-2">Fulfillment: shipping</h2>
-        <p>
-            @Model.Order.Address.FullName<br />
-            @Model.Order.Address.AddressLine1<br />
-            @if (!string.IsNullOrWhiteSpace(Model.Order.Address.AddressLine2))
-            {
-                @Model.Order.Address.AddressLine2<text><br /></text>
-            }
-            @Model.Order.Address.City, @Model.Order.Address.State @Model.Order.Address.PostalCode<br />
-            @Model.Order.Address.Country
-        </p>
+        <partial name="~/Pages/Admin/Orders/_ShippingAddress.cshtml" model="Model.Order.Address" />
         @if (!string.IsNullOrWhiteSpace(Model.Order.TrackingNumber))
         {
             <p class="mt-2 text-sm">Tracking: <strong>@Model.Order.TrackingNumber</strong></p>

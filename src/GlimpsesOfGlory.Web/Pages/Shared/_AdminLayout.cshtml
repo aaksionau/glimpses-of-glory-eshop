@@ -12,8 +12,8 @@
     <title>@title - Admin - Glimpses of Glory</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
-<body class="min-h-screen bg-gray-100 text-gray-900 md:flex" x-data="{ menuOpen: false }" x-on:keydown.escape.window="menuOpen = false">
-    <aside class="bg-gray-900 text-white md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:overflow-y-auto">
+<body class="min-h-screen bg-gray-100 text-gray-900 md:flex print:block print:min-h-0 print:bg-white" x-data="{ menuOpen: false }" x-on:keydown.escape.window="menuOpen = false">
+    <aside class="print:hidden bg-gray-900 text-white md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:overflow-y-auto">
         <div class="flex items-center justify-between px-4 py-3 md:py-5">
             <a href="/admin" class="font-semibold tracking-wide">Glimpses of Glory <span class="text-gray-400 font-normal">Admin</span></a>
             <button type="button"
@@ -29,13 +29,13 @@
         </div>
     </aside>
     <div class="flex-1 min-w-0">
-        <header class="border-b border-gray-200 bg-white px-4 py-4 md:px-8">
+        <header class="border-b border-gray-200 bg-white px-4 py-4 md:px-8 print:hidden">
             <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <h1 class="text-2xl font-semibold">@title</h1>
                 @await RenderSectionAsync("HeaderBadges", required: false)
             </div>
         </header>
-        <main class="px-4 py-6 md:px-8">
+        <main class="px-4 py-6 md:px-8 print:p-0">
             @RenderBody()
         </main>
     </div>
