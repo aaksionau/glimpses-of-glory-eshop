@@ -13,26 +13,25 @@
 }
 else
 {
-    @* One photo shows at a time. Swiping the main photo or the lightbox moves between photos; a swipe
-       isn't also taken as the tap that opens the lightbox. The lightbox traps focus (Alpine's x-trap),
+    @* One photo shows at a time. A sideways swipe on the main photo or the lightbox moves between photos
+       and cancels its tap, so it doesn't also open or close the lightbox. The lightbox traps focus (Alpine's x-trap),
        closes on Escape, the close button or a tap on the backdrop, and hands focus back to the photo. *@
     <div x-data="{
              active: 0,
              count: @photos.Count,
              open: false,
-             touchX: null,
-             swiped: false,
+             touch: null,
              show(i) { this.active = (i + this.count) % this.count; },
              next() { this.show(this.active + 1); },
              prev() { this.show(this.active - 1); },
-             openLightbox() { if (this.swiped) { this.swiped = false; return; } this.open = true; },
+             openLightbox() { this.open = true; },
              closeLightbox() { this.open = false; this.$nextTick(() => this.$refs.trigger.focus()); },
-             swipeStart(e) { this.touchX = e.changedTouches[0].clientX; this.swiped = false; },
+             swipeStart(e) { const t = e.changedTouches[0]; this.touch = { x: t.clientX, y: t.clientY }; },
              swipeEnd(e) {
-                 if (this.touchX === null) return;
-                 const dx = e.changedTouches[0].clientX - this.touchX;
-                 this.touchX = null;
-                 if (Math.abs(dx) > 40) { this.swiped = true; dx < 0 ? this.next() : this.prev(); }
+                 if (this.touch === null) return;
+                 const t = e.changedTouches[0], dx = t.clientX - this.touch.x, dy = t.clientY - this.touch.y;
+                 this.touch = null;
+                 if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) { e.preventDefault(); dx < 0 ? this.next() : this.prev(); }
              }
          }">
         <button type="button"

@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.RegularExpressions;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Web.Dtos;
+using GlimpsesOfGlory.Web.Helpers;
 
 namespace GlimpsesOfGlory.UnitTests;
 
@@ -21,7 +22,8 @@ public class ProductPageMobileTests
 
         Assert.True(form >= 0 && description >= 0);
         Assert.True(form < description, "The add-to-cart form should come before the description.");
-        Assert.True(page.IndexOf("data-testid=\"delivery-note\"", StringComparison.Ordinal) is var note && note > form && note < description);
+        var note = page.IndexOf("data-testid=\"delivery-note\"", StringComparison.Ordinal);
+        Assert.True(note > form && note < description, "The delivery note should sit between the form and the description.");
         Assert.Contains("Free local pickup", page);
     }
 
@@ -31,7 +33,7 @@ public class ProductPageMobileTests
         var page = DetailsPage();
 
         Assert.Contains("var maxQuantity = Model.Product.IsPreorder ? PreorderPolicy.MaxQuantityPerLine : Model.Product.StockQuantity;", page);
-        Assert.Contains("<partial name=\"_QuantityStepper\" model=\"new QuantityStepperView(Model.Product.Slug, Model.Product.Name, 1, maxQuantity)\" />", page);
+        Assert.Contains("<partial name=\"_QuantityStepper\" model=\"new QuantityStepperView(Model.Product.Slug, Model.Product.Name, 1, maxQuantity, errorId)\" />", page);
         Assert.DoesNotContain("type=\"number\"", page);
     }
 
@@ -148,7 +150,7 @@ public class ProductPageMobileTests
 
     private static readonly Lazy<string> DetailsSource = new(() => ReadPage("Products/Details.cshtml"));
 
-    private static readonly Lazy<GlimpsesOfGlory.Web.Helpers.RazorViewToStringRenderer> Renderer =
+    private static readonly Lazy<RazorViewToStringRenderer> Renderer =
         new(RazorViewToStringRendererTests.CreateRenderer);
 
     private static string DetailsPage() => DetailsSource.Value;

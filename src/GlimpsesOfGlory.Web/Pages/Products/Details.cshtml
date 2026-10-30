@@ -42,14 +42,15 @@
 
             @if (Model.ErrorMessage is not null)
             {
-                <p class="mt-4 text-red-600 font-medium" role="alert">@Model.ErrorMessage</p>
+                <p id="add-to-cart-error" class="mt-4 text-red-600 font-medium" role="alert">@Model.ErrorMessage</p>
             }
 
             @if (Model.Product.IsPreorder || Model.Product.StockQuantity > 0)
             {
                 var maxQuantity = Model.Product.IsPreorder ? PreorderPolicy.MaxQuantityPerLine : Model.Product.StockQuantity;
+                var errorId = Model.ErrorMessage is null ? null : "add-to-cart-error";
                 <form method="post" asp-antiforgery="true" class="mt-6 flex flex-wrap items-center gap-3" data-testid="add-to-cart">
-                    <partial name="_QuantityStepper" model="new QuantityStepperView(Model.Product.Slug, Model.Product.Name, 1, maxQuantity)" />
+                    <partial name="_QuantityStepper" model="new QuantityStepperView(Model.Product.Slug, Model.Product.Name, 1, maxQuantity, errorId)" />
                     <button type="submit" class="btn-primary">
                         @(Model.Product.IsPreorder ? "Preorder" : "Add to cart")
                     </button>
