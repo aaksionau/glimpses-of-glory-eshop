@@ -27,7 +27,7 @@
     </label>
 </fieldset>
 
-<button type="submit" x-bind:disabled="submitting"
+<button type="submit" x-bind:disabled="submitting" x-bind:aria-busy="submitting"
         class="btn-primary w-full">
     <span class="group-has-[#payment-cash:checked]:hidden">Continue to payment</span>
     <span class="hidden group-has-[#payment-cash:checked]:inline" x-text="submitting ? 'Placing order…' : 'Place order'">Place order</span>

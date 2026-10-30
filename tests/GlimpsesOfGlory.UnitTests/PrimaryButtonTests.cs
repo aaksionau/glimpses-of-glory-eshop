@@ -63,8 +63,9 @@ public class PrimaryButtonTests
         Assert.Contains("bg-gold-dark", rule);
         Assert.Contains("hover:bg-gold-darker", rule);
         Assert.Contains("text-white", rule);
-        // Disabled turns grey (not a faded gold), so it still reads as unavailable.
-        Assert.Contains("disabled:bg-ink/15", rule);
+        // Disabled turns grey (not a faded gold), so it still reads as unavailable, unless it is only
+        // disabled because it is busy submitting, when it keeps the gold look.
+        Assert.Contains("disabled:not-aria-busy:bg-ink/15", rule);
         Assert.Contains("disabled:cursor-not-allowed", rule);
         Assert.DoesNotContain("disabled:opacity", rule);
     }
@@ -89,19 +90,19 @@ public class PrimaryButtonTests
     private static string PagePath(string page) =>
         Path.Combine([CheckoutPaymentFormTests.WebProjectDirectory(), "Pages", .. page.Split('/')]);
 
-    private static readonly string InputCss =
+    private static string InputCss() =>
         File.ReadAllText(CheckoutPaymentFormTests.WebRootFile("assets", "css", "input.css"));
 
     private static string PrimaryButtonRule()
     {
-        var match = Regex.Match(InputCss, @"\.btn-primary\s*\{\s*@apply\s+([^;]+);");
+        var match = Regex.Match(InputCss(), @"\.btn-primary\s*\{\s*@apply\s+([^;]+);");
         Assert.True(match.Success, "No .btn-primary rule in input.css");
         return match.Groups[1].Value;
     }
 
     private static string ThemeColour(string name)
     {
-        var match = Regex.Match(InputCss, $@"--color-{Regex.Escape(name)}:\s*(#[0-9a-fA-F]{{6}});");
+        var match = Regex.Match(InputCss(), $@"--color-{Regex.Escape(name)}:\s*(#[0-9a-fA-F]{{6}});");
         Assert.True(match.Success, $"No --color-{name} in input.css");
         return match.Groups[1].Value;
     }
