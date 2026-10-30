@@ -3,6 +3,8 @@
 @using GlimpsesOfGlory.Abstractions.Constants
 @using GlimpsesOfGlory.Web.Helpers
 @{
+    // A partial never takes a layout; this also keeps it renderable on its own (in tests).
+    Layout = null;
     var cart = Model.Cart;
 }
 
@@ -16,7 +18,9 @@
         <div class="flex flex-col gap-4">
             @foreach (var line in cart.Lines)
             {
-                <div class="flex flex-wrap items-center gap-4 border-b border-ink/10 pb-4">
+                var lineError = Model.ErrorFor(line.ProductSlug);
+                var hasError = lineError is not null;
+                <div class="flex flex-wrap items-center gap-4 border-b border-ink/10 pb-4@(hasError ? " border-l-4 border-l-red-600 pl-3" : "")" data-line-error="@(hasError ? "true" : null)">
                     @if (line.ThumbnailFileName is not null)
                     {
                         <img src="/product-photos/@line.ThumbnailFileName" alt="@line.ProductName" class="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
@@ -39,6 +43,7 @@
                         <input type="hidden" name="slug" value="@line.ProductSlug" />
                         <label for="qty-@line.ProductSlug" class="sr-only">Quantity for @line.ProductName</label>
                         <input type="number" id="qty-@line.ProductSlug" name="quantity" value="@line.Quantity" min="1" max="@(line.IsPreorder ? PreorderPolicy.MaxQuantityPerLine : (int?)null)"
+                               aria-describedby="@(hasError ? $"error-{line.ProductSlug}" : null)" aria-invalid="@(hasError ? "true" : null)"
                                class="w-16 border border-ink/20 rounded px-2 py-3 text-center" />
                     </form>
 
@@ -49,9 +54,9 @@
                         <button type="submit" class="text-red-700 hover:underline px-2 py-3">Remove</button>
                     </form>
 
-                    @if (Model.QuantityError?.ProductSlug == line.ProductSlug)
+                    @if (lineError is not null)
                     {
-                        <p class="w-full text-red-600 text-sm">@Model.QuantityError.Message</p>
+                        <p class="w-full text-red-600 text-sm" id="error-@line.ProductSlug">@lineError.Message</p>
                     }
                 </div>
             }

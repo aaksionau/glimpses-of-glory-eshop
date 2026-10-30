@@ -6,9 +6,9 @@
 
 <div class="py-4">
     <h1 class="text-3xl font-bold mb-6 font-display">Your cart</h1>
-    @if (!string.IsNullOrEmpty(Model.Error))
+    @if (!string.IsNullOrEmpty(Model.Banner))
     {
-        <p class="text-red-600 mb-4">@Model.Error</p>
+        <p class="text-red-600 mb-4" role="alert">@Model.Banner</p>
     }
-    <partial name="_CartLines" model="new GlimpsesOfGlory.Web.Dtos.CartLinesView(Model.Cart, null)" />
+    <partial name="_CartLines" model="new GlimpsesOfGlory.Web.Dtos.CartLinesView(Model.Cart, Model.LineErrors)" />
 </div>

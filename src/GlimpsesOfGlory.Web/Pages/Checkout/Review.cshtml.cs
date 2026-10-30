@@ -59,16 +59,16 @@ public class ReviewModel(ICartService cartService, IOrderService orderService, C
             return RedirectToPage("/Checkout/Payment");
         }
 
-        var orderId = await orderService.PlaceCashOrderAsync(address.ToShippingAddressInfo(), cancellationToken);
-        if (orderId is null)
+        var result = await orderService.PlaceCashOrderAsync(address.ToShippingAddressInfo(), cancellationToken);
+        if (result.OrderId is not { } orderId)
         {
-            TempData["Error"] = CheckoutMessages.ItemsUnavailable;
+            CartLineErrorsTempData.ReportUnavailable(TempData, result.UnavailableLines);
             return RedirectToPage("/Cart/Index");
         }
 
         await cartService.ClearAsync(cancellationToken);
         checkoutSessionStore.Clear();
-        checkoutSessionStore.SavePlacedOrderId(orderId.Value);
-        return RedirectToPage("/Checkout/Confirmation", new { order = orderId.Value });
+        checkoutSessionStore.SavePlacedOrderId(orderId);
+        return RedirectToPage("/Checkout/Confirmation", new { order = orderId });
     }
 }

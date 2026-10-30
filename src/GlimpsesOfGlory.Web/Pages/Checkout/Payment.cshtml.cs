@@ -39,11 +39,11 @@ public class PaymentModel(
         }
 
         var existingPaymentIntentId = checkoutSessionStore.GetPaymentIntentId();
-        var setup = await orderService.CreatePaymentIntentAsync(address.FulfillmentMethod, address.ToShippingAddressInfo(), existingPaymentIntentId, cancellationToken);
+        var result = await orderService.CreatePaymentIntentAsync(address.FulfillmentMethod, address.ToShippingAddressInfo(), existingPaymentIntentId, cancellationToken);
 
-        if (setup is null)
+        if (result.Setup is not { } setup)
         {
-            TempData["Error"] = CheckoutMessages.ItemsUnavailable;
+            CartLineErrorsTempData.ReportUnavailable(TempData, result.UnavailableLines);
             return RedirectToPage("/Cart/Index");
         }
 

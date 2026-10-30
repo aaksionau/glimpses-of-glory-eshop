@@ -1,6 +1,7 @@
 using GlimpsesOfGlory.Core;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
@@ -20,10 +21,11 @@ public sealed class SqliteTestDatabase : IDisposable
         db.Database.EnsureCreated();
     }
 
-    public AppDbContext CreateDb() =>
+    public AppDbContext CreateDb(params IInterceptor[] interceptors) =>
         new(new DbContextOptionsBuilder<AppDbContext>()
             .UseSqlite(connection)
             .ReplaceService<IModelCustomizer, SqliteDateTimeOffsetCustomizer>()
+            .AddInterceptors(interceptors)
             .Options);
 
     public void Dispose() => connection.Dispose();
