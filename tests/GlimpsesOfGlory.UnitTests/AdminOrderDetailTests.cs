@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.RegularExpressions;
 using GlimpsesOfGlory.Abstractions.Constants;
 using GlimpsesOfGlory.Abstractions.Dtos;
@@ -296,6 +297,62 @@ public class AdminOrderDetailTests
         Assert.DoesNotContain("role=\"status\"", html);
     }
 
+    [Fact]
+    public async Task PackingSlip_LoadsTheOrder()
+    {
+        var model = new PackingSlipModel(new FakeAdminOrderService(Order()));
+
+        Assert.IsType<PageResult>(await model.OnGetAsync(42, CancellationToken.None));
+        Assert.Equal(42, model.Order.Id);
+    }
+
+    [Fact]
+    public async Task PackingSlip_UnknownOrder_IsNotFound()
+    {
+        var model = new PackingSlipModel(new FakeAdminOrderService(Order()));
+
+        Assert.IsType<NotFoundResult>(await model.OnGetAsync(7, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task PackingSlip_ShowsShopOrderShipToAndItems_ButNoAdminOnlyDetails()
+    {
+        var order = Order(lines:
+        [
+            new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null),
+            new OrderConfirmationLine("Linen Apron", 30.00m, 1, true, new DateOnly(2026, 11, 15)),
+        ]) with { InternalNote = "Customer is a friend - add a freebie", TrackingNumber = "1Z999" };
+
+        var html = await RenderSlipAsync(order);
+
+        Assert.Contains("Glimpses of Glory", html);
+        Assert.Contains("#42", html);
+        Assert.Contains("August 1, 2026", html);
+        Assert.Contains("Ship to", html);
+        Assert.Contains("123 Main St", html);
+        Assert.Contains("Springfield, IL 62704", html);
+        Assert.Matches(@"Ceramic Mug\s*</td>\s*<td[^>]*>2</td>", html);
+        Assert.Contains("Linen Apron", html);
+        Assert.Contains("Preorder — ships approx. Nov 15, 2026", html);
+        Assert.DoesNotContain("Customer is a friend", html);
+        Assert.DoesNotContain("$", html);
+    }
+
+    [Fact]
+    public async Task PackingSlip_ForPickupOrder_ShowsThePickupNameInsteadOfAnAddress()
+    {
+        var order = Order(fulfillmentMethod: FulfillmentMethod.Pickup) with
+        {
+            Address = new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null),
+        };
+
+        var html = await RenderSlipAsync(order);
+
+        Assert.Contains("Local pickup for", html);
+        Assert.Contains("Jane Shopper", html);
+        Assert.DoesNotContain("Ship to", html);
+    }
+
     // Runs the real MarkPaid handler, so the model is in the state its htmx response renders.
     private static async Task<DetailsModel> RunMarkPaidHandlerAsync(AdminOrderDetail before, AdminOrderDetail after)
     {
@@ -322,6 +379,13 @@ public class AdminOrderDetailTests
 
     private static Task<string> RenderAsync(string viewPath, DetailsModel model) =>
         RazorViewToStringRendererTests.CreateRenderer().RenderAsync(viewPath, model);
+
+    // Just the slip itself (without the layout the renderer wraps it in), with entities decoded.
+    private static async Task<string> RenderSlipAsync(AdminOrderDetail order)
+    {
+        var html = await RazorViewToStringRendererTests.CreateRenderer().RenderAsync("~/Pages/Admin/Orders/_PackingSlip.cshtml", order);
+        return WebUtility.HtmlDecode(Regex.Match(html, "<article id=\"packing-slip\".*?</article>", RegexOptions.Singleline).Value);
+    }
 
     private sealed class FakeAdminOrderService(AdminOrderDetail order) : IAdminOrderService
     {

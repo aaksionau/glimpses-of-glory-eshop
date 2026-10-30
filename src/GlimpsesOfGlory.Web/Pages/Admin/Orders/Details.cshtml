@@ -10,7 +10,10 @@
 }
 
 <div class="max-w-6xl">
-    <a asp-page="/Admin/Orders/Index" class="inline-block mb-4 text-sm hover:underline">&larr; Back to orders</a>
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <a asp-page="/Admin/Orders/Index" class="text-sm hover:underline">&larr; Back to orders</a>
+        <a asp-page="/Admin/Orders/PackingSlip" asp-route-id="@Model.Order.Id" class="rounded-lg border border-black/20 bg-white px-4 py-2 text-sm font-semibold hover:bg-gray-50">Print packing slip</a>
+    </div>
 
     @* One column on mobile; line items on the left and the order's cards on the right from lg up. *@
     <div class="grid gap-6 lg:grid-cols-3 lg:items-start">
