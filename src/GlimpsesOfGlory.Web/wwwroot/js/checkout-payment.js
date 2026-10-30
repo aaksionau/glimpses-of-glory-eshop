@@ -19,10 +19,6 @@
         errorBox.focus({ preventScroll: true });
     }
 
-    function clearError() {
-        errorBox.textContent = '';
-    }
-
     function setProcessing(processing) {
         submitButton.disabled = processing;
         submitButton.setAttribute('aria-busy', processing ? 'true' : 'false');
@@ -56,9 +52,8 @@
     }
 
     submitButton.addEventListener('click', async function () {
-        if (submitButton.disabled) return;
         setProcessing(true);
-        clearError();
+        errorBox.textContent = '';
 
         var result;
         try {
