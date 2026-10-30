@@ -178,6 +178,8 @@ public class AdminOrderTabsTests
 
         public Task<OrderUpdateResult> MarkPaidAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
 
+        public Task<OrderUpdateResult> UpdateInternalNoteAsync(int id, string? note, CancellationToken cancellationToken) => throw new NotSupportedException();
+
         public Task<OrderUpdateResult> MarkCancelledAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

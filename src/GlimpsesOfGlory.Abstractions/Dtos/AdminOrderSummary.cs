@@ -16,4 +16,5 @@ public sealed record AdminOrderSummary(
     DateOnly? EarliestExpectedAvailability,
     bool NeedsRefund,
     bool NeedsAction,
+    bool HasInternalNote,
     DateTimeOffset CreatedAt);

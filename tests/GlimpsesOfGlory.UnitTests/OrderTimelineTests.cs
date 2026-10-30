@@ -33,6 +33,7 @@ public class OrderTimelineTests
             Total: 0m,
             Status: status,
             TrackingNumber: null,
+            InternalNote: null,
             CreatedAt: Placed,
             PaidAt: paidAt,
             ShippedAt: shippedAt,

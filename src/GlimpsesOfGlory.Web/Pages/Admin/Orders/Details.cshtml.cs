@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using GlimpsesOfGlory.Abstractions.Constants;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
@@ -14,7 +15,15 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
     [StringLength(200)]
     public string? TrackingNumber { get; set; }
 
+    [BindProperty]
+    [StringLength(OrderNotePolicy.MaxLength, ErrorMessage = "The note can be at most {1} characters.")]
+    [Display(Name = "Internal note")]
+    public string? InternalNote { get; set; }
+
     public AdminOrderDetail Order { get; private set; } = null!;
+
+    // Confirmation shown inside the note card after an htmx save.
+    public string? NoteStatusMessage { get; private set; }
 
     public string? StatusMessage { get; private set; }
 
@@ -37,7 +46,44 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
 
         Order = order;
         TrackingNumber = order.TrackingNumber;
+        InternalNote = order.InternalNote;
         return Page();
+    }
+
+    // Swaps only the #order-note card (hx-target), so saving a note never reloads the page.
+    public async Task<IActionResult> OnPostSaveNoteAsync(int id, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            // Re-render with the validation message and the admin's text; nothing is saved.
+            var current = await adminOrderService.GetOrderAsync(id, cancellationToken);
+            if (current is null)
+            {
+                return NotFound();
+            }
+
+            Order = current;
+            return Partial("_OrderNote", this);
+        }
+
+        var result = await adminOrderService.UpdateInternalNoteAsync(id, InternalNote, cancellationToken);
+        if (result == OrderUpdateResult.NotFound)
+        {
+            return NotFound();
+        }
+
+        var order = await adminOrderService.GetOrderAsync(id, cancellationToken);
+        if (order is null)
+        {
+            return NotFound();
+        }
+
+        Order = order;
+        // Show the stored (trimmed) note, not the raw input.
+        ModelState.Remove(nameof(InternalNote));
+        InternalNote = order.InternalNote;
+        NoteStatusMessage = order.InternalNote is null ? "Note cleared." : "Note saved.";
+        return Partial("_OrderNote", this);
     }
 
     // Swaps the #order-status actions fragment (hx-target) so marking an order shipped/cancelled
@@ -105,6 +151,7 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
 
         Order = order;
         TrackingNumber = order.TrackingNumber;
+        InternalNote = order.InternalNote;
         IsHtmxUpdate = true;
         if (result == OrderUpdateResult.InvalidTransition)
         {

@@ -34,6 +34,7 @@ public class AdminOrderDetailTests
             Total: 30.00m,
             Status: status,
             TrackingNumber: null,
+            InternalNote: null,
             CreatedAt: new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero),
             PaidAt: isPaid ? new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero) : null,
             ShippedAt: null,
@@ -192,6 +193,78 @@ public class AdminOrderDetailTests
         Assert.Contains("Pending", html);
     }
 
+    [Fact]
+    public async Task SaveNote_SavesAndReRendersOnlyTheNoteCard()
+    {
+        var service = new FakeAdminOrderService(Order());
+        var model = CreateModel(service);
+        model.InternalNote = "Customer called, collecting Friday";
+
+        var result = await model.OnPostSaveNoteAsync(42, CancellationToken.None);
+
+        var partial = Assert.IsType<PartialViewResult>(result);
+        Assert.Equal("_OrderNote", partial.ViewName);
+        Assert.Equal("Customer called, collecting Friday", model.Order.InternalNote);
+        Assert.Equal("Note saved.", model.NoteStatusMessage);
+
+        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderNote.cshtml", model);
+        Assert.Contains("id=\"order-note\"", html);
+        Assert.Contains("hx-post=\"/admin/orders/42?handler=SaveNote\"", html);
+        Assert.Contains("hx-target=\"#order-note\"", html);
+        Assert.Contains("Customer called, collecting Friday</textarea>", html);
+        Assert.Contains("Note saved.", html);
+    }
+
+    [Fact]
+    public async Task SaveNote_WithBlankNote_ClearsIt()
+    {
+        var service = new FakeAdminOrderService(Order() with { InternalNote = "Old note" });
+        var model = CreateModel(service);
+        model.InternalNote = "  ";
+
+        await model.OnPostSaveNoteAsync(42, CancellationToken.None);
+
+        Assert.Null(model.Order.InternalNote);
+        Assert.Equal("Note cleared.", model.NoteStatusMessage);
+    }
+
+    [Fact]
+    public async Task SaveNote_WhenInvalid_SavesNothing()
+    {
+        var service = new FakeAdminOrderService(Order());
+        var model = CreateModel(service);
+        model.InternalNote = "Too long";
+        model.ModelState.AddModelError(nameof(DetailsModel.InternalNote), "Too long");
+
+        var result = await model.OnPostSaveNoteAsync(42, CancellationToken.None);
+
+        var partial = Assert.IsType<PartialViewResult>(result);
+        Assert.Equal("_OrderNote", partial.ViewName);
+        Assert.Equal(0, service.NoteUpdateCount);
+        Assert.Null(model.NoteStatusMessage);
+    }
+
+    [Fact]
+    public async Task SaveNote_UnknownOrder_IsNotFound()
+    {
+        var model = CreateModel(new FakeAdminOrderService(Order()));
+        model.InternalNote = "Note";
+
+        Assert.IsType<NotFoundResult>(await model.OnPostSaveNoteAsync(7, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task NoteCard_OnFullPageRender_ShowsTheStoredNote()
+    {
+        var model = new DetailsModel(new FakeAdminOrderService(Order() with { InternalNote = "Gift wrap it" }));
+        await model.OnGetAsync(42, CancellationToken.None);
+
+        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderNote.cshtml", model);
+
+        Assert.Contains("Gift wrap it</textarea>", html);
+        Assert.DoesNotContain("role=\"status\"", html);
+    }
+
     // Runs the real MarkPaid handler, so the model is in the state its htmx response renders.
     private static async Task<DetailsModel> RunMarkPaidHandlerAsync(AdminOrderDetail before, AdminOrderDetail after)
     {
@@ -243,6 +316,20 @@ public class AdminOrderDetailTests
         public Task<OrderUpdateResult> MarkPaidAsync(int id, CancellationToken cancellationToken) => Update();
 
         public Task<OrderUpdateResult> MarkCancelledAsync(int id, CancellationToken cancellationToken) => Update();
+
+        public int NoteUpdateCount { get; private set; }
+
+        public Task<OrderUpdateResult> UpdateInternalNoteAsync(int id, string? note, CancellationToken cancellationToken)
+        {
+            if (id != current.Id)
+            {
+                return Task.FromResult(OrderUpdateResult.NotFound);
+            }
+
+            NoteUpdateCount++;
+            current = current with { InternalNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim() };
+            return Task.FromResult(OrderUpdateResult.Updated);
+        }
 
         private Task<OrderUpdateResult> Update()
         {

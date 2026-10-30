@@ -65,6 +65,7 @@
                 <p class="text-sm text-gray-500">Placed @Model.Order.CreatedAt.ToString("MMMM d, yyyy")</p>
             </section>
 
+            <partial name="_OrderNote" model="Model" />
             <partial name="_OrderFulfillmentCard" model="Model" />
             <partial name="_OrderPaymentCard" model="Model" />
             <partial name="_OrderStatus" model="Model" />

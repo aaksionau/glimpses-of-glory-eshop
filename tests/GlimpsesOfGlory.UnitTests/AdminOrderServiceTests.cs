@@ -1,3 +1,4 @@
+using GlimpsesOfGlory.Abstractions.Constants;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
@@ -353,6 +354,97 @@ public sealed class AdminOrderServiceTests : IDisposable
         Assert.Null(orders[inStock].EarliestExpectedAvailability);
     }
 
+    [Fact]
+    public async Task UpdateInternalNote_SavesTheTrimmedNote_AndGetOrderExposesIt()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Pickup);
+
+        var result = await Service().UpdateInternalNoteAsync(id, "  Customer called, collecting Friday \n", CancellationToken.None);
+
+        Assert.Equal(OrderUpdateResult.Updated, result);
+        var detail = await Service().GetOrderAsync(id, CancellationToken.None);
+        Assert.Equal("Customer called, collecting Friday", detail!.InternalNote);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task UpdateInternalNote_WithABlankNote_ClearsIt(string? note)
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Shipping, internalNote: "Old note");
+
+        await Service().UpdateInternalNoteAsync(id, note, CancellationToken.None);
+
+        Assert.Null((await LoadAsync(id)).InternalNote);
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Shipped)]
+    [InlineData(OrderStatus.Cancelled)]
+    public async Task UpdateInternalNote_IsAllowedInAnyStatus(OrderStatus status)
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Shipping, status: status);
+
+        Assert.Equal(OrderUpdateResult.Updated, await Service().UpdateInternalNoteAsync(id, "Refund agreed by phone", CancellationToken.None));
+        var order = await LoadAsync(id);
+        Assert.Equal("Refund agreed by phone", order.InternalNote);
+        Assert.Equal(status, order.Status);
+    }
+
+    [Fact]
+    public async Task UpdateInternalNote_UnknownOrder_IsNotFound()
+    {
+        Assert.Equal(OrderUpdateResult.NotFound, await Service().UpdateInternalNoteAsync(999, "Note", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task UpdateInternalNote_TooLong_Throws_AndSavesNothing()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Shipping);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            Service().UpdateInternalNoteAsync(id, new string('x', OrderNotePolicy.MaxLength + 1), CancellationToken.None));
+        Assert.Null((await LoadAsync(id)).InternalNote);
+    }
+
+    [Fact]
+    public async Task GetOrders_FlagsOrdersThatHaveAnInternalNote()
+    {
+        var withNote = await AddOrderAsync(FulfillmentMethod.Shipping, internalNote: "Collecting Friday");
+        var withoutNote = await AddOrderAsync(FulfillmentMethod.Shipping);
+
+        var page = await Service().GetOrdersAsync(AdminOrderTab.All, AdminOrderFilter.None, 1, 100, CancellationToken.None);
+
+        var orders = page.Orders.ToDictionary(o => o.Id);
+        Assert.True(orders[withNote].HasInternalNote);
+        Assert.False(orders[withoutNote].HasInternalNote);
+    }
+
+    [Fact]
+    public async Task MarkShipped_NeverPutsTheInternalNoteInTheBuyersEmail()
+    {
+        const string note = "Customer was rude on the phone";
+        var id = await AddOrderAsync(FulfillmentMethod.Shipping, internalNote: note);
+        var emailSender = new RecordingEmailSender();
+
+        await Service(emailSender).MarkShippedAsync(id, "TRACK1", CancellationToken.None);
+
+        var sent = Assert.Single(emailSender.Shipped);
+        var html = await RazorViewToStringRendererTests.CreateRenderer().RenderAsync("~/Emails/OrderShipped.cshtml", sent);
+        Assert.Contains("TRACK1", html);
+        Assert.DoesNotContain(note, html);
+    }
+
+    [Theory]
+    [InlineData(typeof(OrderConfirmationView))]
+    [InlineData(typeof(OrderShippedView))]
+    public void CustomerFacingOrderViews_DoNotCarryTheInternalNote(Type customerView)
+    {
+        // These views feed the customer emails and the customer order pages; the note must stay admin-only.
+        Assert.DoesNotContain(customerView.GetProperties(), p => p.Name.Contains("Note", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static async Task<List<int>> IdsAsync(AdminOrderService service, AdminOrderTab tab, AdminOrderFilter? filter = null)
     {
         var page = await service.GetOrdersAsync(tab, filter ?? AdminOrderFilter.None, 1, 100, CancellationToken.None);
@@ -372,8 +464,8 @@ public sealed class AdminOrderServiceTests : IDisposable
 
     private AppDbContext CreateDb() => database.CreateDb();
 
-    private AdminOrderService Service() =>
-        new(CreateDb(), new FakeInventoryStore(new Dictionary<int, int>()), new FakePaymentGateway(), new NullEmailSender(), clock, NullLogger<AdminOrderService>.Instance);
+    private AdminOrderService Service(IEmailSender? emailSender = null) =>
+        new(CreateDb(), new FakeInventoryStore(new Dictionary<int, int>()), new FakePaymentGateway(), emailSender ?? new NullEmailSender(), clock, NullLogger<AdminOrderService>.Instance);
 
     private async Task<int> AddOrderAsync(
         FulfillmentMethod fulfillmentMethod,
@@ -384,7 +476,8 @@ public sealed class AdminOrderServiceTests : IDisposable
         DateTimeOffset? createdAt = null,
         string email = "shopper@example.com",
         string customerName = "Jane Shopper",
-        List<OrderLine>? lines = null)
+        List<OrderLine>? lines = null,
+        string? internalNote = null)
     {
         await using var db = CreateDb();
         var order = new Order
@@ -398,6 +491,7 @@ public sealed class AdminOrderServiceTests : IDisposable
             PaidAt = paidAt,
             CreatedAt = createdAt ?? new DateTimeOffset(2026, 8, 1, 9, 0, 0, TimeSpan.Zero),
             ShippedAt = shippedAt,
+            InternalNote = internalNote,
         };
         db.Orders.Add(order);
         await db.SaveChangesAsync();
@@ -408,6 +502,19 @@ public sealed class AdminOrderServiceTests : IDisposable
     {
         await using var db = CreateDb();
         return await db.Orders.AsNoTracking().SingleAsync(o => o.Id == id);
+    }
+
+    private sealed class RecordingEmailSender : IEmailSender
+    {
+        public List<OrderShippedView> Shipped { get; } = [];
+
+        public Task SendOrderConfirmationAsync(OrderConfirmationView order, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task SendShippedNotificationAsync(OrderShippedView order, CancellationToken cancellationToken)
+        {
+            Shipped.Add(order);
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class ManualTimeProvider(DateTimeOffset now) : TimeProvider

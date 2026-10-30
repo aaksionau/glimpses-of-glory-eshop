@@ -27,5 +27,7 @@ public sealed class Order : ICheckoutHeader
     public DateTimeOffset? ShippedAt { get; set; }
     public DateTimeOffset? PickedUpAt { get; set; }
     public DateTimeOffset? CancelledAt { get; set; }
+    // Private to admins: never copied into a customer email or shown on a customer page.
+    public string? InternalNote { get; set; }
     public List<OrderLine> Lines { get; set; } = [];
 }

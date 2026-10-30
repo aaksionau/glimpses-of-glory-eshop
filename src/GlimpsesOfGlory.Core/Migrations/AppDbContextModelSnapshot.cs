@@ -43,6 +43,10 @@ namespace GlimpsesOfGlory.Core.Migrations
                     b.Property<int>("FulfillmentMethod")
                         .HasColumnType("integer");
 
+                    b.Property<string>("InternalNote")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<DateTimeOffset?>("PaidAt")
                         .HasColumnType("timestamp with time zone");
 
