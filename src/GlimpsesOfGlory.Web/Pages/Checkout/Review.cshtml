@@ -1,6 +1,5 @@
 @page "/checkout/review"
 @model GlimpsesOfGlory.Web.Pages.Checkout.ReviewModel
-@using GlimpsesOfGlory.Web.Helpers
 @{
     ViewData["Title"] = "Review order";
 }
@@ -38,24 +37,23 @@
     <section class="mt-6">
         @if (Model.Address.IsPickup)
         {
-            <h2 class="font-semibold text-lg mb-2">How would you like to pay?</h2>
-        }
-        <a href="/checkout/payment"
-           class="block text-center w-full bg-gold hover:bg-gold-dark transition-colors text-white px-6 py-3 rounded-full font-semibold">
-            @(Model.Address.IsPickup ? "Pay by card" : "Continue to payment")
-        </a>
-        @if (Model.Address.IsPickup)
-        {
-            @* Cash is only offered for local pickup - it's paid in person when collecting.
-               Disabled once submitted so a double click can't place the order twice. *@
-            <form method="post" asp-page-handler="PlaceCashOrder" class="mt-3"
-                  x-data="{ submitting: false }" x-on:submit="submitting = true">
-                <button type="submit" x-bind:disabled="submitting"
-                        class="w-full border border-gold-dark text-gold-dark hover:bg-gold/10 transition-colors px-6 py-3 rounded-full font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span x-text="submitting ? 'Placing order…' : 'Place order & pay cash at pickup'">Place order &amp; pay cash at pickup</span>
-                </button>
+            @* Cash is only offered for local pickup - it's paid in person when collecting. Card continues
+               to the Payment step; cash places the order straight away. The button is disabled once
+               submitted so a double click can't place the order twice, and re-enabled if the shopper
+               comes back to this page from the browser's history. *@
+            <form method="post" asp-page-handler="PickupPayment"
+                  x-data="{ submitting: false }"
+                  x-on:submit="submitting = true"
+                  x-on:pageshow.window="submitting = false">
+                <partial name="_PickupPaymentChoice" model="Model.Total" />
             </form>
-            <p class="text-ink-light text-sm text-center mt-2">@PaymentLabels.CashDueNote(Model.Total)</p>
+        }
+        else
+        {
+            <a href="/checkout/payment"
+               class="block text-center w-full bg-gold hover:bg-gold-dark transition-colors text-white px-6 py-3 rounded-full font-semibold">
+                Continue to payment
+            </a>
         }
     </section>
 </div>

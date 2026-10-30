@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -162,7 +161,7 @@ public class CheckoutOrderSummaryTests
         Regex.Match(html, $"<[a-z]+\\b[^>]*id=\"{id}\"[^>]*>").Value;
 
     // Visible text with tags stripped, entities decoded and whitespace collapsed.
-    private static string Text(string html) =>
+    internal static string Text(string html) =>
         Regex.Replace(WebUtility.HtmlDecode(Regex.Replace(html, "<[^>]+>", " ")), "\\s+", " ");
 
     private sealed class StubCartService(CartSummary cart) : ICartService
@@ -190,28 +189,5 @@ public class CheckoutOrderSummaryTests
         public Task<OrderConfirmationView?> GetOrderConfirmationAsync(string paymentIntentId, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<OrderConfirmationView?> GetOrderConfirmationAsync(int orderId, CancellationToken cancellationToken) => throw new NotSupportedException();
-    }
-
-    private sealed class InMemorySession : ISession
-    {
-        private readonly Dictionary<string, byte[]> _values = [];
-
-        public bool IsAvailable => true;
-
-        public string Id => "test-session";
-
-        public IEnumerable<string> Keys => _values.Keys;
-
-        public void Clear() => _values.Clear();
-
-        public Task CommitAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-        public Task LoadAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-        public void Remove(string key) => _values.Remove(key);
-
-        public void Set(string key, byte[] value) => _values[key] = value;
-
-        public bool TryGetValue(string key, [NotNullWhen(true)] out byte[]? value) => _values.TryGetValue(key, out value);
     }
 }

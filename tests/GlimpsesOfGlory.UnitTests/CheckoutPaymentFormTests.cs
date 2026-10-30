@@ -101,7 +101,7 @@ public class CheckoutPaymentFormTests
     private static string WebRootFile(params string[] parts) =>
         Path.Combine([WebProjectDirectory(), "wwwroot", .. parts]);
 
-    private static string WebProjectDirectory()
+    internal static string WebProjectDirectory()
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
         {
