@@ -192,7 +192,7 @@ public class CheckoutOrderSummaryTests
         public Task<OrderConfirmationView?> GetOrderConfirmationAsync(int orderId, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
-    private sealed class InMemorySession : ISession
+    internal sealed class InMemorySession : ISession
     {
         private readonly Dictionary<string, byte[]> _values = [];
 

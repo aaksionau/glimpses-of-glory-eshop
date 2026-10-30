@@ -1,4 +1,5 @@
 using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Web.Dtos;
 using GlimpsesOfGlory.Web.Helpers;
@@ -37,8 +38,9 @@ public class ReviewModel(ICartService cartService, IOrderService orderService, C
         return Page();
     }
 
-    // Pay-cash-at-pickup: there's no payment step, so the order is placed right here.
-    public async Task<IActionResult> OnPostPlaceCashOrderAsync(CancellationToken cancellationToken)
+    // A pickup shopper's payment choice: card continues to the Payment step; cash has no payment
+    // step, so the order is placed right here.
+    public async Task<IActionResult> OnPostPickupPaymentAsync(PaymentMethod paymentMethod, CancellationToken cancellationToken)
     {
         var address = checkoutSessionStore.GetAddress();
         if (address is null)
@@ -50,6 +52,11 @@ public class ReviewModel(ICartService cartService, IOrderService orderService, C
         if (!address.IsPickup)
         {
             return RedirectToPage("/Checkout/Review");
+        }
+
+        if (paymentMethod != PaymentMethod.Cash)
+        {
+            return RedirectToPage("/Checkout/Payment");
         }
 
         var orderId = await orderService.PlaceCashOrderAsync(address.ToShippingAddressInfo(), cancellationToken);
