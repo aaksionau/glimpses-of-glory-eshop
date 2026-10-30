@@ -122,7 +122,7 @@ public class CheckoutDetailsFormTests
 
         var html = await RenderOnCheckoutPageAsync(modelState);
 
-        Assert.Matches("<span [^>]*data-valmsg-for=\"Address.Email\"[^>]*><span id=\"Address_Email-error\">Enter your email.</span></span>", html);
+        Assert.Matches("<span (?=[^>]*data-valmsg-for=\"Address.Email\")[^>]*id=\"Address_Email-error\"[^>]*>Enter your email.</span>", html);
     }
 
     // The id is the one form-validation.js gives its own message when it re-checks the field, so
@@ -139,7 +139,7 @@ public class CheckoutDetailsFormTests
 
         Assert.Contains("aria-invalid=\"true\"", field);
         Assert.Contains($"aria-describedby=\"Address_{fieldName}-error\"", field);
-        Assert.Matches($"<span [^>]*data-valmsg-for=\"Address.{fieldName}\"[^>]*><span id=\"Address_{fieldName}-error\">Something is wrong.</span></span>", html);
+        Assert.Matches($"<span (?=[^>]*data-valmsg-for=\"Address.{fieldName}\")[^>]*id=\"Address_{fieldName}-error\"[^>]*>Something is wrong.</span>", html);
     }
 
     [Fact]

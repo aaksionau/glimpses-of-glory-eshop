@@ -9,10 +9,8 @@
 (function () {
     'use strict';
 
-    function fields(form) {
-        return Array.from(form.elements).filter(function (el) {
-            return el.name && el.willValidate && el.type !== 'radio' && el.type !== 'checkbox';
-        });
+    function validatable(el) {
+        return el.name && el.willValidate && el.type !== 'radio' && el.type !== 'checkbox';
     }
 
     function messageFor(el) {
@@ -47,15 +45,10 @@
         describedBy(el, id, !valid && !!span);
 
         if (span) {
-            span.replaceChildren();
+            span.id = id;
+            span.textContent = valid ? '' : messageFor(el);
             span.classList.toggle('field-validation-error', !valid);
             span.classList.toggle('field-validation-valid', valid);
-            if (!valid) {
-                var message = document.createElement('span');
-                message.id = id;
-                message.textContent = messageFor(el);
-                span.appendChild(message);
-            }
         }
         return valid;
     }
@@ -85,18 +78,17 @@
             // Clear a shown error as soon as the field is fixed.
             if (e.target.getAttribute('aria-invalid') === 'true') check(form, e.target);
         });
-        form.addEventListener('change', function (e) { edited.add(e.target); });
 
         // Check on blur once the shopper has typed in the field, or if it's already flagged,
         // so tabbing through an untouched form doesn't light it up.
         form.addEventListener('focusout', function (e) {
             var el = e.target;
-            if (!el.willValidate || !el.name) return;
+            if (!validatable(el)) return;
             if (edited.has(el) || el.getAttribute('aria-invalid') === 'true') check(form, el);
         });
 
         form.addEventListener('submit', function (e) {
-            var invalid = fields(form).filter(function (el) { return !check(form, el); });
+            var invalid = Array.from(form.elements).filter(validatable).filter(function (el) { return !check(form, el); });
             showSummary(summary, invalid);
             if (invalid.length) {
                 e.preventDefault();
