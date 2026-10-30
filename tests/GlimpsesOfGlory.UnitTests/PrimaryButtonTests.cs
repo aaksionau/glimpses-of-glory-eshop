@@ -14,6 +14,7 @@ public class PrimaryButtonTests
         { "Index.cshtml", "Shop the Collection" },
         { "Products/Details.cshtml", "Add to cart" },
         { "Cart/_CartLines.cshtml", "Proceed to checkout" },
+        { "Cart/_CartLines.cshtml", "Browse products" },
         { "Checkout/Index.cshtml", "Continue to review" },
         { "Checkout/Review.cshtml", "Continue to payment" },
         { "Checkout/_PickupPaymentChoice.cshtml", "Place order" },
