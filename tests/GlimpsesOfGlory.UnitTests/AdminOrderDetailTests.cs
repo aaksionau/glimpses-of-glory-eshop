@@ -335,7 +335,9 @@ public class AdminOrderDetailTests
         Assert.Contains("Linen Apron", html);
         Assert.Contains("Preorder — ships approx. Nov 15, 2026", html);
         Assert.DoesNotContain("Customer is a friend", html);
-        Assert.DoesNotContain("$", html);
+        Assert.DoesNotContain("12.50", html);
+        Assert.DoesNotContain("30.00", html);
+        Assert.DoesNotContain("Total", html);
     }
 
     [Fact]
