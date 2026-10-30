@@ -1,0 +1,36 @@
+@model GlimpsesOfGlory.Web.Pages.Checkout.PaymentModel
+@using GlimpsesOfGlory.Web.Helpers
+@{
+    // A partial never takes a layout; this also keeps it renderable on its own (in tests).
+    Layout = null;
+}
+@*
+   The card form driven by wwwroot/js/checkout-payment.js. The Pay button stays disabled until the
+   Stripe Payment Element is ready; while a payment is confirming it shows a spinner and
+   "Processing…" with aria-busy. Errors (a declined card, or the form failing to load) go in
+   #payment-error, which is a live region the script also scrolls into view and focuses.
+*@
+<div id="payment-form"
+     data-publishable-key="@Model.PublishableKey"
+     data-client-secret="@Model.ClientSecret"
+     data-load-error="@CheckoutMessages.PaymentFormUnavailable"
+     data-payment-error="@CheckoutMessages.PaymentFailed">
+    <div id="payment-error" role="alert" tabindex="-1"
+         class="text-red-600 text-sm mb-4 scroll-mt-4 empty:hidden focus:outline-none"></div>
+
+    <div id="payment-element" class="mb-4"></div>
+
+    <noscript>
+        <p class="text-red-600 text-sm mb-4">Card payment needs JavaScript. Turn it on and refresh this page.</p>
+    </noscript>
+
+    <button id="submit-payment" type="button" disabled aria-busy="false"
+            class="w-full inline-flex items-center justify-center gap-2 bg-gold hover:bg-gold-dark transition-colors text-white px-6 py-3 rounded-full font-semibold disabled:bg-gold/40 disabled:cursor-not-allowed">
+        <svg data-processing hidden class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"></path>
+        </svg>
+        <span data-processing hidden>@CheckoutMessages.PaymentProcessing</span>
+        <span data-idle>Pay @Model.AmountDue.ToString("C")</span>
+    </button>
+</div>
