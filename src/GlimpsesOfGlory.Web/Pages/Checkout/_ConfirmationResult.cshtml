@@ -9,6 +9,7 @@
 
 @if (Model.Order is { } order)
 {
+    var isPickup = order.FulfillmentMethod == FulfillmentMethod.Pickup;
     <h1 class="text-3xl font-bold mb-2 font-display">Thank you for your order!</h1>
     <p class="text-ink-light mb-6">Order #@order.OrderId &middot; @order.CreatedAt.ToLocalTime().ToString("f")</p>
 
@@ -16,14 +17,14 @@
         <h2 class="font-semibold text-lg">What happens next</h2>
         <p class="text-ink-light mt-1">A confirmation has been sent to <span class="font-medium text-ink">@order.Address.Email</span>.</p>
         <p class="text-ink-light">@FulfillmentLabels.NextSteps(order.FulfillmentMethod)</p>
-        @if (order.FulfillmentMethod == FulfillmentMethod.Pickup && !order.IsPaid)
+        @if (isPickup && !order.IsPaid)
         {
             <p class="font-medium mt-2">@PaymentLabels.CashDueNote(order.Total)</p>
         }
     </section>
 
     <section class="mb-6">
-        @if (order.FulfillmentMethod == FulfillmentMethod.Pickup)
+        @if (isPickup)
         {
             <h2 class="font-semibold text-lg">Local pickup</h2>
             <p class="text-ink-light mt-1">@order.Address.FullName</p>
@@ -31,16 +32,9 @@
         else
         {
             <h2 class="font-semibold text-lg">Shipping to</h2>
-            <p class="text-ink-light mt-1">
-                @order.Address.FullName<br />
-                @order.Address.AddressLine1<br />
-                @if (!string.IsNullOrWhiteSpace(order.Address.AddressLine2))
-                {
-                    @order.Address.AddressLine2<br />
-                }
-                @order.Address.City, @order.Address.State @order.Address.PostalCode<br />
-                @order.Address.Country
-            </p>
+            <div class="text-ink-light mt-1">
+                <partial name="~/Pages/Shared/_ShippingAddress.cshtml" model="order.Address" />
+            </div>
         }
     </section>
 
@@ -70,9 +64,6 @@
         </div>
     </section>
 
-    <p class="mt-8 text-center">
-        <a href="/products" class="inline-block rounded-full bg-gold px-8 py-3 font-semibold text-white transition-colors hover:bg-gold-dark">Continue shopping</a>
-    </p>
 }
 else if (Model.IsPolling)
 {
@@ -86,8 +77,12 @@ else
     <div class="text-center">
         <h1 class="text-2xl font-bold mb-2 font-display">Payment received</h1>
         <p class="text-ink-light">We're still finalizing your order. You'll receive a confirmation email shortly.</p>
-        <p class="mt-8">
-            <a href="/products" class="inline-block rounded-full bg-gold px-8 py-3 font-semibold text-white transition-colors hover:bg-gold-dark">Continue shopping</a>
-        </p>
     </div>
+}
+
+@if (!Model.IsPolling)
+{
+    <p class="mt-8 text-center">
+        <a href="/products" class="inline-block rounded-full bg-gold px-8 py-3 font-semibold text-white transition-colors hover:bg-gold-dark">Continue shopping</a>
+    </p>
 }

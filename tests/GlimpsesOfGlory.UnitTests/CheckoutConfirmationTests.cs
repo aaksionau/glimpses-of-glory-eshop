@@ -18,29 +18,18 @@ public class CheckoutConfirmationTests
     private const string ResultPath = "~/Pages/Checkout/_ConfirmationResult.cshtml";
     private const string PollPath = "~/Pages/Checkout/_PaymentPoll.cshtml";
 
-    [Fact]
-    public async Task ShippedOrder_StatesTheConfirmationEmail_WhatHappensNext_AndOffersContinueShopping()
+    [Theory]
+    [InlineData(FulfillmentMethod.Shipping, "We'll email you a tracking number as soon as your order ships.")]
+    [InlineData(FulfillmentMethod.Pickup, "We'll email you when your order is ready to collect.")]
+    public async Task PlacedOrder_StatesTheConfirmationEmail_WhatHappensNext_AndOffersContinueShopping(FulfillmentMethod method, string nextSteps)
     {
-        var page = await LoadAsync(Order(FulfillmentMethod.Shipping), attempt: 0, htmx: false);
+        var page = await LoadAsync(Order(method), attempt: 0, htmx: false);
 
         var html = await RenderAsync(ResultPath, page);
         var text = CheckoutOrderSummaryTests.Text(html);
 
         Assert.Contains("A confirmation has been sent to shopper@example.com", text);
-        Assert.Contains("We'll email you a tracking number as soon as your order ships.", text);
-        Assert.Matches("<a href=\"/products\"[^>]*>Continue shopping</a>", html);
-    }
-
-    [Fact]
-    public async Task PickupOrder_StatesTheConfirmationEmail_WhatHappensNext_AndOffersContinueShopping()
-    {
-        var page = await LoadAsync(Order(FulfillmentMethod.Pickup), attempt: 0, htmx: false);
-
-        var html = await RenderAsync(ResultPath, page);
-        var text = CheckoutOrderSummaryTests.Text(html);
-
-        Assert.Contains("A confirmation has been sent to shopper@example.com", text);
-        Assert.Contains("We'll email you when your order is ready to collect.", text);
+        Assert.Contains(nextSteps, text);
         Assert.Matches("<a href=\"/products\"[^>]*>Continue shopping</a>", html);
     }
 
