@@ -1,0 +1,24 @@
+@model GlimpsesOfGlory.Web.Dtos.QuantityStepperView
+@{
+    // A partial never takes a layout; this also keeps it renderable on its own (in tests).
+    Layout = null;
+    const string stepButtonClass = "w-11 h-11 rounded-full border border-ink/20 hover:border-gold-dark text-lg leading-none";
+    var hasError = Model.ErrorId is not null;
+}
+
+@* The −/+ buttons step the input within its min/max and fire its change event (which bubbles to the
+   enclosing form) only when the value actually moves. *@
+<span class="flex items-center gap-1"
+      x-data="{ step(up) { const q = this.$refs.qty, before = q.value; up ? q.stepUp() : q.stepDown(); if (q.value !== before) q.dispatchEvent(new Event('change', { bubbles: true })); } }">
+    <button type="button" id="qty-down-@Model.Id" aria-label="Decrease quantity of @Model.ItemName" data-step="down"
+            x-on:click="step(false)"
+            class="@stepButtonClass">&minus;</button>
+    <label for="qty-@Model.Id" class="sr-only">Quantity for @Model.ItemName</label>
+    <input type="number" id="qty-@Model.Id" name="quantity" value="@Model.Value" min="1" max="@Model.Max"
+           x-ref="qty"
+           aria-describedby="@Model.ErrorId" aria-invalid="@(hasError ? "true" : null)"
+           class="w-14 border border-ink/20 rounded px-2 py-3 text-center" />
+    <button type="button" id="qty-up-@Model.Id" aria-label="Increase quantity of @Model.ItemName" data-step="up"
+            x-on:click="step(true)"
+            class="@stepButtonClass">+</button>
+</span>

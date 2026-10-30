@@ -2,7 +2,7 @@
 @using GlimpsesOfGlory.Abstractions.Constants
 @model GlimpsesOfGlory.Web.Pages.Products.DetailsModel
 @using GlimpsesOfGlory.Web.Helpers
-@using GlimpsesOfGlory.Abstractions.Dtos
+@using GlimpsesOfGlory.Web.Dtos
 @{
     ViewData["Title"] = Model.Product.Name;
     ViewData["MetaDescription"] = SeoText.Truncate(Model.Product.Description, 160);
@@ -14,56 +14,15 @@
 }
 
 <div class="container mx-auto px-4 py-10 md:py-16">
-    <a href="/products" class="text-sm text-gold-dark hover:underline">&larr; Back to products</a>
+    <a href="/products" class="inline-flex items-center min-h-11 -ml-2 px-2 text-gold-dark hover:underline">&larr; Back to products</a>
 
-    <div class="mt-4 grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,360px)_1fr]" x-data="{ activeIndex: 0, lightboxOpen: false }">
+    <div class="mt-2 grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,360px)_1fr]">
         <div class="mx-auto w-full max-w-xs md:max-w-none">
-            @if (Model.Product.PhotoFileNames.Count == 0)
-            {
-                <div class="w-full aspect-[3/4] bg-cream-dark flex items-center justify-center text-ink-light">No photos</div>
-            }
-            else
-            {
-                <div class="relative w-full aspect-[3/4] bg-cream-dark rounded-2xl overflow-hidden cursor-zoom-in" @@click="lightboxOpen = true">
-                    @for (var i = 0; i < Model.Product.PhotoFileNames.Count; i++)
-                    {
-                        <img src="/product-photos/@Model.Product.PhotoFileNames[i]"
-                             alt="@Model.Product.Name photo @(i + 1)"
-                             class="absolute inset-0 w-full h-full object-cover"
-                             x-show="activeIndex === @i" />
-                    }
-                </div>
-
-                @if (Model.Product.PhotoFileNames.Count > 1)
-                {
-                    <div class="flex gap-2 mt-3">
-                        @for (var i = 0; i < Model.Product.PhotoFileNames.Count; i++)
-                        {
-                            <button type="button"
-                                    class="w-16 h-16 rounded overflow-hidden border-2"
-                                    x-bind:class="activeIndex === @i ? 'border-gold' : 'border-transparent'"
-                                    @@click="activeIndex = @i">
-                                <img src="/product-photos/@Model.Product.PhotoFileNames[i]" alt="" class="w-full h-full object-cover" />
-                            </button>
-                        }
-                    </div>
-                }
-
-                <div x-show="lightboxOpen"
-                     x-cloak
-                     class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
-                     @@click="lightboxOpen = false">
-                    @for (var i = 0; i < Model.Product.PhotoFileNames.Count; i++)
-                    {
-                        <img src="/product-photos/@Model.Product.PhotoFileNames[i]"
-                             alt="@Model.Product.Name photo @(i + 1)"
-                             class="max-w-full max-h-full object-contain"
-                             x-show="activeIndex === @i" />
-                    }
-                </div>
-            }
+            <partial name="_ProductGallery" model="Model.Product" />
         </div>
 
+        @* The order form sits right under the price and badges, ahead of the description, so on a phone
+           the call to action isn't pushed below the fold by a long description. *@
         <div>
             <h1 class="text-3xl font-bold">@Model.Product.Name</h1>
             <p class="text-2xl mt-2 text-gold-dark font-medium">@Model.Product.Price.ToString("C")</p>
@@ -81,25 +40,31 @@
                 <partial name="_OutOfStockBadge" model="@("inline-block mt-2")" />
             }
 
-            <p class="mt-4 whitespace-pre-line text-ink-light">@Model.Product.Description</p>
-
             @if (Model.ErrorMessage is not null)
             {
-                <p class="mt-4 text-red-600 font-medium">@Model.ErrorMessage</p>
+                <p id="add-to-cart-error" class="mt-4 text-red-600 font-medium" role="alert">@Model.ErrorMessage</p>
             }
 
             @if (Model.Product.IsPreorder || Model.Product.StockQuantity > 0)
             {
                 var maxQuantity = Model.Product.IsPreorder ? PreorderPolicy.MaxQuantityPerLine : Model.Product.StockQuantity;
-                <form method="post" asp-antiforgery="true" class="mt-6 flex items-center gap-3">
-                    <label for="quantity" class="sr-only">Quantity</label>
-                    <input type="number" id="quantity" name="quantity" value="1" min="1" max="@maxQuantity"
-                           class="w-20 border border-ink/20 rounded px-3 py-3 text-center" />
+                var errorId = Model.ErrorMessage is null ? null : "add-to-cart-error";
+                <form method="post" asp-antiforgery="true" class="mt-6 flex flex-wrap items-center gap-3" data-testid="add-to-cart">
+                    <partial name="_QuantityStepper" model="new QuantityStepperView(Model.Product.Slug, Model.Product.Name, 1, maxQuantity, errorId)" />
                     <button type="submit" class="btn-primary">
                         @(Model.Product.IsPreorder ? "Preorder" : "Add to cart")
                     </button>
                 </form>
+                <p class="mt-3 text-ink-light text-sm" data-testid="delivery-note">Shipping available &middot; Free local pickup</p>
             }
+
+            <p class="mt-6 whitespace-pre-line text-ink-light" data-testid="product-description">@Model.Product.Description</p>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    @* The lightbox's x-trap comes from Alpine's focus plugin; the layout renders this section before
+       Alpine itself, so the plugin registers first. *@
+    <script src="~/js/alpine-focus.min.js" defer asp-append-version="true"></script>
+}
