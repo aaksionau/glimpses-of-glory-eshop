@@ -95,6 +95,24 @@ public class CheckoutConfirmationTests
         Assert.DoesNotContain("cart-count", html);
     }
 
+    [Theory]
+    [InlineData(-999, 0)]
+    [InlineData(999, ConfirmationModel.MaxPollAttempts)]
+    public async Task ForgedAttemptCount_IsClampedServerSide(int forged, int expected)
+    {
+        var page = await LoadAsync(order: null, attempt: forged, htmx: true);
+
+        Assert.Equal(expected, page.Attempt);
+    }
+
+    [Fact]
+    public async Task Response_VariesOnTheHtmxHeader_SoCachesDontMixPageAndFragment()
+    {
+        var page = await LoadAsync(order: null, attempt: 0, htmx: true);
+
+        Assert.Equal("HX-Request", page.Response.Headers.Vary.ToString());
+    }
+
     [Fact]
     public async Task FullPageLoad_WithAResult_RendersNoPoller()
     {

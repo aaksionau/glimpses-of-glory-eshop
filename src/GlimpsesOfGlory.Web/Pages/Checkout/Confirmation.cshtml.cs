@@ -48,7 +48,8 @@ public class ConfirmationModel(IOrderService orderService, ICartService cartServ
         }
 
         PaymentIntentId = paymentIntent;
-        Attempt = attempt;
+        // The attempt count comes from the client; clamp it so a forged value can't poll forever.
+        Attempt = Math.Clamp(attempt, 0, MaxPollAttempts);
         Order = await orderService.GetOrderConfirmationAsync(paymentIntent, cancellationToken);
 
         if (Order is not null)
@@ -57,6 +58,8 @@ public class ConfirmationModel(IOrderService orderService, ICartService cartServ
             checkoutSessionStore.Clear();
         }
 
+        // The same URL serves the full page and the htmx fragment, so caches must key on the htmx header.
+        Response.Headers.Vary = "HX-Request";
         return IsHtmxUpdate ? Partial("_PaymentPoll", this) : Page();
     }
 }
