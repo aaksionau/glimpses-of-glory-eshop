@@ -1,6 +1,5 @@
 using GlimpsesOfGlory.Abstractions.Constants;
 using GlimpsesOfGlory.Abstractions.Dtos;
-using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Core.ValueObjects;
 
@@ -18,17 +17,6 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
 
         var shippingCost = await CalculateShippingCostAsync(cart, cancellationToken);
         return new CartSummary(lines, cart.Subtotal, shippingCost);
-    }
-
-    public async Task<decimal> GetShippingCostAsync(FulfillmentMethod fulfillmentMethod, CancellationToken cancellationToken)
-    {
-        if (fulfillmentMethod == FulfillmentMethod.Pickup)
-        {
-            return 0m;
-        }
-
-        var cart = await cartStore.GetCartAsync(cancellationToken);
-        return await CalculateShippingCostAsync(cart, cancellationToken);
     }
 
     private async Task<decimal> CalculateShippingCostAsync(Cart cart, CancellationToken cancellationToken)

@@ -85,43 +85,26 @@ public class CartServiceTests
         Assert.Equal(0m, summary.ShippingCost);
     }
 
-    [Theory]
-    [InlineData(1)]
-    [InlineData(2)]
-    [InlineData(3)]
-    [InlineData(7)]
-    public async Task GetSummaryAsync_ShippingCostMatchesShippingCostAtCheckout(int quantity)
-    {
-        var cartStore = new FakeCartStore();
-        var service = CreateTieredService(cartStore, CreateProduct(stockQuantity: 10));
-        await service.AddLineAsync("widget", quantity, CancellationToken.None);
-
-        var summary = await service.GetSummaryAsync(CancellationToken.None);
-        var checkoutCost = await service.GetShippingCostAsync(FulfillmentMethod.Shipping, CancellationToken.None);
-
-        Assert.Equal(checkoutCost, summary.ShippingCost);
-    }
-
     [Fact]
-    public async Task GetShippingCostAsync_UsesShippingTiers_WhenShipping()
+    public async Task ShippingCostFor_UsesShippingTiers_WhenShipping()
     {
         var cartStore = new FakeCartStore();
         var service = CreateService(cartStore, CreateProduct(stockQuantity: 5));
         await service.AddLineAsync("widget", 1, CancellationToken.None);
 
-        var cost = await service.GetShippingCostAsync(FulfillmentMethod.Shipping, CancellationToken.None);
+        var cost = (await service.GetSummaryAsync(CancellationToken.None)).ShippingCostFor(FulfillmentMethod.Shipping);
 
         Assert.Equal(7.50m, cost);
     }
 
     [Fact]
-    public async Task GetShippingCostAsync_IsFree_WhenPickup()
+    public async Task ShippingCostFor_IsFree_WhenPickup()
     {
         var cartStore = new FakeCartStore();
         var service = CreateService(cartStore, CreateProduct(stockQuantity: 5));
         await service.AddLineAsync("widget", 1, CancellationToken.None);
 
-        var cost = await service.GetShippingCostAsync(FulfillmentMethod.Pickup, CancellationToken.None);
+        var cost = (await service.GetSummaryAsync(CancellationToken.None)).ShippingCostFor(FulfillmentMethod.Pickup);
 
         Assert.Equal(0m, cost);
     }

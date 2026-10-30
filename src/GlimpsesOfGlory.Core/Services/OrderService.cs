@@ -211,8 +211,7 @@ public sealed class OrderService(
         // Shipping only depends on item quantity (and fulfillment method), which the
         // session-cached cart already has correct - only prices/stock need re-deriving
         // from the DB above.
-        var shippingCost = await cartService.GetShippingCostAsync(fulfillmentMethod, cancellationToken);
-        return (lines, lines.Sum(l => l.UnitPrice * l.Quantity), shippingCost);
+        return (lines, lines.Sum(l => l.UnitPrice * l.Quantity), cart.ShippingCostFor(fulfillmentMethod));
     }
 
     // Re-derives prices/stock from the DB rather than trusting the session-cached cart,
