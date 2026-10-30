@@ -653,6 +653,39 @@ public sealed class AdminOrderServiceTests : IDisposable
 
     private AppDbContext CreateDb() => database.CreateDb();
 
+    [Fact]
+    public async Task StreamOrdersForExportAsync_ReturnsTheWholeUtcDayRange_OldestFirst()
+    {
+        await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: new DateTimeOffset(2026, 9, 30, 23, 59, 59, TimeSpan.Zero));
+        var lastMoment = await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: new DateTimeOffset(2026, 10, 31, 23, 59, 59, TimeSpan.Zero));
+        var first = await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero));
+        await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero));
+
+        var rows = await Service().StreamOrdersForExportAsync(new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), CancellationToken.None).ToListAsync();
+
+        Assert.Equal([first, lastMoment], rows.Select(r => r.Id));
+    }
+
+    [Fact]
+    public async Task StreamOrdersForExportAsync_CarriesTheBookkeepingColumns()
+    {
+        var paidAt = new DateTimeOffset(2026, 10, 3, 8, 0, 0, TimeSpan.Zero);
+        var createdAt = new DateTimeOffset(2026, 10, 2, 9, 30, 0, TimeSpan.Zero);
+        var id = await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.Shipped, paymentMethod: PaymentMethod.Card, paidAt: paidAt,
+            createdAt: createdAt, email: "zoe@example.com", customerName: "Zoë", subtotal: 42.5m, shippingCost: 7m);
+
+        var row = Assert.Single(await Service().StreamOrdersForExportAsync(new DateOnly(2026, 10, 2), new DateOnly(2026, 10, 2), CancellationToken.None).ToListAsync());
+
+        Assert.Equal(new AdminOrderExportRow(id, createdAt, "Zoë", "zoe@example.com", FulfillmentMethod.Pickup, OrderStatus.Shipped, PaymentMethod.Card, paidAt, 42.5m, 7m), row);
+        Assert.Equal(49.5m, row.Total);
+    }
+
+    [Fact]
+    public void StreamOrdersForExportAsync_BackwardsRange_Throws()
+    {
+        Assert.Throws<ArgumentException>(() => Service().StreamOrdersForExportAsync(new DateOnly(2026, 10, 2), new DateOnly(2026, 10, 1), CancellationToken.None));
+    }
+
     private AdminOrderService Service(IEmailSender? emailSender = null) =>
         new(CreateDb(), new FakeInventoryStore(new Dictionary<int, int>()), new FakePaymentGateway(), emailSender ?? new NullEmailSender(), clock, NullLogger<AdminOrderService>.Instance);
 
@@ -668,7 +701,9 @@ public sealed class AdminOrderServiceTests : IDisposable
         List<OrderLine>? lines = null,
         string? internalNote = null,
         string? trackingNumber = null,
-        ShippingCarrier? carrier = null)
+        ShippingCarrier? carrier = null,
+        decimal subtotal = 0m,
+        decimal shippingCost = 0m)
     {
         await using var db = CreateDb();
         var order = new Order
@@ -685,6 +720,8 @@ public sealed class AdminOrderServiceTests : IDisposable
             InternalNote = internalNote,
             TrackingNumber = trackingNumber,
             Carrier = carrier,
+            Subtotal = subtotal,
+            ShippingCost = shippingCost,
         };
         db.Orders.Add(order);
         await db.SaveChangesAsync();

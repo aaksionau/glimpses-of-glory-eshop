@@ -171,11 +171,6 @@ public sealed class AdminDashboardServiceTests : IDisposable
         await db.SaveChangesAsync();
     }
 
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
-
     private sealed class StubDashboardService(AdminDashboardMetrics metrics) : IAdminDashboardService
     {
         public Task<AdminDashboardMetrics> GetMetricsAsync(CancellationToken cancellationToken) => Task.FromResult(metrics);

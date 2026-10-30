@@ -12,6 +12,10 @@ public interface IAdminOrderService
     // How many orders each tab holds under the same filter, so the tab counts match the list.
     Task<AdminOrderTabCounts> GetOrderTabCountsAsync(AdminOrderFilter filter, CancellationToken cancellationToken);
 
+    // Every order placed from the start of `from` to the end of `to` (UTC days, inclusive), oldest
+    // first, streamed from the database so a large range is never held in memory.
+    IAsyncEnumerable<AdminOrderExportRow> StreamOrdersForExportAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken);
+
     Task<AdminOrderDetail?> GetOrderAsync(int id, CancellationToken cancellationToken);
 
     // Sends a shipping-notification email to the buyer on success.
