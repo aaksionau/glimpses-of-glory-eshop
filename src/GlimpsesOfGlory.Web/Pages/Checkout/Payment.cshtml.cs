@@ -1,5 +1,6 @@
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Services;
+using GlimpsesOfGlory.Web.Dtos;
 using GlimpsesOfGlory.Web.Helpers;
 using GlimpsesOfGlory.Web.Configuration;
 using Microsoft.AspNetCore.Mvc;
@@ -17,6 +18,11 @@ public class PaymentModel(
     public string PublishableKey { get; private set; } = string.Empty;
 
     public string ClientSecret { get; private set; } = string.Empty;
+
+    // What the card will be charged: the PaymentIntent's amount, priced from the catalogue.
+    public decimal AmountDue { get; private set; }
+
+    public CheckoutOrderSummary Summary { get; private set; } = null!;
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
@@ -44,6 +50,8 @@ public class PaymentModel(
         checkoutSessionStore.SavePaymentIntentId(setup.PaymentIntentId);
         PublishableKey = stripeOptions.Value.PublishableKey;
         ClientSecret = setup.ClientSecret;
+        AmountDue = setup.Amount;
+        Summary = new CheckoutOrderSummary(cart, address.FulfillmentMethod);
         return Page();
     }
 }

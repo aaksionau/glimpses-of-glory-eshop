@@ -17,6 +17,9 @@ public class ReviewModel(ICartService cartService, IOrderService orderService, C
 
     public decimal Total => Cart.Subtotal + ShippingCost;
 
+    // Review is where the shopper checks the order, so its summary is never collapsed.
+    public CheckoutOrderSummary Summary => new(Cart, Address.FulfillmentMethod, Collapsible: false);
+
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         var cart = await cartService.GetSummaryAsync(cancellationToken);

@@ -4,7 +4,7 @@
 @using GlimpsesOfGlory.Web.Dtos
 @* Contact and address fields of the checkout details form. Rendered with for="Address" so the
    inputs keep their "Address." name prefix; each carries its autofill token so browsers can fill
-   the whole form in one go. Relies on the enclosing form's Alpine "method" state.
+   the whole form in one go. Relies on the page's enclosing Alpine "method" state.
    form-validation.js checks the fields in the browser and shows each message in its span, using
    the data-val-* wording (the shipping-only fields aren't [Required], so theirs is set here). An
    invalid field is linked to its message through aria-invalid/aria-describedby, in the browser

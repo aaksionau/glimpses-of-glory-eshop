@@ -37,7 +37,7 @@ public sealed class StripePaymentGateway : IPaymentGateway
         };
 
         var paymentIntent = await _paymentIntentService.CreateAsync(options, cancellationToken: cancellationToken);
-        return new PaymentIntentSetup(paymentIntent.Id, paymentIntent.ClientSecret);
+        return new PaymentIntentSetup(paymentIntent.Id, paymentIntent.ClientSecret, amount);
     }
 
     public async Task<PaymentIntentSetup> UpdatePaymentIntentAsync(
@@ -55,7 +55,7 @@ public sealed class StripePaymentGateway : IPaymentGateway
         try
         {
             var paymentIntent = await _paymentIntentService.UpdateAsync(paymentIntentId, options, cancellationToken: cancellationToken);
-            return new PaymentIntentSetup(paymentIntent.Id, paymentIntent.ClientSecret);
+            return new PaymentIntentSetup(paymentIntent.Id, paymentIntent.ClientSecret, amount);
         }
         catch (StripeException ex)
         {
