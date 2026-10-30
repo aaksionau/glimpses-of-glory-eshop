@@ -25,6 +25,7 @@ public class CartServiceTests
             => Task.FromResult(product);
     }
 
+    // With no tiers given, defaults to a single flat $7.50 tier.
     private sealed class FakeShippingSettingsService(params ShippingTierView[] tiers) : IShippingSettingsService
     {
         private readonly IReadOnlyList<ShippingTierView> tiers = tiers.Length > 0 ? tiers : [new ShippingTierView(1, 1, 7.50m)];
@@ -86,7 +87,7 @@ public class CartServiceTests
     }
 
     [Fact]
-    public async Task ShippingCostFor_UsesShippingTiers_WhenShipping()
+    public async Task GetSummaryAsync_ShippingCostFor_UsesShippingTiers_WhenShipping()
     {
         var cartStore = new FakeCartStore();
         var service = CreateService(cartStore, CreateProduct(stockQuantity: 5));
@@ -98,7 +99,7 @@ public class CartServiceTests
     }
 
     [Fact]
-    public async Task ShippingCostFor_IsFree_WhenPickup()
+    public async Task GetSummaryAsync_ShippingCostFor_IsFree_WhenPickup()
     {
         var cartStore = new FakeCartStore();
         var service = CreateService(cartStore, CreateProduct(stockQuantity: 5));

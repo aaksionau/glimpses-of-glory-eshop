@@ -21,6 +21,8 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
 
     private async Task<decimal> CalculateShippingCostAsync(Cart cart, CancellationToken cancellationToken)
     {
+        // An empty cart ships nothing; skip the tier lookup (GetSummaryAsync runs on
+        // every cart page view).
         if (cart.TotalQuantity <= 0)
         {
             return 0m;
