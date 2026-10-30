@@ -108,9 +108,9 @@
         </div>
 
         <div class="mt-6 flex flex-col gap-1 sm:items-end" data-testid="cart-totals">
-            <p class="flex justify-between gap-4 sm:justify-end">Subtotal <span>@cart.Subtotal.ToString("C")</span></p>
-            <p class="flex justify-between gap-4 text-ink-light text-sm sm:justify-end" data-testid="cart-shipping">Shipping <span>@cart.ShippingCost.ToString("C") &middot; or free local pickup</span></p>
-            <p class="flex justify-between gap-4 text-lg font-bold sm:justify-end" data-testid="cart-estimated-total">Estimated total <span>@cart.TotalFor(FulfillmentMethod.Shipping).ToString("C")</span></p>
+            <p class="flex justify-between gap-4">Subtotal <span>@cart.Subtotal.ToString("C")</span></p>
+            <p class="flex justify-between gap-4 text-ink-light text-sm" data-testid="cart-shipping">Shipping <span>@cart.ShippingCost.ToString("C") &middot; or free local pickup</span></p>
+            <p class="flex justify-between gap-4 text-lg font-bold" data-testid="cart-estimated-total">Estimated total <span>@cart.TotalFor(FulfillmentMethod.Shipping).ToString("C")</span></p>
             <a href="/checkout" class="btn-primary mt-2 w-full sm:w-auto">Proceed to checkout</a>
         </div>
     }
