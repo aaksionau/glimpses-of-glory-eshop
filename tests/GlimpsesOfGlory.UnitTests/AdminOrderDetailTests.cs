@@ -269,6 +269,35 @@ public class AdminOrderDetailTests
     }
 
     [Fact]
+    public async Task CustomerCard_ShowsThePhone_AsACallableLink()
+    {
+        var order = Order(fulfillmentMethod: FulfillmentMethod.Pickup) with
+        {
+            Address = new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null, Phone: "555-0100"),
+        };
+        var model = new DetailsModel(new FakeAdminOrderService(order));
+        await model.OnGetAsync(42, CancellationToken.None);
+
+        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderCustomerCard.cshtml", model);
+
+        Assert.Contains("Jane Shopper", html);
+        Assert.Contains("href=\"mailto:shopper@example.com\"", html);
+        Assert.Contains("<a href=\"tel:555-0100\" class=\"hover:underline\">555-0100</a>", html);
+    }
+
+    [Fact]
+    public async Task CustomerCard_WithoutAPhone_ShowsNoPhoneLine()
+    {
+        var model = new DetailsModel(new FakeAdminOrderService(Order()));
+        await model.OnGetAsync(42, CancellationToken.None);
+
+        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderCustomerCard.cshtml", model);
+
+        Assert.Contains("href=\"mailto:shopper@example.com\"", html);
+        Assert.DoesNotContain("tel:", html);
+    }
+
+    [Fact]
     public async Task SaveNote_SavesAndReRendersOnlyTheNoteCard()
     {
         var service = new FakeAdminOrderService(Order());

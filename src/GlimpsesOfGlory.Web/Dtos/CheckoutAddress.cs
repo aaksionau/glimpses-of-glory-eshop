@@ -18,6 +18,12 @@ public sealed class CheckoutAddress : IValidatableObject
     [StringLength(200)]
     public string FullName { get; set; } = string.Empty;
 
+    // Optional for both delivery methods: lets the shop reach the customer about the order
+    // (shown on the admin order details).
+    [Phone(ErrorMessage = "Enter a valid phone number.")]
+    [StringLength(30, ErrorMessage = "Enter a valid phone number.")]
+    public string? Phone { get; set; }
+
     [StringLength(200)]
     public string? AddressLine1 { get; set; }
 
@@ -50,10 +56,14 @@ public sealed class CheckoutAddress : IValidatableObject
     public bool IsPickup => FulfillmentMethod == FulfillmentMethod.Pickup;
 
     // Pickup orders don't need (or keep) a street address - drop anything left over
-    // from the shopper toggling between shipping and pickup.
-    public ShippingAddressInfo ToShippingAddressInfo() => IsPickup
-        ? new(Email, FullName, null, null, null, null, null, null)
-        : new(Email, FullName, AddressLine1, AddressLine2, City, State, PostalCode, Country);
+    // from the shopper toggling between shipping and pickup. A blank phone is stored as none.
+    public ShippingAddressInfo ToShippingAddressInfo()
+    {
+        var phone = string.IsNullOrWhiteSpace(Phone) ? null : Phone.Trim();
+        return IsPickup
+            ? new(Email, FullName, null, null, null, null, null, null, phone)
+            : new(Email, FullName, AddressLine1, AddressLine2, City, State, PostalCode, Country, phone);
+    }
 
     // The street address is only required when shipping, so it's validated here rather
     // than with [Required] on each property.

@@ -1,6 +1,6 @@
 namespace GlimpsesOfGlory.Abstractions.Dtos;
 
-// For pickup orders only Email and FullName are set - the street address fields are null.
+// For pickup orders the street address fields are null. Phone is optional for every order.
 public sealed record ShippingAddressInfo(
     string Email,
     string FullName,
@@ -9,4 +9,5 @@ public sealed record ShippingAddressInfo(
     string? City,
     string? State,
     string? PostalCode,
-    string? Country);
+    string? Country,
+    string? Phone = null);

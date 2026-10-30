@@ -29,6 +29,10 @@
                 </text>
             }
             @Model.Address.Email
+            @if (!string.IsNullOrWhiteSpace(Model.Address.Phone))
+            {
+                <br />@Model.Address.Phone
+            }
         </p>
     </section>
 

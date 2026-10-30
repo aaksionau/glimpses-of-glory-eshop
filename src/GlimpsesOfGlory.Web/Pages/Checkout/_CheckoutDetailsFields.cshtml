@@ -17,12 +17,18 @@
     // two never select different options.
     var postedCountry = ViewData.ModelState[Html.NameFor(m => m.Country)]?.AttemptedValue ?? Model?.Country;
     var selectedCountry = ShippingCountryPolicy.SelectedOrDefault(postedCountry);
+    // Follow the inputs' own ids (e.g. "Address_Email" under the checkout page's prefix).
+    var emailHintId = Html.IdFor(m => m.Email) + "-hint";
+    var phoneHintId = Html.IdFor(m => m.Phone) + "-hint";
 }
 
+@* The hint says what the email is for, so a shopper wary of marketing isn't put off; it stays
+   linked through aria-describedby alongside any validation message. *@
 <label class="block">
     <span class="block mb-1 font-medium">Email</span>
-    <input asp-for="Email" type="email" autocomplete="email" required
+    <input asp-for="Email" type="email" autocomplete="email" required aria-describedby="@emailHintId"
            class="w-full border border-ink/20 rounded px-3 py-2" />
+    <span id="@emailHintId" class="block mt-1 text-sm text-ink-light">We'll send your order confirmation here.</span>
     <span asp-validation-for="Email" class="text-red-600 text-sm"></span>
 </label>
 
@@ -31,6 +37,15 @@
     <input asp-for="FullName" type="text" autocomplete="name" required
            class="w-full border border-ink/20 rounded px-3 py-2" />
     <span asp-validation-for="FullName" class="text-red-600 text-sm"></span>
+</label>
+
+@* Optional for both delivery methods, so it sits outside the shipping fieldset. *@
+<label class="block">
+    <span class="block mb-1 font-medium">Phone <span class="text-ink-light font-normal">(optional)</span></span>
+    <input asp-for="Phone" type="tel" autocomplete="tel" aria-describedby="@phoneHintId"
+           class="w-full border border-ink/20 rounded px-3 py-2" />
+    <span id="@phoneHintId" class="block mt-1 text-sm text-ink-light">Only used to contact you about this order.</span>
+    <span asp-validation-for="Phone" class="text-red-600 text-sm"></span>
 </label>
 
 @* Disabled (not just hidden) for pickup so the browser skips the required checks

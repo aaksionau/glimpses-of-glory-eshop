@@ -331,6 +331,9 @@ namespace GlimpsesOfGlory.Core.Migrations
                                 .IsRequired()
                                 .HasColumnType("text");
 
+                            b1.Property<string>("Phone")
+                                .HasColumnType("text");
+
                             b1.Property<string>("PostalCode")
                                 .HasColumnType("text");
 
@@ -379,6 +382,9 @@ namespace GlimpsesOfGlory.Core.Migrations
 
                             b1.Property<string>("FullName")
                                 .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.Property<string>("Phone")
                                 .HasColumnType("text");
 
                             b1.Property<string>("PostalCode")
