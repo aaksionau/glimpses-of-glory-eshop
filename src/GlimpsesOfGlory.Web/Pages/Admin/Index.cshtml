@@ -4,6 +4,15 @@
     ViewData["Title"] = "Dashboard";
 }
 
+@{
+    void TileBody(DashboardTile tile)
+    {
+        <p class="text-sm font-medium text-gray-600">@tile.Label</p>
+        <p class="mt-1 text-3xl font-semibold tabular-nums">@tile.Value</p>
+        <p class="mt-2 text-sm text-gray-600">@tile.Description</p>
+    }
+}
+
 <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     @foreach (var tile in Model.Tiles)
     {
@@ -11,17 +20,13 @@
             @if (tile.Href is not null)
             {
                 <a href="@tile.Href" class="block h-full rounded-lg border border-black/10 bg-white p-5 hover:shadow-lg transition-shadow">
-                    <p class="text-sm font-medium text-gray-600">@tile.Label</p>
-                    <p class="mt-1 text-3xl font-semibold tabular-nums">@tile.Value</p>
-                    <p class="mt-2 text-sm text-gray-600">@tile.Description</p>
+                    @{ TileBody(tile); }
                 </a>
             }
             else
             {
                 <div class="h-full rounded-lg border border-black/10 bg-white p-5">
-                    <p class="text-sm font-medium text-gray-600">@tile.Label</p>
-                    <p class="mt-1 text-3xl font-semibold tabular-nums">@tile.Value</p>
-                    <p class="mt-2 text-sm text-gray-600">@tile.Description</p>
+                    @{ TileBody(tile); }
                 </div>
             }
         </li>

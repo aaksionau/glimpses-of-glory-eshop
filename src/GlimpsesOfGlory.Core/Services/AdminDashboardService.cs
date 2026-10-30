@@ -20,8 +20,8 @@ public sealed class AdminDashboardService(AppDbContext db, TimeProvider timeProv
     }
 
     // Order.Total isn't mapped, so the sum is spelled out over its stored parts.
-    private async Task<decimal> RevenueSinceAsync(DateTimeOffset since, CancellationToken cancellationToken) =>
-        await db.Orders
+    private Task<decimal> RevenueSinceAsync(DateTimeOffset since, CancellationToken cancellationToken) =>
+        db.Orders
             .Where(o => o.PaidAt != null && o.PaidAt >= since && o.Status != OrderStatus.Cancelled)
             .SumAsync(o => o.Subtotal + o.ShippingCost, cancellationToken);
 }

@@ -6,6 +6,8 @@ namespace GlimpsesOfGlory.Web.Pages.Admin.Products;
 
 public class IndexModel(IAdminProductService adminProductService) : PageModel
 {
+    public const string LowStockHref = "/admin/products?lowStock=true";
+
     // ?lowStock=true, linked from the dashboard's low-stock number. Also posted back by the
     // hide/unhide buttons so the re-rendered table keeps the filter.
     [BindProperty(SupportsGet = true)]
