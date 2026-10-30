@@ -1,6 +1,7 @@
 using System.Text.Encodings.Web;
 using System.Text.RegularExpressions;
 using GlimpsesOfGlory.Abstractions.Constants;
+using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Web.Dtos;
 using GlimpsesOfGlory.Web.Pages.Checkout;
 using Microsoft.AspNetCore.Http;
@@ -121,7 +122,85 @@ public class CheckoutDetailsFormTests
 
         var html = await RenderOnCheckoutPageAsync(modelState);
 
-        Assert.Matches("<span [^>]*data-valmsg-for=\"Address.Email\"[^>]*>Enter your email.</span>", html);
+        Assert.Matches("<span (?=[^>]*data-valmsg-for=\"Address.Email\")[^>]*id=\"Address_Email-error\"[^>]*>Enter your email.</span>", html);
+    }
+
+    // The id is the one form-validation.js gives its own message when it re-checks the field, so
+    // assistive tech stays pointed at the current message either way.
+    [Theory]
+    [MemberData(nameof(AutocompleteTokens))]
+    public async Task InvalidField_OnCheckoutPage_IsLinkedToItsMessage(string fieldName, string _)
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError($"Address.{fieldName}", "Something is wrong.");
+
+        var html = await RenderOnCheckoutPageAsync(modelState);
+        var field = FindField(html, $"Address.{fieldName}");
+
+        Assert.Contains("aria-invalid=\"true\"", field);
+        Assert.Contains($"aria-describedby=\"Address_{fieldName}-error\"", field);
+        Assert.Matches($"<span (?=[^>]*data-valmsg-for=\"Address.{fieldName}\")[^>]*id=\"Address_{fieldName}-error\"[^>]*>Something is wrong.</span>", html);
+    }
+
+    [Fact]
+    public async Task ValidFields_OnCheckoutPage_AreNotMarkedInvalid()
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("Address.City", "City is required.");
+
+        var html = await RenderOnCheckoutPageAsync(modelState);
+
+        Assert.All(
+            Fields(html).Where(f => !f.Contains("name=\"Address.City\"")),
+            f => Assert.DoesNotContain("aria-", f));
+        Assert.Equal("id=\"Address_City-error\"", Assert.Single(Regex.Matches(html, "id=\"[^\"]*-error\"")).Value);
+    }
+
+    // Each field has a message span for form-validation.js to show its error in.
+    [Theory]
+    [MemberData(nameof(AutocompleteTokens))]
+    public async Task DetailsField_HasAMessageSpan(string fieldName, string _)
+    {
+        var html = await RenderOnCheckoutPageAsync(new ModelStateDictionary());
+
+        Assert.Contains($"data-valmsg-for=\"Address.{fieldName}\"", html);
+    }
+
+    // The shipping-only fields aren't [Required] (they're checked in CheckoutAddress.Validate),
+    // so the browser catches them by their required attribute and shows the server's message.
+    public static TheoryData<string> ShippingRequiredFields => new(CheckoutAddress.ShippingRequiredMessages.Keys);
+
+    [Theory]
+    [MemberData(nameof(ShippingRequiredFields))]
+    public async Task ShippingField_IsRequiredInTheBrowser_WithTheServersMessage(string fieldName)
+    {
+        var field = FindField(await RenderAsync(), fieldName);
+
+        Assert.Matches("\\srequired[\\s=>]", field);
+        Assert.Contains($"data-val-required=\"{CheckoutAddress.ShippingRequiredMessages[fieldName]}\"", field);
+    }
+
+    // The [Required]/[EmailAddress] fields get their wording from the generated data-val-* attributes.
+    [Fact]
+    public async Task ContactFields_CarryTheServersMessages_ForTheBrowser()
+    {
+        var html = await RenderAsync();
+
+        Assert.Contains("data-val-required=\"Email is required.\"", FindField(html, "Email"));
+        Assert.Contains("data-val-email=\"Enter a valid email address.\"", FindField(html, "Email"));
+        Assert.Contains("type=\"email\"", FindField(html, "Email"));
+        Assert.Contains("data-val-required=\"Full name is required.\"", FindField(html, "FullName"));
+    }
+
+    // Pickup disables the address fieldset, so the browser (and form-validation.js) skips its fields.
+    [Fact]
+    public async Task ShippingFields_SitInAFieldsetDisabledForPickup()
+    {
+        var html = await RenderAsync();
+        var fieldset = Regex.Match(html, "<fieldset\\b[^>]*>(.*?)</fieldset>", RegexOptions.Singleline);
+
+        Assert.Contains($":disabled=\"method !== '{FulfillmentMethod.Shipping}'\"", fieldset.Value);
+        Assert.All(CheckoutAddress.ShippingRequiredMessages.Keys, name => Assert.Single(Fields(fieldset.Groups[1].Value), f => f.Contains($"name=\"{name}\"")));
     }
 
     // A failed post re-renders from ModelState's attempted values, which the select tag helper

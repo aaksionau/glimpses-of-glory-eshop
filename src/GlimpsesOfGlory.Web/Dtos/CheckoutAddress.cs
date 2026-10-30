@@ -36,6 +36,17 @@ public sealed class CheckoutAddress : IValidatableObject
     [StringLength(100)]
     public string? Country { get; set; }
 
+    // The message for each street-address field left empty when shipping; the checkout form
+    // shows the same text when the browser catches the empty field first.
+    public static IReadOnlyDictionary<string, string> ShippingRequiredMessages { get; } = new Dictionary<string, string>
+    {
+        [nameof(AddressLine1)] = "Address is required.",
+        [nameof(City)] = "City is required.",
+        [nameof(State)] = "State/region is required.",
+        [nameof(PostalCode)] = "Postal code is required.",
+        [nameof(Country)] = "Country is required.",
+    };
+
     public bool IsPickup => FulfillmentMethod == FulfillmentMethod.Pickup;
 
     // Pickup orders don't need (or keep) a street address - drop anything left over
@@ -53,20 +64,20 @@ public sealed class CheckoutAddress : IValidatableObject
             yield break;
         }
 
-        (string? Value, string Name, string Message)[] requiredFields =
+        (string? Value, string Name)[] requiredFields =
         [
-            (AddressLine1, nameof(AddressLine1), "Address is required."),
-            (City, nameof(City), "City is required."),
-            (State, nameof(State), "State/region is required."),
-            (PostalCode, nameof(PostalCode), "Postal code is required."),
-            (Country, nameof(Country), "Country is required."),
+            (AddressLine1, nameof(AddressLine1)),
+            (City, nameof(City)),
+            (State, nameof(State)),
+            (PostalCode, nameof(PostalCode)),
+            (Country, nameof(Country)),
         ];
 
-        foreach (var (value, name, message) in requiredFields)
+        foreach (var (value, name) in requiredFields)
         {
             if (string.IsNullOrWhiteSpace(value))
             {
-                yield return new ValidationResult(message, [name]);
+                yield return new ValidationResult(ShippingRequiredMessages[name], [name]);
             }
         }
 
