@@ -1,2 +1,7 @@
-﻿<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
-<script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
+@* Client-side checks for forms whose fields carry data-val/required attributes: messages show next
+   to each field on submit (and on blur once a field has been checked) without a round-trip. The
+   layout doesn't load jQuery, so it comes with them. Fields that are hidden or inside a disabled
+   fieldset are skipped. *@
+<script src="~/js/jquery.min.js" asp-append-version="true"></script>
+<script src="~/js/jquery.validate.min.js" asp-append-version="true"></script>
+<script src="~/js/jquery.validate.unobtrusive.min.js" asp-append-version="true"></script>
