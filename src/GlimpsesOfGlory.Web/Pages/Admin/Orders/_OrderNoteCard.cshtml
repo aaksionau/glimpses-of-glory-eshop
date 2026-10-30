@@ -1,0 +1,23 @@
+@model GlimpsesOfGlory.Web.Pages.Admin.Orders.DetailsModel
+@using GlimpsesOfGlory.Abstractions.Constants
+
+@* Saved via htmx: the handler re-renders just this card in place. Admin-only - customers never see it. *@
+<section id="order-note" class="rounded-lg border border-black/10 bg-white p-4" aria-labelledby="order-note-heading">
+    <h2 id="order-note-heading" class="font-semibold">Internal note</h2>
+    <p class="text-sm text-gray-500 mb-2">Only visible to admins. Never shown to the customer.</p>
+
+    <form hx-post="/admin/orders/@Model.Order.Id?handler=SaveNote" hx-target="#order-note" hx-swap="outerHTML" asp-antiforgery="true" class="flex flex-col gap-2" data-order-note-form="true">
+        <label for="order-internal-note" class="sr-only">Internal note</label>
+        <textarea id="order-internal-note" asp-for="InternalNote" rows="4" maxlength="@OrderNotePolicy.MaxLength"
+                  placeholder="e.g. Customer called, collecting Friday"
+                  class="w-full border border-black/20 rounded px-3 py-2 text-sm"></textarea>
+        <span asp-validation-for="InternalNote" class="text-red-600 text-sm"></span>
+        <div class="flex items-center gap-3">
+            @if (!string.IsNullOrEmpty(Model.NoteStatusMessage))
+            {
+                <p class="text-sm text-green-700" role="status">@Model.NoteStatusMessage</p>
+            }
+            <button type="submit" class="ml-auto border border-black/20 bg-white hover:bg-gray-50 px-4 py-2 rounded-lg font-semibold text-sm">Save note</button>
+        </div>
+    </form>
+</section>

@@ -23,5 +23,8 @@ public interface IAdminOrderService
     // For cash orders, once the payment has been collected in person.
     Task<OrderUpdateResult> MarkPaidAsync(int id, CancellationToken cancellationToken);
 
+    // Replaces the order's admin-only note; a blank note clears it. Allowed in any status.
+    Task<OrderUpdateResult> UpdateInternalNoteAsync(int id, string? note, CancellationToken cancellationToken);
+
     Task<OrderUpdateResult> MarkCancelledAsync(int id, CancellationToken cancellationToken);
 }

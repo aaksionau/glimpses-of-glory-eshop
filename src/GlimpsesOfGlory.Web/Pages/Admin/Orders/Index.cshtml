@@ -99,6 +99,15 @@
                                 {
                                     <partial name="_Badge" model="OrderBadges.Pickup" />
                                 }
+                                @if (order.HasInternalNote)
+                                {
+                                    <span class="inline-flex items-center text-gray-600" title="Has an internal note" data-internal-note="true">
+                                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4">
+                                            <path d="M4 3a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h1v3l4-3h7a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H4Zm2 4h8a1 1 0 1 1 0 2H6a1 1 0 0 1 0-2Zm0 3h5a1 1 0 1 1 0 2H6a1 1 0 1 1 0-2Z" />
+                                        </svg>
+                                        <span class="sr-only">Has an internal note</span>
+                                    </span>
+                                }
                                 @if (order.NeedsRefund)
                                 {
                                     <partial name="_Badge" model="OrderBadges.RefundRequired" />

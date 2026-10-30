@@ -1,3 +1,4 @@
+using GlimpsesOfGlory.Abstractions.Constants;
 using GlimpsesOfGlory.Core.Entities;
 using GlimpsesOfGlory.Core.Extensions;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,7 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
             .IsUnique()
             .HasDatabaseName(StripePaymentIntentIdIndexName);
         builder.Ignore(o => o.IsPaid);
+        builder.Property(o => o.InternalNote).HasMaxLength(OrderNotePolicy.MaxLength);
         builder.ConfigureCheckoutHeader();
 
         builder.HasMany(o => o.Lines)

@@ -1,4 +1,5 @@
 using System.Globalization;
+using GlimpsesOfGlory.Abstractions.Constants;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
@@ -39,6 +40,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
                 o.Lines.Where(l => l.IsPreorder).Min(l => l.ExpectedAvailabilityDate),
                 OrderTransitionPolicy.NeedsRefund(o.Status, o.PaymentMethod, o.PaidAt != null),
                 OrderTransitionPolicy.NeedsAction(o.Status, o.PaidAt != null),
+                o.InternalNote != null,
                 o.CreatedAt))
             .ToListAsync(cancellationToken);
 
@@ -230,6 +232,22 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         return OrderUpdateResult.Updated;
     }
 
+    public async Task<OrderUpdateResult> UpdateInternalNoteAsync(int id, string? note, CancellationToken cancellationToken)
+    {
+        // Callers validate the normalized length first; this guard only catches a caller that didn't.
+        var normalized = OrderNotePolicy.Normalize(note);
+        if (normalized?.Length > OrderNotePolicy.MaxLength)
+        {
+            throw new ArgumentException($"An internal note can be at most {OrderNotePolicy.MaxLength} characters.", nameof(note));
+        }
+
+        var rows = await db.Orders
+            .Where(o => o.Id == id)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(o => o.InternalNote, normalized), cancellationToken);
+
+        return rows > 0 ? OrderUpdateResult.Updated : OrderUpdateResult.NotFound;
+    }
+
     private Task<OrderState?> GetStateAsync(int id, CancellationToken cancellationToken) =>
         db.Orders
             .Where(o => o.Id == id)
@@ -261,6 +279,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         order.Total,
         order.Status,
         order.TrackingNumber,
+        order.InternalNote,
         order.CreatedAt,
         order.PaidAt,
         order.ShippedAt,

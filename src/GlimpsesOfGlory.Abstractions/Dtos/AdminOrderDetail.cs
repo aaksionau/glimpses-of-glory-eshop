@@ -15,6 +15,8 @@ public sealed record AdminOrderDetail(
     decimal Total,
     OrderStatus Status,
     string? TrackingNumber,
+    // Admin-only; null when there is no note.
+    string? InternalNote,
     DateTimeOffset CreatedAt,
     // Null when the step hasn't happened - or happened before step timestamps were recorded.
     DateTimeOffset? PaidAt,
