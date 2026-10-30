@@ -98,7 +98,7 @@ public class CheckoutPaymentFormTests
     private static string ButtonContent(string html) =>
         Regex.Match(html, "<button\\b[^>]*id=\"submit-payment\"[^>]*>(.*?)</button>", RegexOptions.Singleline).Groups[1].Value;
 
-    private static string WebRootFile(params string[] parts) =>
+    internal static string WebRootFile(params string[] parts) =>
         Path.Combine([WebProjectDirectory(), "wwwroot", .. parts]);
 
     internal static string WebProjectDirectory()

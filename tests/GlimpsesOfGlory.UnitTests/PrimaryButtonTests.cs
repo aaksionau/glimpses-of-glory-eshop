@@ -89,27 +89,27 @@ public class PrimaryButtonTests
     private static string PagePath(string page) =>
         Path.Combine([CheckoutPaymentFormTests.WebProjectDirectory(), "Pages", .. page.Split('/')]);
 
-    private static string InputCss() =>
-        File.ReadAllText(Path.Combine(CheckoutPaymentFormTests.WebProjectDirectory(), "wwwroot", "assets", "css", "input.css"));
+    private static readonly string InputCss =
+        File.ReadAllText(CheckoutPaymentFormTests.WebRootFile("assets", "css", "input.css"));
 
     private static string PrimaryButtonRule()
     {
-        var match = Regex.Match(InputCss(), @"\.btn-primary\s*\{\s*@apply\s+([^;]+);");
+        var match = Regex.Match(InputCss, @"\.btn-primary\s*\{\s*@apply\s+([^;]+);");
         Assert.True(match.Success, "No .btn-primary rule in input.css");
         return match.Groups[1].Value;
     }
 
     private static string ThemeColour(string name)
     {
-        var match = Regex.Match(InputCss(), $@"--color-{Regex.Escape(name)}:\s*(#[0-9a-fA-F]{{6}});");
+        var match = Regex.Match(InputCss, $@"--color-{Regex.Escape(name)}:\s*(#[0-9a-fA-F]{{6}});");
         Assert.True(match.Success, $"No --color-{name} in input.css");
         return match.Groups[1].Value;
     }
 
     private static double ContrastRatio(string a, string b)
     {
-        var (lighter, darker) = (RelativeLuminance(a), RelativeLuminance(b)) is var (x, y) && x > y ? (x, y) : (y, x);
-        return (lighter + 0.05) / (darker + 0.05);
+        var (la, lb) = (RelativeLuminance(a), RelativeLuminance(b));
+        return (Math.Max(la, lb) + 0.05) / (Math.Min(la, lb) + 0.05);
     }
 
     // WCAG 2.x relative luminance of an sRGB hex colour.
