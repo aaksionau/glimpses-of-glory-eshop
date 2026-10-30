@@ -106,6 +106,36 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         _ => throw new ArgumentOutOfRangeException(nameof(tab), tab, null),
     };
 
+    public IAsyncEnumerable<AdminOrderExportRow> StreamOrdersForExport(DateOnly from, DateOnly to)
+    {
+        if (to < from)
+        {
+            throw new ArgumentException("The export range must not end before it starts.", nameof(to));
+        }
+
+        // Half-open [from, day after to) in UTC, so every moment of the last day is included.
+        var start = new DateTimeOffset(from.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        var end = new DateTimeOffset(to.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+
+        return db.Orders
+            .AsNoTracking()
+            .Where(o => o.CreatedAt >= start && o.CreatedAt < end)
+            .OrderBy(o => o.CreatedAt)
+            .ThenBy(o => o.Id)
+            .Select(o => new AdminOrderExportRow(
+                o.Id,
+                o.CreatedAt,
+                o.ShippingAddress.FullName,
+                o.Email,
+                o.FulfillmentMethod,
+                o.Status,
+                o.PaymentMethod,
+                o.PaidAt,
+                o.Subtotal,
+                o.ShippingCost))
+            .AsAsyncEnumerable();
+    }
+
     public async Task<AdminOrderDetail?> GetOrderAsync(int id, CancellationToken cancellationToken)
     {
         var order = await LoadWithLinesAsync(id, cancellationToken);

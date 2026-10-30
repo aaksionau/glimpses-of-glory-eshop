@@ -35,7 +35,7 @@ public class AdminOrderTabsTests
     public async Task IndexPage_LoadsTheSelectedTabAndCounts()
     {
         var service = new RecordingAdminOrderService();
-        var model = new IndexModel(service) { Status = "cancelled" };
+        var model = new IndexModel(service, TimeProvider.System) { Status = "cancelled" };
 
         await model.OnGetAsync(CancellationToken.None);
 
@@ -49,7 +49,7 @@ public class AdminOrderTabsTests
     {
         var service = new RecordingAdminOrderService();
 
-        await new IndexModel(service).OnGetAsync(CancellationToken.None);
+        await new IndexModel(service, TimeProvider.System).OnGetAsync(CancellationToken.None);
 
         Assert.Equal(AdminOrderTab.NeedsAction, service.RequestedTab);
     }
@@ -58,7 +58,7 @@ public class AdminOrderTabsTests
     public async Task IndexPage_PassesSearchFilterAndPageThrough()
     {
         var service = new RecordingAdminOrderService();
-        var model = new IndexModel(service) { Status = "all", Search = "  jane ", Preorder = true, PageNumber = 3 };
+        var model = new IndexModel(service, TimeProvider.System) { Status = "all", Search = "  jane ", Preorder = true, PageNumber = 3 };
 
         await model.OnGetAsync(CancellationToken.None);
 
@@ -73,7 +73,7 @@ public class AdminOrderTabsTests
     public async Task IndexPage_AdoptsThePageTheServiceActuallyReturned()
     {
         var service = new RecordingAdminOrderService { ReturnedPage = 2 };
-        var model = new IndexModel(service) { PageNumber = 99 };
+        var model = new IndexModel(service, TimeProvider.System) { PageNumber = 99 };
 
         await model.OnGetAsync(CancellationToken.None);
 
@@ -95,12 +95,79 @@ public class AdminOrderTabsTests
     public async Task IndexPage_PassesTheToFulfillAndUnpaidCashFiltersThrough()
     {
         var service = new RecordingAdminOrderService();
-        var model = new IndexModel(service) { ToFulfill = true, UnpaidCash = true };
+        var model = new IndexModel(service, TimeProvider.System) { ToFulfill = true, UnpaidCash = true };
 
         await model.OnGetAsync(CancellationToken.None);
 
         Assert.Equal(new AdminOrderFilter(ToFulfillOnly: true, UnpaidCashOnly: true), service.RequestedFilter);
         Assert.Equal(new AdminOrderFilter(ToFulfillOnly: true, UnpaidCashOnly: true), service.CountedFilter);
+    }
+
+    [Fact]
+    public async Task IndexPage_DefaultsTheExportRangeToTheCurrentMonthSoFar()
+    {
+        var model = new IndexModel(new RecordingAdminOrderService(), new FixedTimeProvider(new DateTimeOffset(2026, 10, 30, 23, 0, 0, TimeSpan.Zero)));
+
+        await model.OnGetAsync(CancellationToken.None);
+
+        Assert.Equal(new DateOnly(2026, 10, 1), model.ExportFrom);
+        Assert.Equal(new DateOnly(2026, 10, 30), model.ExportTo);
+    }
+
+    [Fact]
+    public async Task IndexPage_Export_StreamsTheRangeAsACsvAttachment()
+    {
+        var service = new RecordingAdminOrderService
+        {
+            ExportRows = [new AdminOrderExportRow(7, new DateTimeOffset(2026, 10, 2, 9, 30, 0, TimeSpan.Zero), "Jane", "jane@example.com", FulfillmentMethod.Shipping, OrderStatus.New, PaymentMethod.Card, null, 10m, 5m)],
+        };
+        var (model, body) = ExportPage(service, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31));
+
+        var result = await model.OnGetExportAsync(CancellationToken.None);
+
+        Assert.IsType<Microsoft.AspNetCore.Mvc.EmptyResult>(result);
+        Assert.Equal((new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31)), service.ExportedRange);
+        Assert.Equal(OrderCsvExport.ContentType, model.Response.ContentType);
+        Assert.Equal("attachment; filename=orders-2026-10-01-to-2026-10-31.csv", model.Response.Headers.ContentDisposition.ToString());
+        var csv = System.Text.Encoding.UTF8.GetString(body.ToArray());
+        Assert.Contains("\r\n7,2026-10-02 09:30,Jane,jane@example.com,Shipping,New,Card,,10.00,5.00,15.00\r\n", csv);
+    }
+
+    [Theory]
+    [InlineData(null, "2026-10-31")]
+    [InlineData("2026-10-01", null)]
+    [InlineData("2026-10-31", "2026-10-01")]
+    public async Task IndexPage_Export_WithAMissingOrBackwardsRange_ShowsAnErrorInsteadOfExporting(string? from, string? to)
+    {
+        var service = new RecordingAdminOrderService();
+        var (model, body) = ExportPage(service, from is null ? null : DateOnly.Parse(from), to is null ? null : DateOnly.Parse(to));
+
+        var result = await model.OnGetExportAsync(CancellationToken.None);
+
+        Assert.IsType<Microsoft.AspNetCore.Mvc.RazorPages.PageResult>(result);
+        Assert.NotNull(model.ExportError);
+        Assert.Null(service.ExportedRange);
+        Assert.Equal(0, body.Length);
+        Assert.NotNull(service.RequestedTab);
+    }
+
+    private static (IndexModel Model, MemoryStream Body) ExportPage(RecordingAdminOrderService service, DateOnly? from, DateOnly? to)
+    {
+        var body = new MemoryStream();
+        var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+        httpContext.Response.Body = body;
+        var model = new IndexModel(service, TimeProvider.System)
+        {
+            ExportFrom = from,
+            ExportTo = to,
+            PageContext = new Microsoft.AspNetCore.Mvc.RazorPages.PageContext { HttpContext = httpContext },
+        };
+        return (model, body);
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
     }
 
     [Fact]
@@ -168,6 +235,16 @@ public class AdminOrderTabsTests
         {
             CountedFilter = filter;
             return Task.FromResult(new AdminOrderTabCounts(1, 0, 2, 3));
+        }
+
+        public (DateOnly From, DateOnly To)? ExportedRange { get; private set; }
+
+        public List<AdminOrderExportRow> ExportRows { get; init; } = [];
+
+        public IAsyncEnumerable<AdminOrderExportRow> StreamOrdersForExport(DateOnly from, DateOnly to)
+        {
+            ExportedRange = (from, to);
+            return ExportRows.ToAsyncEnumerable();
         }
 
         public Task<AdminOrderDetail?> GetOrderAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();

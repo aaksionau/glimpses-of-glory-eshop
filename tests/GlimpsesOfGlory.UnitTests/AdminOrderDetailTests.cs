@@ -563,6 +563,8 @@ public class AdminOrderDetailTests
         public Task<AdminOrderTabCounts> GetOrderTabCountsAsync(AdminOrderFilter filter, CancellationToken cancellationToken) =>
             Task.FromResult(new AdminOrderTabCounts(0, 0, 0, 0));
 
+        public IAsyncEnumerable<AdminOrderExportRow> StreamOrdersForExport(DateOnly from, DateOnly to) => throw new NotSupportedException();
+
         public Task<AdminOrderDetail?> GetOrderAsync(int id, CancellationToken cancellationToken) =>
             Task.FromResult<AdminOrderDetail?>(id == current.Id ? current : null);
 

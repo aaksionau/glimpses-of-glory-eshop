@@ -52,6 +52,26 @@
     }
 </form>
 
+@* A plain GET so the browser downloads the file; the range covers whole UTC days, both ends included. *@
+<form method="get" action="/admin/orders" aria-label="Export orders to CSV" class="mb-4 flex flex-wrap items-end gap-3">
+    <input type="hidden" name="handler" value="export" />
+    <div>
+        <label for="export-from" class="block text-sm text-gray-600">From</label>
+        <input id="export-from" type="date" name="from" value="@Model.ExportFrom?.ToString("yyyy-MM-dd")" required
+               class="border border-black/30 px-2 py-1" />
+    </div>
+    <div>
+        <label for="export-to" class="block text-sm text-gray-600">To</label>
+        <input id="export-to" type="date" name="to" value="@Model.ExportTo?.ToString("yyyy-MM-dd")" required
+               class="border border-black/30 px-2 py-1" />
+    </div>
+    <button type="submit" class="border border-black px-3 py-1 text-sm hover:bg-black hover:text-white">Export CSV</button>
+    @if (Model.ExportError is { } exportError)
+    {
+        <p role="alert" class="w-full text-sm text-red-700">@exportError</p>
+    }
+</form>
+
 <div class="overflow-x-auto">
     @if (Model.Orders.Orders.Count == 0)
     {
