@@ -27,4 +27,10 @@ public interface IAdminOrderService
     Task<OrderUpdateResult> UpdateInternalNoteAsync(int id, string? note, CancellationToken cancellationToken);
 
     Task<OrderUpdateResult> MarkCancelledAsync(int id, CancellationToken cancellationToken);
+
+    // Re-sends the buyer's order confirmation email; any order that isn't cancelled. Changes nothing on the order.
+    Task<EmailResendResult> ResendConfirmationAsync(int id, CancellationToken cancellationToken);
+
+    // Re-sends the shipped (or ready-for-pickup) email; only while the order is shipped/ready. Changes nothing on the order.
+    Task<EmailResendResult> ResendShippedEmailAsync(int id, CancellationToken cancellationToken);
 }

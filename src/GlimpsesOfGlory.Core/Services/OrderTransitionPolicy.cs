@@ -17,6 +17,14 @@ public static class OrderTransitionPolicy
 
     public static bool CanMarkPaid(OrderStatus status, bool isPaid) => !isPaid && status != OrderStatus.Cancelled;
 
+    // Resending a customer email never changes the order. A cancelled order's confirmation would
+    // mislead the buyer, so it's withheld.
+    public static bool CanResendConfirmation(OrderStatus status) => status != OrderStatus.Cancelled;
+
+    // The shipped / ready-for-pickup email only fits while the order is in that step; once a pickup
+    // order is collected, "ready for pickup" is stale.
+    public static bool CanResendShippedEmail(OrderStatus status) => status == OrderStatus.Shipped;
+
     // Cancelling doesn't touch the money, so a paid card order needs refunding by hand in Stripe.
     // Cash is settled in person and is out of scope.
     public static bool NeedsRefund(OrderStatus status, PaymentMethod paymentMethod, bool isPaid) =>

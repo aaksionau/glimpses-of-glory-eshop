@@ -130,6 +130,41 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
         return await OrderStatusPartialAsync(id, result, _ => "Order marked as cancelled.", cancellationToken);
     }
 
+    // Resends swap the same #order-status fragment, showing whether the email went out. They change
+    // nothing on the order, so there's nothing to swap out of band.
+    public Task<IActionResult> OnPostResendConfirmationAsync(int id, CancellationToken cancellationToken) =>
+        ResendEmailPartialAsync(id, adminOrderService.ResendConfirmationAsync, _ => "order confirmation email", cancellationToken);
+
+    public Task<IActionResult> OnPostResendShippedEmailAsync(int id, CancellationToken cancellationToken) =>
+        ResendEmailPartialAsync(id, adminOrderService.ResendShippedEmailAsync, o => FulfillmentLabels.ShippedEmailName(o.FulfillmentMethod), cancellationToken);
+
+    // emailName gets the reloaded order so the shipped email can be named by fulfillment method.
+    private async Task<IActionResult> ResendEmailPartialAsync(int id, Func<int, CancellationToken, Task<EmailResendResult>> resend, Func<AdminOrderDetail, string> emailName, CancellationToken cancellationToken)
+    {
+        var result = await resend(id, cancellationToken);
+        if (result == EmailResendResult.NotFound)
+        {
+            return NotFound();
+        }
+
+        return await ReloadPartialAsync(id, order =>
+        {
+            var name = emailName(order);
+            switch (result)
+            {
+                case EmailResendResult.Sent:
+                    StatusMessage = $"The {name} was resent to {order.Address.Email}.";
+                    break;
+                case EmailResendResult.NotAllowed:
+                    ErrorMessage = $"The {name} can't be resent for this order's current status. Nothing was sent.";
+                    break;
+                default:
+                    ErrorMessage = $"The {name} couldn't be sent. Please try again later.";
+                    break;
+            }
+        }, cancellationToken);
+    }
+
     // statusMessage gets the reloaded order so the wording can depend on it (e.g. shipped vs. ready for pickup).
     private async Task<IActionResult> OrderStatusPartialAsync(int id, OrderUpdateResult result, Func<AdminOrderDetail, string> statusMessage, CancellationToken cancellationToken)
     {
@@ -138,6 +173,25 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
             return NotFound();
         }
 
+        return await ReloadPartialAsync(id, order =>
+        {
+            IsHtmxUpdate = true;
+            if (result == OrderUpdateResult.InvalidTransition)
+            {
+                // Usually a stale page (the order changed in another tab) - the re-rendered
+                // fragment shows the current status and only the actions it still allows.
+                ErrorMessage = "That action isn't allowed for this order's current status. Nothing was changed.";
+            }
+            else
+            {
+                StatusMessage = statusMessage(order);
+            }
+        }, cancellationToken);
+    }
+
+    // Reloads the order and re-renders the #order-status fragment; setMessages fills in the outcome.
+    private async Task<IActionResult> ReloadPartialAsync(int id, Action<AdminOrderDetail> setMessages, CancellationToken cancellationToken)
+    {
         var order = await adminOrderService.GetOrderAsync(id, cancellationToken);
         if (order is null)
         {
@@ -145,17 +199,7 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
         }
 
         ShowOrder(order);
-        IsHtmxUpdate = true;
-        if (result == OrderUpdateResult.InvalidTransition)
-        {
-            // Usually a stale page (the order changed in another tab) - the re-rendered
-            // fragment shows the current status and only the actions it still allows.
-            ErrorMessage = "That action isn't allowed for this order's current status. Nothing was changed.";
-        }
-        else
-        {
-            StatusMessage = statusMessage(order);
-        }
+        setMessages(order);
         return Partial("_OrderStatus", this);
     }
 

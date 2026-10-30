@@ -12,6 +12,10 @@ public static class FulfillmentLabels
     public static string ShippedStatus(FulfillmentMethod fulfillmentMethod) =>
         fulfillmentMethod == FulfillmentMethod.Pickup ? "Ready for pickup" : "Shipped";
 
+    // The customer email sent on OrderStatus.Shipped, as the admin order page names it.
+    public static string ShippedEmailName(FulfillmentMethod fulfillmentMethod) =>
+        fulfillmentMethod == FulfillmentMethod.Pickup ? "ready-for-pickup email" : "shipping email";
+
     public static string Status(OrderStatus status, FulfillmentMethod fulfillmentMethod) => status switch
     {
         OrderStatus.Shipped => ShippedStatus(fulfillmentMethod),

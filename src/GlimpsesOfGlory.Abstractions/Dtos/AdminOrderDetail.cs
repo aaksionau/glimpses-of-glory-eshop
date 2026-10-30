@@ -27,4 +27,7 @@ public sealed record AdminOrderDetail(
     bool CanMarkPickedUp,
     bool CanMarkPaid,
     bool CanMarkCancelled,
-    bool NeedsRefund);
+    bool NeedsRefund,
+    bool CanResendConfirmation,
+    // The shipped email, or the ready-for-pickup email for pickup orders.
+    bool CanResendShippedEmail);

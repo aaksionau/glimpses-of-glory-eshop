@@ -49,9 +49,29 @@
             }
         </div>
     }
-    else if (!Model.Order.CanMarkCancelled)
+    else if (!Model.Order.CanResendConfirmation && !Model.Order.CanResendShippedEmail)
     {
         <p class="text-sm text-gray-500">No further actions for this order.</p>
+    }
+
+    @if (Model.Order.CanResendConfirmation || Model.Order.CanResendShippedEmail)
+    {
+        @* Resending never changes the order; the result shows in the messages above. *@
+        <div class="mt-4 border-t border-black/10 pt-3 flex flex-col gap-2">
+            <h3 class="text-sm text-gray-500">Customer emails</h3>
+            @if (Model.Order.CanResendConfirmation)
+            {
+                <form hx-post="/admin/orders/@Model.Order.Id?handler=ResendConfirmation" hx-target="#order-status" hx-swap="outerHTML" asp-antiforgery="true" data-order-action="ResendConfirmation">
+                    <button type="submit" class="w-full @SecondaryButton">Resend confirmation</button>
+                </form>
+            }
+            @if (Model.Order.CanResendShippedEmail)
+            {
+                <form hx-post="/admin/orders/@Model.Order.Id?handler=ResendShippedEmail" hx-target="#order-status" hx-swap="outerHTML" asp-antiforgery="true" data-order-action="ResendShippedEmail">
+                    <button type="submit" class="w-full @SecondaryButton">Resend @FulfillmentLabels.ShippedEmailName(Model.Order.FulfillmentMethod)</button>
+                </form>
+            }
+        </div>
     }
 
     @if (Model.Order.CanMarkCancelled)

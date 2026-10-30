@@ -455,6 +455,116 @@ public sealed class AdminOrderServiceTests : IDisposable
         Assert.DoesNotContain(customerView.GetProperties(), p => p.Name.Contains("Note", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public async Task ResendConfirmation_SendsTheConfirmation_AndChangesNothing()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Shipped, paidAt: T1, shippedAt: T1, lines: [Line()]);
+        var before = await LoadAsync(id);
+        var emailSender = new RecordingEmailSender();
+        clock.Now = T2;
+
+        var result = await Service(emailSender).ResendConfirmationAsync(id, CancellationToken.None);
+
+        Assert.Equal(EmailResendResult.Sent, result);
+        var sent = Assert.Single(emailSender.Confirmations);
+        Assert.Equal(id, sent.OrderId);
+        Assert.Equal("shopper@example.com", sent.Address.Email);
+        Assert.Single(sent.Lines);
+        Assert.Empty(emailSender.Shipped);
+        AssertUnchanged(before, await LoadAsync(id));
+    }
+
+    [Fact]
+    public async Task ResendShippedEmail_SendsTheShippedEmail_AndChangesNothing()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.Shipped, shippedAt: T1, trackingNumber: "TRACK1");
+        var before = await LoadAsync(id);
+        var emailSender = new RecordingEmailSender();
+        clock.Now = T2;
+
+        var result = await Service(emailSender).ResendShippedEmailAsync(id, CancellationToken.None);
+
+        Assert.Equal(EmailResendResult.Sent, result);
+        var sent = Assert.Single(emailSender.Shipped);
+        Assert.Equal(FulfillmentMethod.Pickup, sent.FulfillmentMethod);
+        Assert.Equal("TRACK1", sent.TrackingNumber);
+        Assert.Empty(emailSender.Confirmations);
+        AssertUnchanged(before, await LoadAsync(id));
+    }
+
+    [Fact]
+    public async Task ResendConfirmation_CancelledOrder_IsNotAllowed_AndSendsNothing()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Cancelled);
+        var emailSender = new RecordingEmailSender();
+
+        Assert.Equal(EmailResendResult.NotAllowed, await Service(emailSender).ResendConfirmationAsync(id, CancellationToken.None));
+        Assert.Empty(emailSender.Confirmations);
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.New)]
+    [InlineData(OrderStatus.PickedUp)]
+    [InlineData(OrderStatus.Cancelled)]
+    public async Task ResendShippedEmail_BeforeShippedOrAfterIt_IsNotAllowed_AndSendsNothing(OrderStatus status)
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Pickup, status: status);
+        var emailSender = new RecordingEmailSender();
+
+        Assert.Equal(EmailResendResult.NotAllowed, await Service(emailSender).ResendShippedEmailAsync(id, CancellationToken.None));
+        Assert.Empty(emailSender.Shipped);
+    }
+
+    [Fact]
+    public async Task Resend_UnknownOrder_IsNotFound()
+    {
+        Assert.Equal(EmailResendResult.NotFound, await Service().ResendConfirmationAsync(999, CancellationToken.None));
+        Assert.Equal(EmailResendResult.NotFound, await Service().ResendShippedEmailAsync(999, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Resend_WhenTheEmailFails_ReportsFailed_AndChangesNothing()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Shipped, shippedAt: T1);
+        var before = await LoadAsync(id);
+        var service = Service(new RecordingEmailSender { Fail = true });
+
+        Assert.Equal(EmailResendResult.Failed, await service.ResendConfirmationAsync(id, CancellationToken.None));
+        Assert.Equal(EmailResendResult.Failed, await service.ResendShippedEmailAsync(id, CancellationToken.None));
+        AssertUnchanged(before, await LoadAsync(id));
+    }
+
+    [Fact]
+    public async Task Resend_WhenTheEmailTimesOut_ReportsFailed()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Shipped, shippedAt: T1);
+        var service = Service(new RecordingEmailSender { TimeOut = true });
+
+        Assert.Equal(EmailResendResult.Failed, await service.ResendConfirmationAsync(id, CancellationToken.None));
+        Assert.Equal(EmailResendResult.Failed, await service.ResendShippedEmailAsync(id, CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.New, true, false)]
+    [InlineData(OrderStatus.Shipped, true, true)]
+    [InlineData(OrderStatus.PickedUp, true, false)]
+    [InlineData(OrderStatus.Cancelled, false, false)]
+    public async Task GetOrder_ExposesWhichEmailsCanBeResent(OrderStatus status, bool confirmation, bool shipped)
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Pickup, status: status);
+
+        var detail = await Service().GetOrderAsync(id, CancellationToken.None);
+
+        Assert.Equal((confirmation, shipped), (detail!.CanResendConfirmation, detail.CanResendShippedEmail));
+    }
+
+    private static void AssertUnchanged(Order before, Order after)
+    {
+        Assert.Equal(
+            (before.Status, before.TrackingNumber, before.CreatedAt, before.PaidAt, before.ShippedAt, before.PickedUpAt, before.CancelledAt),
+            (after.Status, after.TrackingNumber, after.CreatedAt, after.PaidAt, after.ShippedAt, after.PickedUpAt, after.CancelledAt));
+    }
+
     private static async Task<List<int>> IdsAsync(AdminOrderService service, AdminOrderTab tab, AdminOrderFilter? filter = null)
     {
         var page = await service.GetOrdersAsync(tab, filter ?? AdminOrderFilter.None, 1, 100, CancellationToken.None);
@@ -487,7 +597,8 @@ public sealed class AdminOrderServiceTests : IDisposable
         string email = "shopper@example.com",
         string customerName = "Jane Shopper",
         List<OrderLine>? lines = null,
-        string? internalNote = null)
+        string? internalNote = null,
+        string? trackingNumber = null)
     {
         await using var db = CreateDb();
         var order = new Order
@@ -502,6 +613,7 @@ public sealed class AdminOrderServiceTests : IDisposable
             CreatedAt = createdAt ?? new DateTimeOffset(2026, 8, 1, 9, 0, 0, TimeSpan.Zero),
             ShippedAt = shippedAt,
             InternalNote = internalNote,
+            TrackingNumber = trackingNumber,
         };
         db.Orders.Add(order);
         await db.SaveChangesAsync();
@@ -518,11 +630,30 @@ public sealed class AdminOrderServiceTests : IDisposable
     {
         public List<OrderShippedView> Shipped { get; } = [];
 
-        public Task SendOrderConfirmationAsync(OrderConfirmationView order, CancellationToken cancellationToken) => Task.CompletedTask;
+        public List<OrderConfirmationView> Confirmations { get; } = [];
 
-        public Task SendShippedNotificationAsync(OrderShippedView order, CancellationToken cancellationToken)
+        // Simulates the email provider rejecting the send.
+        public bool Fail { get; init; }
+
+        // Simulates an HttpClient timeout, which surfaces as a TaskCanceledException.
+        public bool TimeOut { get; init; }
+
+        public Task SendOrderConfirmationAsync(OrderConfirmationView order, CancellationToken cancellationToken) => Record(Confirmations, order);
+
+        public Task SendShippedNotificationAsync(OrderShippedView order, CancellationToken cancellationToken) => Record(Shipped, order);
+
+        private Task Record<T>(List<T> sent, T email)
         {
-            Shipped.Add(order);
+            if (Fail)
+            {
+                throw new HttpRequestException("Resend rejected email (500)");
+            }
+            if (TimeOut)
+            {
+                throw new TaskCanceledException("The request was canceled due to the configured HttpClient.Timeout.");
+            }
+
+            sent.Add(email);
             return Task.CompletedTask;
         }
     }

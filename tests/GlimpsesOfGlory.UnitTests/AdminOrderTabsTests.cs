@@ -181,5 +181,9 @@ public class AdminOrderTabsTests
         public Task<OrderUpdateResult> UpdateInternalNoteAsync(int id, string? note, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<OrderUpdateResult> MarkCancelledAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<EmailResendResult> ResendConfirmationAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<EmailResendResult> ResendShippedEmailAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

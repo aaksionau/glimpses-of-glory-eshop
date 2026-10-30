@@ -76,4 +76,24 @@ public class OrderTransitionPolicyTests
     {
         Assert.Equal(expected, OrderTransitionPolicy.NeedsAction(status, isPaid));
     }
+
+    [Theory]
+    [InlineData(OrderStatus.New, true)]
+    [InlineData(OrderStatus.Shipped, true)]
+    [InlineData(OrderStatus.PickedUp, true)]
+    [InlineData(OrderStatus.Cancelled, false)]
+    public void CanResendConfirmation_UnlessCancelled(OrderStatus status, bool expected)
+    {
+        Assert.Equal(expected, OrderTransitionPolicy.CanResendConfirmation(status));
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.New, false)]
+    [InlineData(OrderStatus.Shipped, true)]
+    [InlineData(OrderStatus.PickedUp, false)]
+    [InlineData(OrderStatus.Cancelled, false)]
+    public void CanResendShippedEmail_OnlyWhileShippedOrReady(OrderStatus status, bool expected)
+    {
+        Assert.Equal(expected, OrderTransitionPolicy.CanResendShippedEmail(status));
+    }
 }
