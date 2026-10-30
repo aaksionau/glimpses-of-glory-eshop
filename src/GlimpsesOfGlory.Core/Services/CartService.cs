@@ -1,6 +1,5 @@
 using GlimpsesOfGlory.Abstractions.Constants;
 using GlimpsesOfGlory.Abstractions.Dtos;
-using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Core.ValueObjects;
 
@@ -16,17 +15,18 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
             .Select(l => new CartLineView(l.ProductSlug, l.ProductName, l.ThumbnailFileName, l.UnitPrice, l.Quantity, l.IsPreorder, l.ExpectedAvailabilityDate))
             .ToList();
 
-        return new CartSummary(lines, cart.Subtotal);
+        var shippingCost = await CalculateShippingCostAsync(cart, cancellationToken);
+        return new CartSummary(lines, cart.Subtotal, shippingCost);
     }
 
-    public async Task<decimal> GetShippingCostAsync(FulfillmentMethod fulfillmentMethod, CancellationToken cancellationToken)
+    private async Task<decimal> CalculateShippingCostAsync(Cart cart, CancellationToken cancellationToken)
     {
-        if (fulfillmentMethod == FulfillmentMethod.Pickup)
+        // An empty cart ships nothing; skip the tier lookup (GetSummaryAsync runs on
+        // every cart page view).
+        if (cart.TotalQuantity <= 0)
         {
             return 0m;
         }
-
-        var cart = await cartStore.GetCartAsync(cancellationToken);
 
         // Built per call (not injected as a singleton) so admin edits to shipping
         // tiers (#11) take effect immediately without a redeploy.

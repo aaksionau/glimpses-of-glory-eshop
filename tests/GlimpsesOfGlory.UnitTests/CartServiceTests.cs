@@ -25,10 +25,13 @@ public class CartServiceTests
             => Task.FromResult(product);
     }
 
-    private sealed class FakeShippingSettingsService : IShippingSettingsService
+    // With no tiers given, defaults to a single flat $7.50 tier.
+    private sealed class FakeShippingSettingsService(params ShippingTierView[] tiers) : IShippingSettingsService
     {
+        private readonly IReadOnlyList<ShippingTierView> tiers = tiers.Length > 0 ? tiers : [new ShippingTierView(1, 1, 7.50m)];
+
         public Task<IReadOnlyList<ShippingTierView>> GetTiersAsync(CancellationToken cancellationToken)
-            => Task.FromResult<IReadOnlyList<ShippingTierView>>([new ShippingTierView(1, 1, 7.50m)]);
+            => Task.FromResult(tiers);
 
         public Task UpdateTiersAsync(IReadOnlyList<ShippingTierUpdate> tiers, CancellationToken cancellationToken)
             => Task.CompletedTask;
@@ -40,26 +43,69 @@ public class CartServiceTests
     private static CartService CreateService(FakeCartStore cartStore, ProductDetail? product) =>
         new(cartStore, new FakeProductCatalogService(product), new FakeShippingSettingsService());
 
+    // $8 for 1-2 items, $5 from 3 items.
+    private static CartService CreateTieredService(FakeCartStore cartStore, ProductDetail? product) =>
+        new(cartStore, new FakeProductCatalogService(product), new FakeShippingSettingsService(
+            new ShippingTierView(1, 1, 8.00m), new ShippingTierView(2, 3, 5.00m)));
+
     [Fact]
-    public async Task GetShippingCostAsync_UsesShippingTiers_WhenShipping()
+    public async Task GetSummaryAsync_IncludesShippingCostForCurrentQuantity()
+    {
+        var cartStore = new FakeCartStore();
+        var service = CreateTieredService(cartStore, CreateProduct(stockQuantity: 10));
+        await service.AddLineAsync("widget", 2, CancellationToken.None);
+
+        var summary = await service.GetSummaryAsync(CancellationToken.None);
+
+        Assert.Equal(8.00m, summary.ShippingCost);
+    }
+
+    [Fact]
+    public async Task GetSummaryAsync_ShippingCostFollowsQuantityChange()
+    {
+        var cartStore = new FakeCartStore();
+        var service = CreateTieredService(cartStore, CreateProduct(stockQuantity: 10));
+        await service.AddLineAsync("widget", 1, CancellationToken.None);
+
+        await service.UpdateLineQuantityAsync("widget", 3, CancellationToken.None);
+        var summary = await service.GetSummaryAsync(CancellationToken.None);
+
+        Assert.Equal(5.00m, summary.ShippingCost);
+    }
+
+    [Fact]
+    public async Task GetSummaryAsync_ShippingCostIsZero_AfterLastLineRemoved()
+    {
+        var cartStore = new FakeCartStore();
+        var service = CreateTieredService(cartStore, CreateProduct(stockQuantity: 10));
+        await service.AddLineAsync("widget", 2, CancellationToken.None);
+
+        await service.RemoveLineAsync("widget", CancellationToken.None);
+        var summary = await service.GetSummaryAsync(CancellationToken.None);
+
+        Assert.Equal(0m, summary.ShippingCost);
+    }
+
+    [Fact]
+    public async Task GetSummaryAsync_ShippingCostFor_UsesShippingTiers_WhenShipping()
     {
         var cartStore = new FakeCartStore();
         var service = CreateService(cartStore, CreateProduct(stockQuantity: 5));
         await service.AddLineAsync("widget", 1, CancellationToken.None);
 
-        var cost = await service.GetShippingCostAsync(FulfillmentMethod.Shipping, CancellationToken.None);
+        var cost = (await service.GetSummaryAsync(CancellationToken.None)).ShippingCostFor(FulfillmentMethod.Shipping);
 
         Assert.Equal(7.50m, cost);
     }
 
     [Fact]
-    public async Task GetShippingCostAsync_IsFree_WhenPickup()
+    public async Task GetSummaryAsync_ShippingCostFor_IsFree_WhenPickup()
     {
         var cartStore = new FakeCartStore();
         var service = CreateService(cartStore, CreateProduct(stockQuantity: 5));
         await service.AddLineAsync("widget", 1, CancellationToken.None);
 
-        var cost = await service.GetShippingCostAsync(FulfillmentMethod.Pickup, CancellationToken.None);
+        var cost = (await service.GetSummaryAsync(CancellationToken.None)).ShippingCostFor(FulfillmentMethod.Pickup);
 
         Assert.Equal(0m, cost);
     }

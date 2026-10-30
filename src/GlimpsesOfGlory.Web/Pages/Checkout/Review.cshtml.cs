@@ -33,7 +33,7 @@ public class ReviewModel(ICartService cartService, IOrderService orderService, C
 
         Cart = cart;
         Address = address;
-        ShippingCost = await cartService.GetShippingCostAsync(address.FulfillmentMethod, cancellationToken);
+        ShippingCost = cart.ShippingCostFor(address.FulfillmentMethod);
         return Page();
     }
 
