@@ -26,20 +26,17 @@ public class CheckoutDetailsFormTests
     [Fact]
     public async Task EveryDetailsInput_HasAnAutocompleteToken()
     {
-        var html = await RenderAsync();
-
-        var inputs = Regex.Matches(html, "<input\\b[^>]*>")
-            .Select(m => m.Value)
-            .ToList();
+        var inputs = Inputs(await RenderAsync()).ToList();
 
         Assert.Equal(8, inputs.Count);
         Assert.All(inputs, i => Assert.Contains("autocomplete=\"", i));
     }
 
     private static string FindInput(string html, string fieldName) =>
-        Assert.Single(
-            Regex.Matches(html, "<input\\b[^>]*>").Select(m => m.Value),
-            i => i.Contains($"name=\"{fieldName}\""));
+        Assert.Single(Inputs(html), i => i.Contains($"name=\"{fieldName}\""));
+
+    private static IEnumerable<string> Inputs(string html) =>
+        Regex.Matches(html, "<input\\b[^>]*>").Select(m => m.Value);
 
     private static Task<string> RenderAsync() =>
         RazorViewToStringRendererTests.CreateRenderer()
