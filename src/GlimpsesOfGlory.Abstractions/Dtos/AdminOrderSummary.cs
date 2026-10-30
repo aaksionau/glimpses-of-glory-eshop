@@ -12,6 +12,8 @@ public sealed record AdminOrderSummary(
     FulfillmentMethod FulfillmentMethod,
     bool IsPaid,
     bool HasPreorderLines,
+    // The soonest expected availability date across the order's preorder lines, if any carry one.
+    DateOnly? EarliestExpectedAvailability,
     bool NeedsRefund,
     bool NeedsAction,
     DateTimeOffset CreatedAt);

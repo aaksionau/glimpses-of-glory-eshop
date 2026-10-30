@@ -19,4 +19,7 @@ public static class PreorderNoteFormatter
         expectedAvailabilityDate is { } date
             ? $"Expected available {date:MMM d, yyyy}"
             : "No expected availability date";
+
+    // Admin orders list: the soonest any of the order's preorder lines is expected to be available.
+    public static string EarliestAvailability(DateOnly date) => $"Earliest available {date:MMM d, yyyy}";
 }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Expressions;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
@@ -15,10 +16,21 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
     private static readonly Expression<Func<Order, bool>> NeedsActionFilter =
         o => o.Status == OrderStatus.New || (o.PaidAt == null && o.Status != OrderStatus.Cancelled);
 
-    public async Task<IReadOnlyList<AdminOrderSummary>> GetOrdersAsync(AdminOrderTab tab, CancellationToken cancellationToken)
+    public async Task<AdminOrderPage> GetOrdersAsync(AdminOrderTab tab, AdminOrderFilter filter, int page, int pageSize, CancellationToken cancellationToken)
     {
-        return await InTab(db.Orders.AsNoTracking(), tab)
+        ArgumentOutOfRangeException.ThrowIfLessThan(pageSize, 1);
+
+        var orders = Filtered(InTab(db.Orders.AsNoTracking(), tab), filter);
+        var totalCount = await orders.CountAsync(cancellationToken);
+        var lastPage = Math.Max(1, (totalCount + pageSize - 1) / pageSize);
+        page = Math.Clamp(page, 1, lastPage);
+
+        // Id breaks CreatedAt ties so an order can't appear on two pages, or on none.
+        var items = await orders
             .OrderByDescending(o => o.CreatedAt)
+            .ThenByDescending(o => o.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(o => new AdminOrderSummary(
                 o.Id,
                 o.ShippingAddress.FullName,
@@ -29,20 +41,54 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
                 o.FulfillmentMethod,
                 o.PaidAt != null,
                 o.Lines.Any(l => l.IsPreorder),
+                o.Lines.Where(l => l.IsPreorder).Min(l => l.ExpectedAvailabilityDate),
                 OrderTransitionPolicy.NeedsRefund(o.Status, o.PaymentMethod, o.PaidAt != null),
                 OrderTransitionPolicy.NeedsAction(o.Status, o.PaidAt != null),
                 o.CreatedAt))
             .ToListAsync(cancellationToken);
+
+        return new AdminOrderPage(items, page, pageSize, totalCount);
     }
 
     // One COUNT query per tab; the DbContext can't run them concurrently.
-    public async Task<AdminOrderTabCounts> GetOrderTabCountsAsync(CancellationToken cancellationToken)
+    public async Task<AdminOrderTabCounts> GetOrderTabCountsAsync(AdminOrderFilter filter, CancellationToken cancellationToken)
     {
-        var needsAction = await InTab(db.Orders, AdminOrderTab.NeedsAction).CountAsync(cancellationToken);
-        var shipped = await InTab(db.Orders, AdminOrderTab.Shipped).CountAsync(cancellationToken);
-        var cancelled = await InTab(db.Orders, AdminOrderTab.Cancelled).CountAsync(cancellationToken);
-        var all = await db.Orders.CountAsync(cancellationToken);
+        var orders = Filtered(db.Orders, filter);
+        var needsAction = await InTab(orders, AdminOrderTab.NeedsAction).CountAsync(cancellationToken);
+        var shipped = await InTab(orders, AdminOrderTab.Shipped).CountAsync(cancellationToken);
+        var cancelled = await InTab(orders, AdminOrderTab.Cancelled).CountAsync(cancellationToken);
+        var all = await orders.CountAsync(cancellationToken);
         return new AdminOrderTabCounts(needsAction, shipped, cancelled, all);
+    }
+
+    private static IQueryable<Order> Filtered(IQueryable<Order> orders, AdminOrderFilter filter)
+    {
+        if (filter.PreorderOnly)
+        {
+            orders = orders.Where(o => o.Lines.Any(l => l.IsPreorder));
+        }
+
+        var search = filter.Search?.Trim();
+        if (string.IsNullOrEmpty(search))
+        {
+            return orders;
+        }
+
+        // "#42" is unambiguously an order number; a bare "42" could also be part of an email.
+        var orderNumberOnly = search.StartsWith('#');
+        var term = search.TrimStart('#').Trim();
+        int? orderId = int.TryParse(term, NumberStyles.None, CultureInfo.InvariantCulture, out var id) ? id : null;
+        if (orderNumberOnly)
+        {
+            return orderId is { } exact ? orders.Where(o => o.Id == exact) : orders.Where(o => false);
+        }
+
+        // Lower-cased on both sides so the match is case-insensitive on Postgres too.
+        var lowered = term.ToLowerInvariant();
+        return orders.Where(o =>
+            o.Id == orderId
+            || o.Email.ToLower().Contains(lowered)
+            || o.ShippingAddress.FullName.ToLower().Contains(lowered));
     }
 
     private static IQueryable<Order> InTab(IQueryable<Order> orders, AdminOrderTab tab) => tab switch

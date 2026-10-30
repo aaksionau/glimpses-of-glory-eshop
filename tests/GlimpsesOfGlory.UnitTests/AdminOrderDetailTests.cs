@@ -227,10 +227,10 @@ public class AdminOrderDetailTests
 
         public int UpdateCount { get; private set; }
 
-        public Task<IReadOnlyList<AdminOrderSummary>> GetOrdersAsync(AdminOrderTab tab, CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<AdminOrderSummary>>([]);
+        public Task<AdminOrderPage> GetOrdersAsync(AdminOrderTab tab, AdminOrderFilter filter, int page, int pageSize, CancellationToken cancellationToken) =>
+            Task.FromResult(new AdminOrderPage([], 1, pageSize, 0));
 
-        public Task<AdminOrderTabCounts> GetOrderTabCountsAsync(CancellationToken cancellationToken) =>
+        public Task<AdminOrderTabCounts> GetOrderTabCountsAsync(AdminOrderFilter filter, CancellationToken cancellationToken) =>
             Task.FromResult(new AdminOrderTabCounts(0, 0, 0, 0));
 
         public Task<AdminOrderDetail?> GetOrderAsync(int id, CancellationToken cancellationToken) =>
