@@ -393,6 +393,16 @@ public sealed class AdminOrderServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateInternalNote_StoresLineEndingsAsLf()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Shipping);
+
+        await Service().UpdateInternalNoteAsync(id, "Line one\r\nLine two", CancellationToken.None);
+
+        Assert.Equal("Line one\nLine two", (await LoadAsync(id)).InternalNote);
+    }
+
+    [Fact]
     public async Task UpdateInternalNote_UnknownOrder_IsNotFound()
     {
         Assert.Equal(OrderUpdateResult.NotFound, await Service().UpdateInternalNoteAsync(999, "Note", CancellationToken.None));

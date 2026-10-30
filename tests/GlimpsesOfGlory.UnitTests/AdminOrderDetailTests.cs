@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using GlimpsesOfGlory.Abstractions.Constants;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
@@ -203,11 +204,11 @@ public class AdminOrderDetailTests
         var result = await model.OnPostSaveNoteAsync(42, CancellationToken.None);
 
         var partial = Assert.IsType<PartialViewResult>(result);
-        Assert.Equal("_OrderNote", partial.ViewName);
+        Assert.Equal("_OrderNoteCard", partial.ViewName);
         Assert.Equal("Customer called, collecting Friday", model.Order.InternalNote);
         Assert.Equal("Note saved.", model.NoteStatusMessage);
 
-        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderNote.cshtml", model);
+        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderNoteCard.cshtml", model);
         Assert.Contains("id=\"order-note\"", html);
         Assert.Contains("hx-post=\"/admin/orders/42?handler=SaveNote\"", html);
         Assert.Contains("hx-target=\"#order-note\"", html);
@@ -239,9 +240,39 @@ public class AdminOrderDetailTests
         var result = await model.OnPostSaveNoteAsync(42, CancellationToken.None);
 
         var partial = Assert.IsType<PartialViewResult>(result);
-        Assert.Equal("_OrderNote", partial.ViewName);
+        Assert.Equal("_OrderNoteCard", partial.ViewName);
         Assert.Equal(0, service.NoteUpdateCount);
         Assert.Null(model.NoteStatusMessage);
+    }
+
+    [Fact]
+    public async Task SaveNote_TooLongAfterNormalizing_ShowsAValidationMessage_AndSavesNothing()
+    {
+        var service = new FakeAdminOrderService(Order());
+        var model = CreateModel(service);
+        model.InternalNote = new string('x', OrderNotePolicy.MaxLength + 1);
+
+        var result = await model.OnPostSaveNoteAsync(42, CancellationToken.None);
+
+        Assert.IsType<PartialViewResult>(result);
+        Assert.False(model.ModelState.IsValid);
+        Assert.Equal(0, service.NoteUpdateCount);
+    }
+
+    [Fact]
+    public async Task SaveNote_LengthIsCheckedOnTheNormalizedNote()
+    {
+        // Padding and CRLF line endings push the raw post over the limit; the stored note fits exactly.
+        var lines = new string('x', OrderNotePolicy.MaxLength / 2 - 1);
+        var service = new FakeAdminOrderService(Order());
+        var model = CreateModel(service);
+        model.InternalNote = $"   {lines}\r\n{lines}\r\n   ";
+
+        await model.OnPostSaveNoteAsync(42, CancellationToken.None);
+
+        Assert.True(model.ModelState.IsValid);
+        Assert.Equal(1, service.NoteUpdateCount);
+        Assert.Equal($"{lines}\n{lines}", model.Order.InternalNote);
     }
 
     [Fact]
@@ -259,7 +290,7 @@ public class AdminOrderDetailTests
         var model = new DetailsModel(new FakeAdminOrderService(Order() with { InternalNote = "Gift wrap it" }));
         await model.OnGetAsync(42, CancellationToken.None);
 
-        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderNote.cshtml", model);
+        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderNoteCard.cshtml", model);
 
         Assert.Contains("Gift wrap it</textarea>", html);
         Assert.DoesNotContain("role=\"status\"", html);
@@ -327,7 +358,7 @@ public class AdminOrderDetailTests
             }
 
             NoteUpdateCount++;
-            current = current with { InternalNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim() };
+            current = current with { InternalNote = OrderNotePolicy.Normalize(note) };
             return Task.FromResult(OrderUpdateResult.Updated);
         }
 

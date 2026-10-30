@@ -234,16 +234,16 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
 
     public async Task<OrderUpdateResult> UpdateInternalNoteAsync(int id, string? note, CancellationToken cancellationToken)
     {
-        // Stored trimmed, and blank as null, so "has a note" is a plain null check.
-        var trimmed = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
-        if (trimmed?.Length > OrderNotePolicy.MaxLength)
+        // Callers validate the normalized length first; this guard only catches a caller that didn't.
+        var normalized = OrderNotePolicy.Normalize(note);
+        if (normalized?.Length > OrderNotePolicy.MaxLength)
         {
             throw new ArgumentException($"An internal note can be at most {OrderNotePolicy.MaxLength} characters.", nameof(note));
         }
 
         var rows = await db.Orders
             .Where(o => o.Id == id)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(o => o.InternalNote, trimmed), cancellationToken);
+            .ExecuteUpdateAsync(setters => setters.SetProperty(o => o.InternalNote, normalized), cancellationToken);
 
         return rows > 0 ? OrderUpdateResult.Updated : OrderUpdateResult.NotFound;
     }
