@@ -70,6 +70,7 @@ public class OrderCsvExportTests
     [InlineData("+1", "'+1")]
     [InlineData("-1", "'-1")]
     [InlineData("@SUM(A1)", "'@SUM(A1)")]
+    [InlineData("＝SUM(A1)", "'＝SUM(A1)")]
     public async Task Write_NeutralizesFormulasInCustomerText(string name, string expected)
     {
         var lines = await LinesAsync(Row(1, name: name));

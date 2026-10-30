@@ -239,7 +239,7 @@ public class AdminOrderTabsTests
 
         public List<AdminOrderExportRow> ExportRows { get; init; } = [];
 
-        public IAsyncEnumerable<AdminOrderExportRow> StreamOrdersForExport(DateOnly from, DateOnly to)
+        public IAsyncEnumerable<AdminOrderExportRow> StreamOrdersForExportAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
         {
             ExportedRange = (from, to);
             return ExportRows.ToAsyncEnumerable();

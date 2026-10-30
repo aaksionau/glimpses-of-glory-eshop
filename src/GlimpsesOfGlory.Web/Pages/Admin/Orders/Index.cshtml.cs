@@ -65,7 +65,7 @@ public class IndexModel(IAdminOrderService adminOrderService, TimeProvider timeP
             {
                 FileName = OrderCsvExport.FileName(from, to),
             }.ToString();
-            await OrderCsvExport.WriteAsync(adminOrderService.StreamOrdersForExport(from, to), Response.Body, cancellationToken);
+            await OrderCsvExport.WriteAsync(adminOrderService.StreamOrdersForExportAsync(from, to, cancellationToken), Response.Body, cancellationToken);
             return new EmptyResult();
         }
 

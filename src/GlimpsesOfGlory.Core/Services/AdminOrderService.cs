@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using GlimpsesOfGlory.Abstractions.Constants;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
@@ -106,7 +107,7 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         _ => throw new ArgumentOutOfRangeException(nameof(tab), tab, null),
     };
 
-    public IAsyncEnumerable<AdminOrderExportRow> StreamOrdersForExport(DateOnly from, DateOnly to)
+    public IAsyncEnumerable<AdminOrderExportRow> StreamOrdersForExportAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
     {
         if (to < from)
         {
@@ -117,7 +118,15 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
         var start = new DateTimeOffset(from.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
         var end = new DateTimeOffset(to.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
 
-        return db.Orders
+        return StreamOrdersCreatedBetweenAsync(start, end, cancellationToken);
+    }
+
+    // An async iterator, so the token is honored even if the caller never calls WithCancellation;
+    // kept apart from the public method so a backwards range still throws eagerly.
+    private async IAsyncEnumerable<AdminOrderExportRow> StreamOrdersCreatedBetweenAsync(
+        DateTimeOffset start, DateTimeOffset end, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var rows = db.Orders
             .AsNoTracking()
             .Where(o => o.CreatedAt >= start && o.CreatedAt < end)
             .OrderBy(o => o.CreatedAt)
@@ -133,7 +142,13 @@ public sealed class AdminOrderService(AppDbContext db, IInventoryStore inventory
                 o.PaidAt,
                 o.Subtotal,
                 o.ShippingCost))
-            .AsAsyncEnumerable();
+            .AsAsyncEnumerable()
+            .WithCancellation(cancellationToken);
+
+        await foreach (var row in rows)
+        {
+            yield return row;
+        }
     }
 
     public async Task<AdminOrderDetail?> GetOrderAsync(int id, CancellationToken cancellationToken)

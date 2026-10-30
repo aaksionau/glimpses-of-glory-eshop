@@ -62,10 +62,11 @@ public static class OrderCsvExport
     private static string Escape(string value) =>
         value.AsSpan().IndexOfAny(",\"\r\n") >= 0 ? $"\"{value.Replace("\"", "\"\"")}\"" : value;
 
-    // Customer-entered text starting with a formula character would run as a formula in Excel
-    // (CSV injection), so it is prefixed with an apostrophe to keep it literal.
+    // Customer-entered text starting with a formula character (OWASP's list, fullwidth forms
+    // included) would run as a formula in Excel (CSV injection), so it is prefixed with an
+    // apostrophe to keep it literal.
     private static string Text(string value) =>
-        value.Length > 0 && "=+-@\t\r".Contains(value[0]) ? "'" + value : value;
+        value.Length > 0 && "=+-@\t\r\n＝＋－＠".Contains(value[0]) ? "'" + value : value;
 
     private static string Timestamp(DateTimeOffset at) =>
         at.ToUniversalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
