@@ -76,6 +76,36 @@ public class CartPolishTests
     }
 
     [Fact]
+    public async Task UndoRemove_OfALineAlreadyBackInTheCart_DoesNotAddItAgain()
+    {
+        var cartService = new InMemoryCartService(Sunrise, Harbour);
+
+        var result = await CartPage(cartService).OnPostUndoRemoveAsync("sunrise", 2, CancellationToken.None);
+
+        var view = Assert.IsType<CartLinesView>(Assert.IsType<PartialViewResult>(result).Model);
+        Assert.Empty(cartService.Added);
+        Assert.Null(view.Message);
+    }
+
+    [Fact]
+    public async Task CartLines_AfterRemoving_FocusTheUndoButton()
+    {
+        var html = await RenderCartLinesAsync(new CartLinesView(Cart(Harbour), [], RemovedLine: Sunrise));
+
+        Assert.Matches("<button type=\"submit\" autofocus[^>]*>Undo</button>", html);
+    }
+
+    [Fact]
+    public async Task CartLines_EveryCartForm_DropsAPostWhileAnotherIsInFlight()
+    {
+        var html = await RenderCartLinesAsync(new CartLinesView(Cart(Sunrise), [], RemovedLine: Harbour));
+        var forms = Regex.Matches(html, "<form[^>]*hx-post=\"/cart[^>]*>");
+
+        Assert.Equal(3, forms.Count);
+        Assert.All(forms, f => Assert.Contains("hx-sync=\"closest #cart-lines:drop\"", f.Value));
+    }
+
+    [Fact]
     public async Task CartLines_AfterRemovingTheLastLine_StillOfferUndo()
     {
         var html = await RenderCartLinesAsync(new CartLinesView(Cart(), [], RemovedLine: Sunrise));

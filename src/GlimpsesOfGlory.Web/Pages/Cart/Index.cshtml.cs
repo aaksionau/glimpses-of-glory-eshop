@@ -49,8 +49,15 @@ public class IndexModel(ICartService cartService) : PageModel
     }
 
     // Puts a removed line back. It's re-added like any add to cart, so stock and price are checked again.
+    // A line already in the cart is left alone, so a repeated Undo (a retry, a second tab) can't add it twice.
     public async Task<IActionResult> OnPostUndoRemoveAsync(string slug, int quantity, CancellationToken cancellationToken)
     {
+        Cart = await cartService.GetSummaryAsync(cancellationToken);
+        if (Cart.Lines.Any(l => l.ProductSlug == slug))
+        {
+            return Partial("_CartLines", new CartLinesView(Cart, []));
+        }
+
         var result = await cartService.AddLineAsync(slug, quantity, cancellationToken);
         Cart = await cartService.GetSummaryAsync(cancellationToken);
         return Partial("_CartLines", new CartLinesView(Cart, [], Message: result.Success ? null : result.ErrorMessage));
