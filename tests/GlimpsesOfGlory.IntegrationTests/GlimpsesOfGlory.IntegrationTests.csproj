@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.16.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- Stateless doubles shared with the unit tests rather than copied. -->
+  <ItemGroup>
+    <Compile Include="../GlimpsesOfGlory.UnitTests/FakePaymentGateway.cs" Link="Shared/FakePaymentGateway.cs" />
+    <Compile Include="../GlimpsesOfGlory.UnitTests/FixedTimeProvider.cs" Link="Shared/FixedTimeProvider.cs" />
+    <Compile Include="../GlimpsesOfGlory.UnitTests/NullEmailSender.cs" Link="Shared/NullEmailSender.cs" />
+    <!-- Not thread-safe, but in the race tests only the winning transition sends an email. -->
+    <Compile Include="../GlimpsesOfGlory.UnitTests/RecordingEmailSender.cs" Link="Shared/RecordingEmailSender.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GlimpsesOfGlory.Core\GlimpsesOfGlory.Core.csproj" />
+  </ItemGroup>
+
+</Project>
