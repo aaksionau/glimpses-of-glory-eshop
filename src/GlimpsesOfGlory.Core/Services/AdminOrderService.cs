@@ -237,14 +237,10 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
         {
             return;
         }
-        try
-        {
-            await send(order);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to send {EmailKind} email for order {OrderId}", emailKind, order.Id);
-        }
+        await BestEffortEmail.TrySendAsync(
+            () => send(order),
+            ex => logger.LogError(ex, "Failed to send {EmailKind} email for order {OrderId}", emailKind, order.Id),
+            cancellationToken);
     }
 
     public Task<OrderUpdateResult> MarkPickedUpAsync(int id, CancellationToken cancellationToken) =>
@@ -331,18 +327,11 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
             return EmailResendResult.NotAllowed;
         }
 
-        try
-        {
-            await send(order);
-            return EmailResendResult.Sent;
-        }
-        // Filtered on the caller's token, not the exception type: an HttpClient timeout is also an
-        // OperationCanceledException and must surface as Failed, not escape as a 500.
-        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
-        {
-            logger.LogError(ex, "Failed to resend {EmailKind} email for order {OrderId}", emailKind, order.Id);
-            return EmailResendResult.Failed;
-        }
+        var sent = await BestEffortEmail.TrySendAsync(
+            () => send(order),
+            ex => logger.LogError(ex, "Failed to resend {EmailKind} email for order {OrderId}", emailKind, order.Id),
+            cancellationToken);
+        return sent ? EmailResendResult.Sent : EmailResendResult.Failed;
     }
 
     private Task<Order?> LoadWithLinesAsync(int id, CancellationToken cancellationToken) =>

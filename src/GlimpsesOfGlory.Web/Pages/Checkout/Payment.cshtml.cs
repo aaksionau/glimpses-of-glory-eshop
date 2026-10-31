@@ -27,15 +27,10 @@ public class PaymentModel(
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         var cart = await cartService.GetSummaryAsync(cancellationToken);
-        if (cart.Lines.Count == 0)
-        {
-            return RedirectToPage("/Cart/Index");
-        }
-
         var address = checkoutSessionStore.GetAddress();
-        if (address is null)
+        if (CheckoutStepGuard.ShouldRedirect(cart, address, out var redirect))
         {
-            return RedirectToPage("/Checkout/Index");
+            return redirect;
         }
 
         var existingPaymentIntentId = checkoutSessionStore.GetPaymentIntentId();
