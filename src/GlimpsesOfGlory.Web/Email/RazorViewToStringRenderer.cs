@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Routing;
 
-namespace GlimpsesOfGlory.Web.Helpers;
+namespace GlimpsesOfGlory.Web.Email;
 
 // Renders a .cshtml view (not a routable Razor Page) to an HTML string outside of an
 // HTTP request, using ASP.NET Core's built-in Razor view engine - no third-party

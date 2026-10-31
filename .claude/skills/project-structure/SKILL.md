@@ -26,13 +26,20 @@ src/
     AppDbContext.cs, Migrations/
 
   GlimpsesOfGlory.Web/             (references both; see boundary rule below)
-    Pages/, Helpers/ (SessionCartStore.cs, CheckoutSessionStore.cs), Dtos/ (CheckoutAddress.cs),
-    Configuration/, Security/, Program.cs
+    Pages/        Razor Pages (routing folders)
+    Emails/       Razor email templates (OrderConfirmation.cshtml, ...)
+    Email/        ResendEmailSender (IEmailSender over Resend's HTTP API), RazorViewToStringRenderer
+    TagHelpers/   FieldValidationAriaTagHelper, ValidationMessageIdTagHelper
+    Formatting/   display text: *Labels, OrderBadges, OrderTimeline, RelativeTime, SeoText,
+                  PreorderNoteFormatter, CheckoutMessages, FieldValidationMessages
+    Helpers/      what fits no more specific kind: session stores, CheckoutStepGuard,
+                  AdminOrderListState, OrderCsvExport, nav sections, ...
+    Dtos/ (CheckoutAddress.cs), Configuration/, Security/, Program.cs
 ```
 
 Both `Abstractions` and `Core` are organized **type-first and flat**: the top-level split is by kind (`Services/`, `Dtos/`, `Entities/`, `EntityConfigurations/`, ...), and files sit directly in that folder — no per-feature subfolder underneath. A file's feature is conveyed by its name and class name (`ProductCatalogService.cs`, `OrderConfiguration.cs`), not by its path. This means the namespace for every file in a given kind-folder is the same (`GlimpsesOfGlory.Core.Services`, `GlimpsesOfGlory.Abstractions.Dtos`, etc.) regardless of which feature it belongs to.
 
-`Web` does **not** use this layout: it has no `Cart/` or `Checkout/` folders of its own (`Pages/Cart`, `Pages/Checkout` are just Razor Pages routing folders, not feature or kind folders). Web-only support types are still grouped by kind: session stores and other helper classes go in `Helpers/`, plain data-transfer types go in `Dtos/`. Keep this flat — don't reintroduce `Web/<Feature>/` folders.
+`Web` does **not** use this layout: it has no `Cart/` or `Checkout/` folders of its own (`Pages/Cart`, `Pages/Checkout` are just Razor Pages routing folders, not feature or kind folders). Web-only support types are still grouped by kind: tag helpers go in `TagHelpers/`, email sending/rendering in `Email/`, display-label and message formatters in `Formatting/`, plain data-transfer types in `Dtos/`, and session stores and other helpers that fit no more specific kind in `Helpers/`. Namespaces follow the folder (`GlimpsesOfGlory.Web.Formatting`, ...); `Pages/_ViewImports.cshtml` imports `Formatting` and `Helpers` for all pages. Keep this flat — don't reintroduce `Web/<Feature>/` folders.
 
 ## The boundary rule
 

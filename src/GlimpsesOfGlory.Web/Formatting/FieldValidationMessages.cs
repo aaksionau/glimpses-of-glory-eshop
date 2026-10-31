@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
-namespace GlimpsesOfGlory.Web.Helpers;
+namespace GlimpsesOfGlory.Web.Formatting;
 
 // What FieldValidationAriaTagHelper and ValidationMessageIdTagHelper agree on: whether a field
 // failed validation, and the id of its message.

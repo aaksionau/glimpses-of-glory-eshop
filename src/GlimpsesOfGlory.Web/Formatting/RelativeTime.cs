@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace GlimpsesOfGlory.Web.Helpers;
+namespace GlimpsesOfGlory.Web.Formatting;
 
 public static class RelativeTime
 {

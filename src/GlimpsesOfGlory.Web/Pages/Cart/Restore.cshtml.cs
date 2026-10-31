@@ -1,4 +1,5 @@
 using GlimpsesOfGlory.Abstractions.Services;
+using GlimpsesOfGlory.Web.Formatting;
 using GlimpsesOfGlory.Web.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;

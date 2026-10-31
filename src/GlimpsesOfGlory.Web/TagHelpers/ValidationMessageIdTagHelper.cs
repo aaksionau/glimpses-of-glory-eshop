@@ -1,8 +1,9 @@
+using GlimpsesOfGlory.Web.Formatting;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 
-namespace GlimpsesOfGlory.Web.Helpers;
+namespace GlimpsesOfGlory.Web.TagHelpers;
 
 // Gives a server-side validation message span the id "<field id>-error" so the invalid field's
 // aria-describedby (see FieldValidationAriaTagHelper) can point at it. wwwroot/js/form-validation.js

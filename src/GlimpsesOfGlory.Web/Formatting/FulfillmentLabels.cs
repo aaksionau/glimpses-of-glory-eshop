@@ -1,6 +1,6 @@
 using GlimpsesOfGlory.Abstractions.Enums;
 
-namespace GlimpsesOfGlory.Web.Helpers;
+namespace GlimpsesOfGlory.Web.Formatting;
 
 public static class FulfillmentLabels
 {

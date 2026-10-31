@@ -2,7 +2,7 @@ using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Web.Dtos;
 
-namespace GlimpsesOfGlory.Web.Helpers;
+namespace GlimpsesOfGlory.Web.Formatting;
 
 // The steps shown on the admin order detail page: Placed -> Paid -> Shipped for shipping orders,
 // Placed -> Paid -> Ready for pickup -> Picked up for pickup orders, or Placed -> (Paid) ->

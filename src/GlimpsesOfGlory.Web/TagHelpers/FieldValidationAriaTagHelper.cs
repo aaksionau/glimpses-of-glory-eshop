@@ -1,8 +1,9 @@
+using GlimpsesOfGlory.Web.Formatting;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 
-namespace GlimpsesOfGlory.Web.Helpers;
+namespace GlimpsesOfGlory.Web.TagHelpers;
 
 // Marks a form control that failed server-side validation as aria-invalid and points its
 // aria-describedby at the message that ValidationMessageIdTagHelper renders for it, so assistive
