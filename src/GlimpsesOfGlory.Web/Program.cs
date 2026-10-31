@@ -1,12 +1,10 @@
-using GlimpsesOfGlory.Abstractions.Dtos;
-using GlimpsesOfGlory.Abstractions.Enums;
-using GlimpsesOfGlory.Abstractions.Exceptions;
 using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Core;
 using GlimpsesOfGlory.Core.Options;
 using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Web.Configuration;
 using GlimpsesOfGlory.Web.Email;
+using GlimpsesOfGlory.Web.Endpoints;
 using GlimpsesOfGlory.Web.Helpers;
 using GlimpsesOfGlory.Web.Security;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -15,7 +13,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
 using System.Globalization;
-using System.Xml.Linq;
 
 if (args is ["hash-password", var passwordToHash])
 {
@@ -139,66 +136,7 @@ app.MapStaticAssets();
 app.MapRazorPages()
    .WithStaticAssets();
 
-app.MapGet("/robots.txt", (HttpRequest request) =>
-{
-    var baseUrl = $"{request.Scheme}://{request.Host}";
-    var content = $"""
-        User-agent: *
-        Allow: /
-        Disallow: /admin
-        Disallow: /cart
-        Disallow: /checkout
-
-        Sitemap: {baseUrl}/sitemap.xml
-        """;
-    return Results.Text(content, "text/plain");
-});
-
-app.MapGet("/sitemap.xml", async (
-    HttpRequest request,
-    IProductCatalogService productCatalogService,
-    CancellationToken cancellationToken) =>
-{
-    var baseUrl = $"{request.Scheme}://{request.Host}";
-    var products = await productCatalogService.GetProductsAsync(cancellationToken);
-
-    var urls = new List<string> { $"{baseUrl}/", $"{baseUrl}/products" };
-    urls.AddRange(products.Select(p => $"{baseUrl}/products/{p.Slug}"));
-
-    XNamespace ns = "http://www.sitemaps.org/schemas/sitemap/0.9";
-    var document = new XDocument(
-        new XDeclaration("1.0", "utf-8", null),
-        new XElement(ns + "urlset", urls.Select(url => new XElement(ns + "url", new XElement(ns + "loc", url)))));
-
-    return Results.Text(document.ToString(), "application/xml");
-});
-
-app.MapPost("/webhooks/stripe", async (
-    HttpRequest request,
-    IPaymentGateway paymentGateway,
-    IOrderService orderService,
-    CancellationToken cancellationToken) =>
-{
-    using var reader = new StreamReader(request.Body);
-    var payload = await reader.ReadToEndAsync(cancellationToken);
-    var signature = request.Headers["Stripe-Signature"].ToString();
-
-    PaymentWebhookResult result;
-    try
-    {
-        result = paymentGateway.HandleWebhookEvent(payload, signature);
-    }
-    catch (PaymentSignatureVerificationException)
-    {
-        return Results.BadRequest();
-    }
-
-    if (result is { Outcome: PaymentEventOutcome.Succeeded, PaymentIntentId: not null })
-    {
-        await orderService.ConfirmPaymentAsync(result.PaymentIntentId, cancellationToken);
-    }
-
-    return Results.Ok();
-});
+app.MapSeoEndpoints();
+app.MapStripeWebhook();
 
 app.Run();

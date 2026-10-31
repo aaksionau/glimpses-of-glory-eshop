@@ -7,6 +7,8 @@ namespace GlimpsesOfGlory.IntegrationTests;
 // own connection) over it; disposing drops the database.
 public sealed class TestDatabase(string connectionString, Func<Task> drop) : IAsyncDisposable
 {
+    public string ConnectionString => connectionString;
+
     public AppDbContext CreateDb(params IInterceptor[] interceptors) =>
         new(PostgresFixture.OptionsBuilder(connectionString).AddInterceptors(interceptors).Options);
 

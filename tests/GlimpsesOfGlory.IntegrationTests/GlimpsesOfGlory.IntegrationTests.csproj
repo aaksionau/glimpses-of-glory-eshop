@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.16.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
@@ -16,7 +17,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
-  <!-- Stateless doubles shared with the unit tests rather than copied. -->
+  <!-- Doubles shared with the unit tests rather than copied. Each test builds its own instances,
+       so mutable ones (FakePaymentGateway.NextWebhookResult) are never shared between tests. -->
   <ItemGroup>
     <Compile Include="../GlimpsesOfGlory.UnitTests/FakePaymentGateway.cs" Link="Shared/FakePaymentGateway.cs" />
     <Compile Include="../GlimpsesOfGlory.UnitTests/FixedTimeProvider.cs" Link="Shared/FixedTimeProvider.cs" />
@@ -27,6 +29,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\GlimpsesOfGlory.Core\GlimpsesOfGlory.Core.csproj" />
+    <ProjectReference Include="..\..\src\GlimpsesOfGlory.Web\GlimpsesOfGlory.Web.csproj" />
   </ItemGroup>
 
 </Project>
