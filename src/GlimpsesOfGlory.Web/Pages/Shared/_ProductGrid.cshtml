@@ -1,0 +1,17 @@
+@model IReadOnlyList<GlimpsesOfGlory.Abstractions.Dtos.ProductSummary>
+@{
+    // A partial never takes a layout; this also keeps it renderable on its own (in tests).
+    Layout = null;
+    // A page whose grid starts above the fold sets ViewData["EagerImageCount"] (e.g. one desktop row) so those
+    // photos aren't lazy and the likely LCP image isn't delayed; every other card stays lazy.
+    var eagerImageCount = ViewData["EagerImageCount"] as int? ?? 0;
+}
+
+@* The one product grid, shared by the home page's featured pieces and All products. gap-4 on phones
+   leaves the two-column cards more room. *@
+<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4" data-testid="product-grid">
+    @for (var i = 0; i < Model.Count; i++)
+    {
+        <partial name="_ProductCard" model="Model[i]" view-data="@(new ViewDataDictionary(ViewData) { ["EagerImage"] = i < eagerImageCount })" />
+    }
+</div>
