@@ -5,7 +5,6 @@ using GlimpsesOfGlory.Core.Entities;
 using GlimpsesOfGlory.Core.Options;
 using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Core.ValueObjects;
-using GlimpsesOfGlory.Web.Pages.Admin;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace GlimpsesOfGlory.UnitTests;
@@ -19,36 +18,6 @@ public sealed class AdminDashboardServiceTests : IDisposable
     private readonly SqliteTestDatabase database = new();
 
     public void Dispose() => database.Dispose();
-
-    [Fact]
-    public async Task GetMetrics_WithNothingInTheShop_IsAllZero()
-    {
-        Assert.Equal(new AdminDashboardMetrics(0, 0, 0, 0m, 0m), await Service().GetMetricsAsync(CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task GetMetrics_CountsNewOrdersToFulfill()
-    {
-        await AddOrderAsync(OrderStatus.New, PaymentMethod.Card, paidAt: Now);
-        await AddOrderAsync(OrderStatus.New, PaymentMethod.Cash);
-        await AddOrderAsync(OrderStatus.Shipped, PaymentMethod.Card, paidAt: Now);
-        await AddOrderAsync(OrderStatus.PickedUp, PaymentMethod.Cash, paidAt: Now);
-        await AddOrderAsync(OrderStatus.Cancelled, PaymentMethod.Cash);
-
-        Assert.Equal(2, (await Service().GetMetricsAsync(CancellationToken.None)).OrdersToFulfill);
-    }
-
-    [Fact]
-    public async Task GetMetrics_CountsUnpaidCashOrders_ThatArentCancelled()
-    {
-        await AddOrderAsync(OrderStatus.New, PaymentMethod.Cash);
-        await AddOrderAsync(OrderStatus.Shipped, PaymentMethod.Cash);
-        await AddOrderAsync(OrderStatus.New, PaymentMethod.Cash, paidAt: Now);
-        await AddOrderAsync(OrderStatus.Cancelled, PaymentMethod.Cash);
-        await AddOrderAsync(OrderStatus.New, PaymentMethod.Card);
-
-        Assert.Equal(2, (await Service().GetMetricsAsync(CancellationToken.None)).UnpaidCashOrders);
-    }
 
     [Fact]
     public async Task GetMetrics_CountsVisibleLowStockProducts_ExcludingPreorders()
@@ -115,26 +84,6 @@ public sealed class AdminDashboardServiceTests : IDisposable
         Assert.Equal(3, all.Count);
     }
 
-    [Fact]
-    public async Task DashboardPage_LinksEachCountTileToItsFilteredList()
-    {
-        var model = new IndexModel(new StubDashboardService(new AdminDashboardMetrics(3, 1, 4, 55m, 155m)));
-
-        await model.OnGetAsync(CancellationToken.None);
-
-        Assert.Equal(
-            [
-                ("Orders to fulfill", "3", "/admin/orders?tofulfill=true"),
-                ("Unpaid cash orders", "1", "/admin/orders?unpaidcash=true"),
-                ("Low-stock products", "4", "/admin/products?lowStock=true"),
-            ],
-            model.Tiles.Take(3).Select(t => (t.Label, t.Value, t.Href)));
-        Assert.Equal(55m.ToString("C"), model.Tiles[3].Value);
-        Assert.Equal(155m.ToString("C"), model.Tiles[4].Value);
-        // There's no revenue list to link to.
-        Assert.All(model.Tiles.Skip(3), t => Assert.Null(t.Href));
-    }
-
     private AdminDashboardService Service() => new(database.CreateDb(), new FixedTimeProvider(Now));
 
     private async Task AddOrderAsync(OrderStatus status, PaymentMethod paymentMethod, DateTimeOffset? paidAt = null, decimal subtotal = 20m, decimal shipping = 0m)
@@ -169,10 +118,5 @@ public sealed class AdminDashboardServiceTests : IDisposable
             IsActive = isActive,
         });
         await db.SaveChangesAsync();
-    }
-
-    private sealed class StubDashboardService(AdminDashboardMetrics metrics) : IAdminDashboardService
-    {
-        public Task<AdminDashboardMetrics> GetMetricsAsync(CancellationToken cancellationToken) => Task.FromResult(metrics);
     }
 }

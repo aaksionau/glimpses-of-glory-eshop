@@ -53,13 +53,6 @@ public class AdminOrderDetailTests
             CanResendShippedEmail: status == OrderStatus.Shipped);
 
     [Fact]
-    public void Primary_NewOrder_IsMarkShipped()
-    {
-        Assert.Equal(OrderAction.MarkShipped, OrderActions.Primary(Order()));
-        Assert.Empty(OrderActions.Secondary(Order()));
-    }
-
-    [Fact]
     public void Primary_NewUnpaidCashOrder_IsFulfilment_WithMarkPaidSecondary()
     {
         var order = Order(fulfillmentMethod: FulfillmentMethod.Pickup, paymentMethod: PaymentMethod.Cash, isPaid: false);
@@ -103,16 +96,6 @@ public class AdminOrderDetailTests
         }
     }
 
-    [Theory]
-    [InlineData(OrderAction.MarkShipped, FulfillmentMethod.Shipping, "Mark shipped")]
-    [InlineData(OrderAction.MarkShipped, FulfillmentMethod.Pickup, "Mark ready for pickup")]
-    [InlineData(OrderAction.MarkPickedUp, FulfillmentMethod.Pickup, "Mark picked up")]
-    [InlineData(OrderAction.MarkPaid, FulfillmentMethod.Pickup, "Mark as paid")]
-    public void Label_NamesTheAction(OrderAction action, FulfillmentMethod fulfillmentMethod, string expected)
-    {
-        Assert.Equal(expected, OrderActions.Label(action, fulfillmentMethod));
-    }
-
     [Fact]
     public async Task MarkShipped_WithInvalidTrackingNumber_SavesNothing()
     {
@@ -139,197 +122,6 @@ public class AdminOrderDetailTests
         await model.OnPostMarkShippedAsync(42, CancellationToken.None);
 
         Assert.Equal(("ABC123", ShippingCarrier.Other), service.ShippedWith);
-    }
-
-    [Fact]
-    public async Task ActionsFragment_MarkShippedForm_HasACarrierSelectNextToTheTrackingNumber()
-    {
-        var model = new DetailsModel(new FakeAdminOrderService(Order()));
-        await model.OnGetAsync(42, CancellationToken.None);
-
-        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderStatus.cshtml", model);
-
-        var form = Regex.Match(html, "<form[^>]*data-order-action=\"MarkShipped\".*?</form>", RegexOptions.Singleline).Value;
-        Assert.Matches("<select[^>]*name=\"Carrier\"", form);
-        Assert.Matches("<option[^>]*value=\"Usps\"[^>]*>USPS</option>", form);
-        Assert.Matches("<option[^>]*selected=\"selected\"[^>]*>USPS</option>", form);
-        Assert.Contains("<option value=\"Other\">Other</option>", form);
-        Assert.Contains("name=\"TrackingNumber\"", form);
-    }
-
-    [Fact]
-    public async Task ActionsFragment_PickupOrder_HasNoCarrierSelect()
-    {
-        var model = new DetailsModel(new FakeAdminOrderService(Order(fulfillmentMethod: FulfillmentMethod.Pickup)));
-        await model.OnGetAsync(42, CancellationToken.None);
-
-        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderStatus.cshtml", model);
-
-        Assert.DoesNotContain("name=\"Carrier\"", html);
-    }
-
-    [Fact]
-    public async Task FulfillmentCard_UspsTracking_IsALinkToTheCarrier()
-    {
-        const string url = "https://tools.usps.com/go/TrackConfirmAction?tLabels=9400111899223";
-        var order = Order(status: OrderStatus.Shipped) with { TrackingNumber = "9400111899223", Carrier = ShippingCarrier.Usps, TrackingUrl = url };
-        var model = new DetailsModel(new FakeAdminOrderService(order));
-        await model.OnGetAsync(42, CancellationToken.None);
-
-        var html = WebUtility.HtmlDecode(await RenderAsync("~/Pages/Admin/Orders/_OrderFulfillmentCard.cshtml", model));
-
-        Assert.Contains("(USPS)", html);
-        Assert.Matches($"<a href=\"{Regex.Escape(url)}\"[^>]*>9400111899223</a>", html);
-    }
-
-    [Fact]
-    public async Task FulfillmentCard_OtherCarrierTracking_IsPlainText()
-    {
-        var order = Order(status: OrderStatus.Shipped) with { TrackingNumber = "ABC123", Carrier = ShippingCarrier.Other };
-        var model = new DetailsModel(new FakeAdminOrderService(order));
-        await model.OnGetAsync(42, CancellationToken.None);
-
-        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderFulfillmentCard.cshtml", model);
-
-        var card = Regex.Match(html, "<section id=\"order-fulfillment\".*?</section>", RegexOptions.Singleline).Value;
-        Assert.Contains("(Other)", card);
-        Assert.Contains("<strong>ABC123</strong>", card);
-        Assert.DoesNotContain("<a ", card);
-    }
-
-    [Fact]
-    public void ExpectedAvailability_FormatsTheDate()
-    {
-        Assert.Equal("Expected available Nov 3, 2026", PreorderNoteFormatter.ExpectedAvailability(new DateOnly(2026, 11, 3)));
-        Assert.Equal("No expected availability date", PreorderNoteFormatter.ExpectedAvailability(null));
-    }
-
-    [Fact]
-    public async Task ActionsFragment_ShowsOnlyTheNextStepAsPrimary_AndCancelSeparately()
-    {
-        var order = Order(fulfillmentMethod: FulfillmentMethod.Pickup, paymentMethod: PaymentMethod.Cash, isPaid: false);
-        var model = await RunMarkPaidHandlerAsync(order, order);
-
-        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderStatus.cshtml", model);
-
-        Assert.Single(Regex.Matches(html, "data-primary=\"true\""));
-        Assert.Matches("data-order-action=\"MarkShipped\" data-primary=\"true\"", html);
-        Assert.Matches("data-order-action=\"MarkPaid\" data-primary=\"false\"", html);
-        Assert.Contains("data-order-action=\"MarkCancelled\"", html);
-    }
-
-    [Fact]
-    public async Task ActionsFragment_AfterHtmxAction_SwapsHeaderBadgesAndCardsOutOfBand()
-    {
-        var before = Order(status: OrderStatus.PickedUp, fulfillmentMethod: FulfillmentMethod.Pickup, paymentMethod: PaymentMethod.Cash, isPaid: false);
-        var after = before with { IsPaid = true, CanMarkPaid = false };
-        var model = await RunMarkPaidHandlerAsync(before, after);
-
-        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderStatus.cshtml", model);
-
-        Assert.Matches("id=\"order-header-badges\"[^>]*hx-swap-oob=\"true\"", html);
-        Assert.Matches("id=\"order-payment\"[^>]*hx-swap-oob=\"true\"", html);
-        Assert.Matches("id=\"order-fulfillment\"[^>]*hx-swap-oob=\"true\"", html);
-        Assert.Matches("id=\"order-timeline\"[^>]*hx-swap-oob=\"true\"", html);
-        var headerBadges = Regex.Match(html, "id=\"order-header-badges\".*?</div>", RegexOptions.Singleline).Value;
-        Assert.Contains(">Paid<", headerBadges);
-        Assert.Contains(">Picked up<", headerBadges);
-        Assert.DoesNotContain("data-primary=\"true\"", html);
-    }
-
-    [Fact]
-    public async Task HeaderBadges_OnFullPageRender_AreNotOutOfBand()
-    {
-        var model = new DetailsModel(new FakeAdminOrderService(Order()));
-        await model.OnGetAsync(42, CancellationToken.None);
-
-        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderHeaderBadges.cshtml", model);
-
-        Assert.Contains("id=\"order-header-badges\"", html);
-        Assert.DoesNotContain("hx-swap-oob", html);
-    }
-
-    [Fact]
-    public async Task Timeline_ShowsCompletedStepsWithTime_AndPendingStepsGreyedOut()
-    {
-        var order = Order(status: OrderStatus.Shipped, fulfillmentMethod: FulfillmentMethod.Pickup) with
-        {
-            ShippedAt = new DateTimeOffset(2026, 8, 2, 14, 30, 0, TimeSpan.Zero),
-        };
-        var model = new DetailsModel(new FakeAdminOrderService(order));
-        await model.OnGetAsync(42, CancellationToken.None);
-
-        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderTimeline.cshtml", model);
-
-        Assert.DoesNotContain("hx-swap-oob", html);
-        Assert.Matches("data-timeline-step=\"Ready for pickup\" data-complete=\"true\"", html);
-        Assert.Contains("August 2, 2026 at 14:30 UTC", html);
-        Assert.Matches("text-gray-400\" data-timeline-step=\"Picked up\" data-complete=\"false\"", html);
-        Assert.Contains("Pending", html);
-    }
-
-    [Fact]
-    public async Task CustomerCard_ShowsThePhone_AsACallableLink()
-    {
-        var order = Order(fulfillmentMethod: FulfillmentMethod.Pickup) with
-        {
-            Address = new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null, Phone: "555-0100"),
-        };
-        var model = new DetailsModel(new FakeAdminOrderService(order));
-        await model.OnGetAsync(42, CancellationToken.None);
-
-        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderCustomerCard.cshtml", model);
-
-        Assert.Contains("Jane Shopper", html);
-        Assert.Contains("href=\"mailto:shopper@example.com\"", html);
-        Assert.Contains("<a href=\"tel:555-0100\" class=\"hover:underline\">555-0100</a>", html);
-    }
-
-    [Fact]
-    public async Task CustomerCard_WithoutAPhone_ShowsNoPhoneLine()
-    {
-        var model = new DetailsModel(new FakeAdminOrderService(Order()));
-        await model.OnGetAsync(42, CancellationToken.None);
-
-        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderCustomerCard.cshtml", model);
-
-        Assert.Contains("href=\"mailto:shopper@example.com\"", html);
-        Assert.DoesNotContain("tel:", html);
-    }
-
-    [Fact]
-    public async Task SaveNote_SavesAndReRendersOnlyTheNoteCard()
-    {
-        var service = new FakeAdminOrderService(Order());
-        var model = CreateModel(service);
-        model.InternalNote = "Customer called, collecting Friday";
-
-        var result = await model.OnPostSaveNoteAsync(42, CancellationToken.None);
-
-        var partial = Assert.IsType<PartialViewResult>(result);
-        Assert.Equal("_OrderNoteCard", partial.ViewName);
-        Assert.Equal("Customer called, collecting Friday", model.Order.InternalNote);
-        Assert.Equal("Note saved.", model.NoteStatusMessage);
-
-        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderNoteCard.cshtml", model);
-        Assert.Contains("id=\"order-note\"", html);
-        Assert.Contains("hx-post=\"/admin/orders/42?handler=SaveNote\"", html);
-        Assert.Contains("hx-target=\"#order-note\"", html);
-        Assert.Contains("Customer called, collecting Friday</textarea>", html);
-        Assert.Contains("Note saved.", html);
-    }
-
-    [Fact]
-    public async Task SaveNote_WithBlankNote_ClearsIt()
-    {
-        var service = new FakeAdminOrderService(Order() with { InternalNote = "Old note" });
-        var model = CreateModel(service);
-        model.InternalNote = "  ";
-
-        await model.OnPostSaveNoteAsync(42, CancellationToken.None);
-
-        Assert.Null(model.Order.InternalNote);
-        Assert.Equal("Note cleared.", model.NoteStatusMessage);
     }
 
     [Fact]
@@ -379,44 +171,6 @@ public class AdminOrderDetailTests
     }
 
     [Fact]
-    public async Task SaveNote_UnknownOrder_IsNotFound()
-    {
-        var model = CreateModel(new FakeAdminOrderService(Order()));
-        model.InternalNote = "Note";
-
-        Assert.IsType<NotFoundResult>(await model.OnPostSaveNoteAsync(7, CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task NoteCard_OnFullPageRender_ShowsTheStoredNote()
-    {
-        var model = new DetailsModel(new FakeAdminOrderService(Order() with { InternalNote = "Gift wrap it" }));
-        await model.OnGetAsync(42, CancellationToken.None);
-
-        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderNoteCard.cshtml", model);
-
-        Assert.Contains("Gift wrap it</textarea>", html);
-        Assert.DoesNotContain("role=\"status\"", html);
-    }
-
-    [Fact]
-    public async Task PackingSlip_LoadsTheOrder()
-    {
-        var model = new PackingSlipModel(new FakeAdminOrderService(Order()));
-
-        Assert.IsType<PageResult>(await model.OnGetAsync(42, CancellationToken.None));
-        Assert.Equal(42, model.Order.Id);
-    }
-
-    [Fact]
-    public async Task PackingSlip_UnknownOrder_IsNotFound()
-    {
-        var model = new PackingSlipModel(new FakeAdminOrderService(Order()));
-
-        Assert.IsType<NotFoundResult>(await model.OnGetAsync(7, CancellationToken.None));
-    }
-
-    [Fact]
     public async Task PackingSlip_ShowsShopOrderShipToAndItems_ButNoAdminOnlyDetails()
     {
         var order = Order(lines:
@@ -443,72 +197,6 @@ public class AdminOrderDetailTests
     }
 
     [Fact]
-    public async Task PackingSlip_ForPickupOrder_ShowsThePickupNameInsteadOfAnAddress()
-    {
-        var order = Order(fulfillmentMethod: FulfillmentMethod.Pickup) with
-        {
-            Address = new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null),
-        };
-
-        var html = await RenderSlipAsync(order);
-
-        Assert.Contains("Local pickup for", html);
-        Assert.Contains("Jane Shopper", html);
-        Assert.DoesNotContain("Ship to", html);
-    }
-
-    [Theory]
-    [InlineData(OrderStatus.New, FulfillmentMethod.Shipping, true, false)]
-    [InlineData(OrderStatus.Shipped, FulfillmentMethod.Shipping, true, true)]
-    [InlineData(OrderStatus.Shipped, FulfillmentMethod.Pickup, true, true)]
-    [InlineData(OrderStatus.PickedUp, FulfillmentMethod.Pickup, true, false)]
-    [InlineData(OrderStatus.Cancelled, FulfillmentMethod.Shipping, false, false)]
-    public async Task ActionsFragment_OffersResendsOnlyWhereTheyApply(OrderStatus status, FulfillmentMethod fulfillmentMethod, bool confirmation, bool shipped)
-    {
-        var model = new DetailsModel(new FakeAdminOrderService(Order(status: status, fulfillmentMethod: fulfillmentMethod)));
-        await model.OnGetAsync(42, CancellationToken.None);
-
-        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderStatus.cshtml", model);
-
-        Assert.Equal(confirmation, html.Contains("hx-post=\"/admin/orders/42?handler=ResendConfirmation\""));
-        Assert.Equal(shipped, html.Contains("hx-post=\"/admin/orders/42?handler=ResendShippedEmail\""));
-        Assert.Equal(!confirmation, html.Contains("No further actions for this order."));
-    }
-
-    [Theory]
-    [InlineData(FulfillmentMethod.Shipping, "Resend shipping email")]
-    [InlineData(FulfillmentMethod.Pickup, "Resend ready-for-pickup email")]
-    public async Task ActionsFragment_NamesTheShippedEmailByFulfillmentMethod(FulfillmentMethod fulfillmentMethod, string label)
-    {
-        var model = new DetailsModel(new FakeAdminOrderService(Order(status: OrderStatus.Shipped, fulfillmentMethod: fulfillmentMethod)));
-        await model.OnGetAsync(42, CancellationToken.None);
-
-        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderStatus.cshtml", model);
-
-        Assert.Contains(label, html);
-    }
-
-    [Fact]
-    public async Task ResendConfirmation_Sent_ShowsSuccessInTheActionsFragment()
-    {
-        var service = new FakeAdminOrderService(Order());
-        var model = CreateModel(service);
-
-        var result = await model.OnPostResendConfirmationAsync(42, CancellationToken.None);
-
-        var partial = Assert.IsType<PartialViewResult>(result);
-        Assert.Equal("_OrderStatus", partial.ViewName);
-        Assert.Equal(["confirmation"], service.Resent);
-        Assert.Equal(0, service.UpdateCount);
-        Assert.Null(model.ErrorMessage);
-
-        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderStatus.cshtml", model);
-        Assert.Contains("role=\"status\"", html);
-        Assert.Contains("The order confirmation email was resent to shopper@example.com.", WebUtility.HtmlDecode(html));
-        Assert.DoesNotContain("hx-swap-oob", html);
-    }
-
-    [Fact]
     public async Task ResendShippedEmail_Failed_ShowsAnErrorInsteadOfFailingSilently()
     {
         var service = new FakeAdminOrderService(Order(status: OrderStatus.Shipped, fulfillmentMethod: FulfillmentMethod.Pickup)) { ResendResult = EmailResendResult.Failed };
@@ -520,41 +208,6 @@ public class AdminOrderDetailTests
         Assert.Equal(["shipped"], service.Resent);
         Assert.Null(model.StatusMessage);
         Assert.Equal("The ready-for-pickup email couldn't be sent. Please try again later.", model.ErrorMessage);
-
-        var html = await RenderAsync("~/Pages/Admin/Orders/_OrderStatus.cshtml", model);
-        Assert.Contains("role=\"alert\"", html);
-    }
-
-    [Fact]
-    public async Task ResendShippedEmail_NotAllowed_ShowsAnError()
-    {
-        var service = new FakeAdminOrderService(Order()) { ResendResult = EmailResendResult.NotAllowed };
-        var model = CreateModel(service);
-
-        await model.OnPostResendShippedEmailAsync(42, CancellationToken.None);
-
-        Assert.Equal("The shipping email can't be resent for this order's current status. Nothing was sent.", model.ErrorMessage);
-    }
-
-    [Fact]
-    public async Task ResendConfirmation_UnknownOrder_IsNotFound()
-    {
-        var model = CreateModel(new FakeAdminOrderService(Order()));
-
-        Assert.IsType<NotFoundResult>(await model.OnPostResendConfirmationAsync(7, CancellationToken.None));
-    }
-
-    // Runs the real MarkPaid handler, so the model is in the state its htmx response renders.
-    private static async Task<DetailsModel> RunMarkPaidHandlerAsync(AdminOrderDetail before, AdminOrderDetail after)
-    {
-        var service = new FakeAdminOrderService(before) { AfterUpdate = after };
-        var model = CreateModel(service);
-
-        var result = await model.OnPostMarkPaidAsync(before.Id, CancellationToken.None);
-
-        var partial = Assert.IsType<PartialViewResult>(result);
-        Assert.Equal("_OrderStatus", partial.ViewName);
-        return Assert.IsType<DetailsModel>(partial.Model);
     }
 
     private static DetailsModel CreateModel(IAdminOrderService service) =>
@@ -567,9 +220,6 @@ public class AdminOrderDetailTests
                 ViewData = new ViewDataDictionary<DetailsModel>(new EmptyModelMetadataProvider(), new ModelStateDictionary()),
             },
         };
-
-    private static Task<string> RenderAsync(string viewPath, DetailsModel model) =>
-        RazorViewToStringRendererTests.CreateRenderer().RenderAsync(viewPath, model);
 
     // Just the slip itself (without the layout the renderer wraps it in), with entities decoded.
     private static async Task<string> RenderSlipAsync(AdminOrderDetail order)

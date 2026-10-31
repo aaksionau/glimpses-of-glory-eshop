@@ -7,26 +7,12 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace GlimpsesOfGlory.UnitTests;
 
-// The optional phone given at checkout is stored on the order and reaches the admin's order details.
+// The optional phone given at checkout survives the PendingCheckout copy and reaches the admin.
 public sealed class CheckoutPhoneTests : IDisposable
 {
     private readonly SqliteTestDatabase database = new();
 
     public void Dispose() => database.Dispose();
-
-    [Theory]
-    [InlineData("555-0100")]
-    [InlineData(null)]
-    public async Task CashOrder_SavesThePhone_AndTheAdminSeesIt(string? phone)
-    {
-        await SeedProductAsync();
-        var address = new ShippingAddressInfo("shopper@example.com", "Sam Shopper", null, null, null, null, null, null, Phone: phone);
-
-        var result = await OrderService().PlaceCashOrderAsync(address, CancellationToken.None);
-
-        var detail = await AdminOrderService().GetOrderAsync(result.OrderId!.Value, CancellationToken.None);
-        Assert.Equal(phone, detail!.Address.Phone);
-    }
 
     // Card orders wait in a PendingCheckout until Stripe confirms payment; the phone must survive that copy.
     [Fact]

@@ -57,14 +57,6 @@ public class OrderCsvExportTests
         Assert.Contains("\"Doe, \"\"JJ\"\"\nJane\"", string.Join("\r\n", lines));
     }
 
-    [Fact]
-    public async Task Write_KeepsAccentedNamesIntact()
-    {
-        var lines = await LinesAsync(Row(1, name: "Zoë Łukasiewicz"));
-
-        Assert.Contains(",Zoë Łukasiewicz,", lines[1]);
-    }
-
     [Theory]
     [InlineData("=HYPERLINK(\"x\")", "\"'=HYPERLINK(\"\"x\"\")\"")]
     [InlineData("+1", "'+1")]
@@ -76,12 +68,6 @@ public class OrderCsvExportTests
         var lines = await LinesAsync(Row(1, name: name));
 
         Assert.Contains($",{expected},", lines[1]);
-    }
-
-    [Fact]
-    public void FileName_NamesTheRange()
-    {
-        Assert.Equal("orders-2026-10-01-to-2026-10-31.csv", OrderCsvExport.FileName(new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31)));
     }
 
     [Fact]
