@@ -29,7 +29,7 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
             .ThenByDescending(o => o.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(o => new AdminOrderSummary(
+            .Select(OrderFacts.Project((o, facts) => new AdminOrderSummary(
                 o.Id,
                 o.ShippingAddress.FullName,
                 o.Email,
@@ -40,10 +40,10 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
                 o.PaidAt != null,
                 o.Lines.Any(l => l.IsPreorder),
                 o.Lines.Where(l => l.IsPreorder).Min(l => l.ExpectedAvailabilityDate),
-                OrderTransitionPolicy.NeedsRefund(o.Status, o.PaymentMethod, o.PaidAt != null),
-                OrderTransitionPolicy.NeedsAction(o.Status, o.PaidAt != null),
+                OrderLifecycle.NeedsRefund.IsSatisfiedBy(facts),
+                OrderLifecycle.NeedsAction.IsSatisfiedBy(facts),
                 o.InternalNote != null,
-                o.CreatedAt))
+                o.CreatedAt)))
             .ToListAsync(cancellationToken);
 
         return new AdminOrderPage(items, page, pageSize, totalCount);
@@ -68,11 +68,11 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
         }
         if (filter.ToFulfillOnly)
         {
-            orders = orders.Where(AdminQueryFilters.ToFulfill);
+            orders = orders.Where(OrderLifecycle.ToFulfill.OnOrders);
         }
         if (filter.UnpaidCashOnly)
         {
-            orders = orders.Where(AdminQueryFilters.UnpaidCash);
+            orders = orders.Where(OrderLifecycle.UnpaidCash.OnOrders);
         }
 
         var search = filter.Search?.Trim();
@@ -100,9 +100,9 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
 
     private static IQueryable<Order> InTab(IQueryable<Order> orders, AdminOrderTab tab) => tab switch
     {
-        AdminOrderTab.NeedsAction => orders.Where(AdminQueryFilters.NeedsAction),
-        AdminOrderTab.Shipped => orders.Where(o => o.Status == OrderStatus.Shipped || o.Status == OrderStatus.PickedUp),
-        AdminOrderTab.Cancelled => orders.Where(o => o.Status == OrderStatus.Cancelled),
+        AdminOrderTab.NeedsAction => orders.Where(OrderLifecycle.NeedsAction.OnOrders),
+        AdminOrderTab.Shipped => orders.Where(OrderLifecycle.ShippedOrCollected.OnOrders),
+        AdminOrderTab.Cancelled => orders.Where(OrderLifecycle.Cancelled.OnOrders),
         AdminOrderTab.All => orders,
         _ => throw new ArgumentOutOfRangeException(nameof(tab), tab, null),
     };
@@ -172,22 +172,15 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
         {
             return OrderUpdateResult.NotFound;
         }
-        if (!OrderTransitionPolicy.CanMarkShipped(order.Status))
-        {
-            return OrderUpdateResult.InvalidTransition;
-        }
 
-        // Guarded on the status we just checked, so a double-click (or two admins at once)
-        // only ships - and emails the buyer - once.
+        // Guarded on the status the transition is checked against, so a double-click (or two
+        // admins at once) only ships - and emails the buyer - once.
         var tracking = string.IsNullOrWhiteSpace(trackingNumber) ? null : trackingNumber.Trim();
         // A carrier without a tracking number has nothing to link to, so it isn't recorded.
         ShippingCarrier? shippedWith = tracking is null ? null : carrier;
-        var now = timeProvider.GetUtcNow();
-        var result = await UpdateIfStatusAsync(id, order.Status, setters => setters
-            .SetProperty(o => o.Status, OrderStatus.Shipped)
+        var result = await TransitionAsync(id, OrderFacts.Of(order), OrderLifecycle.MarkShipped, setters => setters
             .SetProperty(o => o.TrackingNumber, tracking)
-            .SetProperty(o => o.Carrier, shippedWith)
-            .SetProperty(o => o.ShippedAt, o => o.ShippedAt ?? now), cancellationToken);
+            .SetProperty(o => o.Carrier, shippedWith), cancellationToken);
         if (result != OrderUpdateResult.Updated)
         {
             return result;
@@ -210,62 +203,20 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
         return OrderUpdateResult.Updated;
     }
 
-    public async Task<OrderUpdateResult> MarkPickedUpAsync(int id, CancellationToken cancellationToken)
-    {
-        var state = await GetStateAsync(id, cancellationToken);
-        if (state is null)
-        {
-            return OrderUpdateResult.NotFound;
-        }
-        if (!OrderTransitionPolicy.CanMarkPickedUp(state.Status, state.FulfillmentMethod))
-        {
-            return OrderUpdateResult.InvalidTransition;
-        }
+    public Task<OrderUpdateResult> MarkPickedUpAsync(int id, CancellationToken cancellationToken) =>
+        TransitionAsync(id, OrderLifecycle.MarkPickedUp, cancellationToken);
 
-        var now = timeProvider.GetUtcNow();
-        return await UpdateIfStatusAsync(id, state.Status, setters => setters
-            .SetProperty(o => o.Status, OrderStatus.PickedUp)
-            .SetProperty(o => o.PickedUpAt, o => o.PickedUpAt ?? now), cancellationToken);
-    }
-
-    public async Task<OrderUpdateResult> MarkPaidAsync(int id, CancellationToken cancellationToken)
-    {
-        var state = await GetStateAsync(id, cancellationToken);
-        if (state is null)
-        {
-            return OrderUpdateResult.NotFound;
-        }
-        if (!OrderTransitionPolicy.CanMarkPaid(state.Status, state.IsPaid))
-        {
-            return OrderUpdateResult.InvalidTransition;
-        }
-
-        // Coalesced so a concurrent repeat click doesn't move the recorded payment date.
-        var now = timeProvider.GetUtcNow();
-        return await UpdateIfStatusAsync(id, state.Status, setters => setters
-            .SetProperty(o => o.PaidAt, o => o.PaidAt ?? now), cancellationToken);
-    }
+    // The payment date is coalesced like every step timestamp, so a concurrent repeat click doesn't move it.
+    public Task<OrderUpdateResult> MarkPaidAsync(int id, CancellationToken cancellationToken) =>
+        TransitionAsync(id, OrderLifecycle.MarkPaid, cancellationToken);
 
     public async Task<OrderUpdateResult> MarkCancelledAsync(int id, CancellationToken cancellationToken)
     {
-        var state = await GetStateAsync(id, cancellationToken);
-        if (state is null)
-        {
-            return OrderUpdateResult.NotFound;
-        }
-        if (!OrderTransitionPolicy.CanMarkCancelled(state.Status))
-        {
-            return OrderUpdateResult.InvalidTransition;
-        }
-
         // The status guard and the restock commit together, so a concurrent repeat click that
         // loses the guard can't restock a second time, and a failed restock leaves the order New.
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
-        var now = timeProvider.GetUtcNow();
-        var result = await UpdateIfStatusAsync(id, state.Status, setters => setters
-            .SetProperty(o => o.Status, OrderStatus.Cancelled)
-            .SetProperty(o => o.CancelledAt, o => o.CancelledAt ?? now), cancellationToken);
+        var result = await TransitionAsync(id, OrderLifecycle.MarkCancelled, cancellationToken);
         if (result != OrderUpdateResult.Updated)
         {
             await transaction.RollbackAsync(cancellationToken);
@@ -301,7 +252,7 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
     public Task<EmailResendResult> ResendConfirmationAsync(int id, CancellationToken cancellationToken) =>
         ResendAsync(
             id,
-            OrderTransitionPolicy.CanResendConfirmation,
+            OrderLifecycle.CanResendConfirmation,
             order => emailSender.SendOrderConfirmationAsync(order.ToConfirmationView(), cancellationToken),
             "order confirmation",
             cancellationToken);
@@ -309,21 +260,21 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
     public Task<EmailResendResult> ResendShippedEmailAsync(int id, CancellationToken cancellationToken) =>
         ResendAsync(
             id,
-            OrderTransitionPolicy.CanResendShippedEmail,
+            OrderLifecycle.CanResendShippedEmail,
             order => emailSender.SendShippedNotificationAsync(order.ToShippedView(), cancellationToken),
             "shipping-notification",
             cancellationToken);
 
     // Read-only: the order is loaded untracked and nothing is written, so a resend never touches
     // the status or the step timestamps. A failed send is logged and reported, not thrown.
-    private async Task<EmailResendResult> ResendAsync(int id, Func<OrderStatus, bool> isAllowed, Func<Order, Task> send, string emailKind, CancellationToken cancellationToken)
+    private async Task<EmailResendResult> ResendAsync(int id, OrderRule isAllowed, Func<Order, Task> send, string emailKind, CancellationToken cancellationToken)
     {
         var order = await LoadWithLinesAsync(id, cancellationToken);
         if (order is null)
         {
             return EmailResendResult.NotFound;
         }
-        if (!isAllowed(order.Status))
+        if (!isAllowed.IsSatisfiedBy(OrderFacts.Of(order)))
         {
             return EmailResendResult.NotAllowed;
         }
@@ -348,52 +299,70 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
             .Include(o => o.Lines)
             .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
 
-    private Task<OrderState?> GetStateAsync(int id, CancellationToken cancellationToken) =>
-        db.Orders
+    private async Task<OrderUpdateResult> TransitionAsync(int id, OrderTransition transition, CancellationToken cancellationToken)
+    {
+        var facts = await db.Orders
             .Where(o => o.Id == id)
-            .Select(o => new OrderState(o.Status, o.FulfillmentMethod, o.PaidAt != null))
+            .Select(OrderFacts.FromOrder)
             .FirstOrDefaultAsync(cancellationToken);
 
-    // Only applies if the order is still in the status the caller checked the policy against,
-    // so a concurrent change (another tab, another admin) can't be overridden. Step timestamps are
-    // set as "existing value ?? now" so a repeat call never moves one that's already recorded.
-    private async Task<OrderUpdateResult> UpdateIfStatusAsync(int id, OrderStatus expectedStatus, Action<UpdateSettersBuilder<Order>> setters, CancellationToken cancellationToken)
+        return facts is null
+            ? OrderUpdateResult.NotFound
+            : await TransitionAsync(id, facts, transition, alsoSet: null, cancellationToken);
+    }
+
+    // Checks the transition against the facts the caller loaded, then applies it only if the order
+    // is still in that status, so a concurrent change (another tab, another admin) can't be
+    // overridden. alsoSet adds the action's own columns to the same guarded update.
+    private async Task<OrderUpdateResult> TransitionAsync(int id, OrderFacts facts, OrderTransition transition, Action<UpdateSettersBuilder<Order>>? alsoSet, CancellationToken cancellationToken)
     {
+        if (!transition.IsAllowed(facts))
+        {
+            return OrderUpdateResult.InvalidTransition;
+        }
+
+        var now = timeProvider.GetUtcNow();
         var rows = await db.Orders
-            .Where(o => o.Id == id && o.Status == expectedStatus)
-            .ExecuteUpdateAsync(setters, cancellationToken);
+            .Where(o => o.Id == id && o.Status == facts.Status)
+            .ExecuteUpdateAsync(setters =>
+            {
+                transition.Apply(setters, now);
+                alsoSet?.Invoke(setters);
+            }, cancellationToken);
 
         return rows > 0 ? OrderUpdateResult.Updated : OrderUpdateResult.InvalidTransition;
     }
 
-    private AdminOrderDetail ToDetail(Order order) => new(
-        order.Id,
-        order.FulfillmentMethod,
-        order.PaymentMethod,
-        order.IsPaid,
-        order.StripePaymentIntentId is { } paymentIntentId ? paymentGateway.GetPaymentDashboardUrl(paymentIntentId) : null,
-        order.ShippingAddress.ToInfo(order.Email),
-        order.Lines.Select(l => l.ToConfirmationLine()).ToList(),
-        order.Subtotal,
-        order.ShippingCost,
-        order.Total,
-        order.Status,
-        order.TrackingNumber,
-        order.Carrier,
-        CarrierTrackingLinks.TrackingUrl(order.Carrier, order.TrackingNumber),
-        order.InternalNote,
-        order.CreatedAt,
-        order.PaidAt,
-        order.ShippedAt,
-        order.PickedUpAt,
-        order.CancelledAt,
-        OrderTransitionPolicy.CanMarkShipped(order.Status),
-        OrderTransitionPolicy.CanMarkPickedUp(order.Status, order.FulfillmentMethod),
-        OrderTransitionPolicy.CanMarkPaid(order.Status, order.IsPaid),
-        OrderTransitionPolicy.CanMarkCancelled(order.Status),
-        OrderTransitionPolicy.NeedsRefund(order.Status, order.PaymentMethod, order.IsPaid),
-        OrderTransitionPolicy.CanResendConfirmation(order.Status),
-        OrderTransitionPolicy.CanResendShippedEmail(order.Status));
-
-    private sealed record OrderState(OrderStatus Status, FulfillmentMethod FulfillmentMethod, bool IsPaid);
+    private AdminOrderDetail ToDetail(Order order)
+    {
+        var facts = OrderFacts.Of(order);
+        return new(
+            order.Id,
+            order.FulfillmentMethod,
+            order.PaymentMethod,
+            order.IsPaid,
+            order.StripePaymentIntentId is { } paymentIntentId ? paymentGateway.GetPaymentDashboardUrl(paymentIntentId) : null,
+            order.ShippingAddress.ToInfo(order.Email),
+            order.Lines.Select(l => l.ToConfirmationLine()).ToList(),
+            order.Subtotal,
+            order.ShippingCost,
+            order.Total,
+            order.Status,
+            order.TrackingNumber,
+            order.Carrier,
+            CarrierTrackingLinks.TrackingUrl(order.Carrier, order.TrackingNumber),
+            order.InternalNote,
+            order.CreatedAt,
+            order.PaidAt,
+            order.ShippedAt,
+            order.PickedUpAt,
+            order.CancelledAt,
+            OrderLifecycle.MarkShipped.IsAllowed(facts),
+            OrderLifecycle.MarkPickedUp.IsAllowed(facts),
+            OrderLifecycle.MarkPaid.IsAllowed(facts),
+            OrderLifecycle.MarkCancelled.IsAllowed(facts),
+            OrderLifecycle.NeedsRefund.IsSatisfiedBy(facts),
+            OrderLifecycle.CanResendConfirmation.IsSatisfiedBy(facts),
+            OrderLifecycle.CanResendShippedEmail.IsSatisfiedBy(facts));
+    }
 }
