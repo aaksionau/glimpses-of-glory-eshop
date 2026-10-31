@@ -3,6 +3,8 @@
 @{
     ViewData["Title"] = "Products";
     ViewData["MetaDescription"] = "Browse all products currently available at Glimpses of Glory.";
+    // The grid's first desktop row is above the fold here, so its photos load eagerly.
+    ViewData["EagerImageCount"] = 4;
 }
 
 <div class="container mx-auto px-4 py-10 md:py-16">

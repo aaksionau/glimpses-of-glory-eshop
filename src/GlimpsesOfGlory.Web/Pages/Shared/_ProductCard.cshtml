@@ -15,7 +15,7 @@
             @* The 3:4 box and the intrinsic width/height reserve the space before the photo arrives, so the grid
                doesn't jump; lazy loading leaves photos further down the page until they're scrolled near. *@
             <img src="/product-photos/@Model.ThumbnailFileName" alt="@Model.Name"
-                 width="600" height="800" loading="lazy" decoding="async"
+                 width="600" height="800" loading="@(ViewData["EagerImage"] is true ? null : "lazy")" decoding="async"
                  class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 @(!Model.IsPreorder && Model.StockQuantity <= 0 ? "opacity-50" : "")" />
         }
         else

@@ -14,7 +14,7 @@ public static class StorefrontSections
 {
     public static StorefrontSection FromPath(string? path)
     {
-        var segments = (path ?? string.Empty).Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var segments = Segments(path);
         if (segments.Length == 0)
         {
             return StorefrontSection.Home;
@@ -28,4 +28,22 @@ public static class StorefrontSections
             _ => StorefrontSection.None,
         };
     }
+
+    // The aria-current value for a header link: "page" when the request is the link's own page,
+    // "true" when it is somewhere inside that section (a product page under Shop), otherwise null.
+    public static string? AriaCurrent(StorefrontSection link, string? path)
+    {
+        if (link == StorefrontSection.None || link != FromPath(path))
+        {
+            return null;
+        }
+
+        var segments = Segments(path);
+        var isSectionPage = segments.Length <= 1
+            || (segments.Length == 2 && segments[1].Equals("index", StringComparison.OrdinalIgnoreCase));
+        return isSectionPage ? "page" : "true";
+    }
+
+    private static string[] Segments(string? path) =>
+        (path ?? string.Empty).Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
 }

@@ -30,6 +30,27 @@ public class HomeAndHeaderMobileTests
         Assert.Equal(expected, StorefrontSections.FromPath(path));
     }
 
+    [Theory]
+    [InlineData(StorefrontSection.Home, "/", "page")]
+    [InlineData(StorefrontSection.Shop, "/products", "page")]
+    [InlineData(StorefrontSection.Shop, "/Products/Index", "page")]
+    [InlineData(StorefrontSection.Shop, "/products/sunrise", "true")]
+    [InlineData(StorefrontSection.Cart, "/cart", "page")]
+    [InlineData(StorefrontSection.Shop, "/cart", null)]
+    [InlineData(StorefrontSection.Home, "/checkout", null)]
+    [InlineData(StorefrontSection.None, "/privacy", null)]
+    public void AriaCurrent_IsPageOnTheSectionPage_AndTrueInsideTheSection(StorefrontSection link, string path, string? expected)
+    {
+        Assert.Equal(expected, StorefrontSections.AriaCurrent(link, path));
+    }
+
+    [Fact]
+    public void AllProducts_LoadsTheFirstDesktopRowEagerly()
+    {
+        Assert.Contains("ViewData[\"EagerImageCount\"] = 4;", ReadPage("Products/Index.cshtml"));
+        Assert.DoesNotContain("EagerImageCount", ReadPage("Index.cshtml"));
+    }
+
     [Fact]
     public void Home_PutsFeaturedPiecesRightAfterTheHero()
     {
@@ -145,8 +166,7 @@ public class HomeAndHeaderMobileTests
 
         Assert.Contains("min-h-11", navClass);
         Assert.Contains("px-3", navClass);
-        Assert.Contains("currentSection = StorefrontSections.FromPath(path);", layout);
-        Assert.Contains("? \"page\" : null", layout);
+        Assert.Contains("StorefrontSections.AriaCurrent(section, path)", layout);
 
         var links = Regex.Matches(Header(), "<a [^>]*>").Select(m => m.Value).Skip(1).ToList();
         Assert.Equal(4, links.Count);

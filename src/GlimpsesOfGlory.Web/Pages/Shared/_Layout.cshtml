@@ -1,22 +1,13 @@
 @using GlimpsesOfGlory.Abstractions.Services
 @using GlimpsesOfGlory.Web.Helpers
 @inject ICartStore CartStore
-@functions {
-    private StorefrontSection currentSection;
-
-    private string NavLinkClass(StorefrontSection section) =>
-        "min-h-11 items-center px-3 border-b-2 transition-colors hover:text-gold-dark "
-        + (IsCurrent(section) ? "border-gold text-gold-dark" : "border-transparent");
-
-    private string? AriaCurrent(StorefrontSection section) => IsCurrent(section) ? "page" : null;
-
-    private bool IsCurrent(StorefrontSection section) =>
-        section != StorefrontSection.None && section == currentSection;
-}
 @{
     var request = Context.Request;
     var path = request.Path.Value ?? "";
-    currentSection = StorefrontSections.FromPath(path);
+    string? AriaCurrent(StorefrontSection section) => StorefrontSections.AriaCurrent(section, path);
+    string NavLinkClass(StorefrontSection section) =>
+        "min-h-11 items-center px-3 border-b-2 transition-colors hover:text-gold-dark "
+        + (AriaCurrent(section) is not null ? "border-gold text-gold-dark" : "border-transparent");
     var isUserFlowPage = path.StartsWith("/admin", StringComparison.OrdinalIgnoreCase)
         || path.StartsWith("/cart", StringComparison.OrdinalIgnoreCase)
         || path.StartsWith("/checkout", StringComparison.OrdinalIgnoreCase);
