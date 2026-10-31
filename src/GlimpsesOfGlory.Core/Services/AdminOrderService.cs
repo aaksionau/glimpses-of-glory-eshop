@@ -228,8 +228,7 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
     }
 
     // Emails the buyer after a committed transition. The order is loaded after the update, so the
-    // email shows exactly what was committed. A failed send shouldn't undo the status change, so
-    // it's logged for manual follow-up instead.
+    // email shows exactly what was committed.
     private async Task NotifyAsync(int id, Func<Order, Task> send, string emailKind, CancellationToken cancellationToken)
     {
         var order = await LoadWithLinesAsync(id, cancellationToken);

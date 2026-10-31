@@ -236,12 +236,12 @@ public sealed class OrderService(
         // from the DB above.
         var subtotal = lines.Sum(l => l.UnitPrice * l.Quantity);
         // The lines keep the cart's line order, so they pair up by index.
-        var pricedCart = cart with
+        var repricedCart = cart with
         {
             Lines = cart.Lines.Select((l, i) => l with { ProductName = lines[i].ProductName, UnitPrice = lines[i].UnitPrice }).ToList(),
             Subtotal = subtotal,
         };
-        return new CartPricing(new PricedCart(lines, subtotal, cart.ShippingCostFor(fulfillmentMethod), pricedCart), []);
+        return new CartPricing(new PricedCart(lines, repricedCart, fulfillmentMethod), []);
     }
 
     // Untracked, so a re-read after a rolled-back reservation sees the database's current stock.
@@ -264,13 +264,14 @@ public sealed class OrderService(
 
     private sealed record CartPricing(PricedCart? Priced, IReadOnlyList<UnavailableCartLine> UnavailableLines);
 
-    private sealed record PricedCart(List<PendingCheckoutLine> Lines, decimal Subtotal, decimal ShippingCost, CartSummary Cart)
+    private sealed record PricedCart(List<PendingCheckoutLine> Lines, CartSummary Cart, FulfillmentMethod FulfillmentMethod)
     {
-        public decimal Total => Subtotal + ShippingCost;
+        public decimal Subtotal => Cart.Subtotal;
+        public decimal ShippingCost => Cart.ShippingCostFor(FulfillmentMethod);
+        public decimal Total => Cart.TotalFor(FulfillmentMethod);
     }
 
-    // The order is already committed and stock already decremented - a failed confirmation
-    // email shouldn't undo it. Log for manual follow-up instead.
+    // Sent after the order and stock decrement are committed.
     private Task SendConfirmationEmailAsync(Order order, CancellationToken cancellationToken) =>
         BestEffortEmail.TrySendAsync(
             () => emailSender.SendOrderConfirmationAsync(order.ToConfirmationView(), cancellationToken),
