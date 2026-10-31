@@ -1,0 +1,38 @@
+@model GlimpsesOfGlory.Abstractions.Dtos.AbandonedCheckoutReminderView
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>You left something in your cart</title>
+</head>
+<body style="font-family: sans-serif; color: #1f2937;">
+    <h1>You left something in your cart</h1>
+    <p>Your items are still waiting for you whenever you're ready to finish your order.</p>
+
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr>
+                <th style="text-align: left; border-bottom: 1px solid #d1d5db;">Item</th>
+                <th style="text-align: right; border-bottom: 1px solid #d1d5db;">Qty</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var line in Model.Lines)
+            {
+                <tr>
+                    <td>@line.ProductName</td>
+                    <td style="text-align: right;">@line.Quantity</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <p style="margin: 1.5rem 0;">
+        <a href="@Model.RestoreUrl" style="display: inline-block; background: #1f2937; color: #ffffff; padding: 0.75rem 1.25rem; border-radius: 0.5rem; text-decoration: none; font-weight: bold;">Return to your cart</a>
+    </p>
+
+    <p style="font-size: 0.875rem; color: #6b7280;">
+        You're receiving this email because you started a checkout at Glimpses of Glory.
+    </p>
+</body>
+</html>

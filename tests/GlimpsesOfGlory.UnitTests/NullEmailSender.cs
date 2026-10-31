@@ -11,4 +11,6 @@ internal sealed class NullEmailSender : IEmailSender
     public Task SendShippedNotificationAsync(OrderShippedView order, CancellationToken cancellationToken) => Task.CompletedTask;
 
     public Task SendReadyForPickupNotificationAsync(OrderReadyForPickupView order, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task SendAbandonedCheckoutReminderAsync(AbandonedCheckoutReminderView reminder, CancellationToken cancellationToken) => Task.CompletedTask;
 }

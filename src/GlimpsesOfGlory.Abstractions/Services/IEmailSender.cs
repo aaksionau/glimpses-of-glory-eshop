@@ -9,4 +9,6 @@ public interface IEmailSender
     Task SendShippedNotificationAsync(OrderShippedView order, CancellationToken cancellationToken);
 
     Task SendReadyForPickupNotificationAsync(OrderReadyForPickupView order, CancellationToken cancellationToken);
+
+    Task SendAbandonedCheckoutReminderAsync(AbandonedCheckoutReminderView reminder, CancellationToken cancellationToken);
 }

@@ -147,6 +147,12 @@ namespace GlimpsesOfGlory.Core.Migrations
                     b.Property<int>("FulfillmentMethod")
                         .HasColumnType("integer");
 
+                    b.Property<DateTimeOffset?>("RemindedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RestoreToken")
+                        .HasColumnType("text");
+
                     b.Property<decimal>("ShippingCost")
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
@@ -160,6 +166,9 @@ namespace GlimpsesOfGlory.Core.Migrations
                         .HasColumnType("numeric(10,2)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("RestoreToken")
+                        .IsUnique();
 
                     b.HasIndex("StripePaymentIntentId")
                         .IsUnique();

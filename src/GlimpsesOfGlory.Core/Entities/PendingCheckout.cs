@@ -18,5 +18,9 @@ public sealed class PendingCheckout : ICheckoutHeader
     public decimal ShippingCost { get; set; }
     public decimal Total => Subtotal + ShippingCost;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    // Set once the abandoned-checkout reminder has been emailed; a checkout is reminded at most once.
+    public DateTimeOffset? RemindedAt { get; set; }
+    // Unguessable token in the reminder's /cart/restore link, generated when the reminder is sent.
+    public string? RestoreToken { get; set; }
     public List<PendingCheckoutLine> Lines { get; set; } = [];
 }

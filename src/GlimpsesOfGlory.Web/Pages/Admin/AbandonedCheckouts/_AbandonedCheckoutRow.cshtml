@@ -1,0 +1,38 @@
+@model GlimpsesOfGlory.Web.Pages.Admin.AbandonedCheckouts.AbandonedCheckoutRowViewModel
+@using GlimpsesOfGlory.Web.Helpers
+@{
+    var checkout = Model.Checkout;
+}
+
+<tr id="abandoned-checkout-@checkout.Id" class="border-b border-black/10 align-top">
+    <td class="py-2 pl-3 pr-2">@checkout.Email</td>
+    <td class="py-2 pr-2">
+        <ul class="text-sm">
+            @foreach (var line in checkout.Lines)
+            {
+                <li>@line.ProductName &times; @line.Quantity</li>
+            }
+        </ul>
+    </td>
+    <td class="py-2 pr-4 text-right tabular-nums">@checkout.Total.ToString("C")</td>
+    <td class="py-2 pr-2 text-sm">@FulfillmentLabels.CostLabel(checkout.FulfillmentMethod)</td>
+    <td class="py-2 pr-2 whitespace-nowrap text-sm">
+        <time datetime="@checkout.CreatedAt.ToString("o")" title="@RelativeTime.FullTimestamp(checkout.CreatedAt)">@RelativeTime.Format(checkout.CreatedAt, Model.Now)</time>
+    </td>
+    <td class="py-2 pr-3 text-sm">
+        @if (checkout.RemindedAt is { } remindedAt)
+        {
+            <span class="whitespace-nowrap text-gray-600">Reminded <time datetime="@remindedAt.ToString("o")" title="@RelativeTime.FullTimestamp(remindedAt)">@remindedAt.ToString("MMM d, yyyy")</time></span>
+        }
+        else
+        {
+            <form hx-post="/admin/abandoned-checkouts?handler=SendReminder&amp;id=@checkout.Id" hx-target="#abandoned-checkout-@checkout.Id" hx-swap="outerHTML" asp-antiforgery="true">
+                <button type="submit" class="whitespace-nowrap border border-black/20 bg-white hover:bg-gray-50 px-3 py-1 rounded-lg font-semibold">Send reminder</button>
+            </form>
+            @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+            {
+                <p class="mt-1 text-red-600" role="alert">@Model.ErrorMessage</p>
+            }
+        }
+    </td>
+</tr>

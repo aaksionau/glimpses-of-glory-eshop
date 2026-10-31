@@ -9,6 +9,7 @@ public sealed record AbandonedCheckout(
     IReadOnlyList<AbandonedCheckoutLine> Lines,
     decimal Total,
     FulfillmentMethod FulfillmentMethod,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? RemindedAt);
 
 public sealed record AbandonedCheckoutLine(string ProductName, int Quantity);

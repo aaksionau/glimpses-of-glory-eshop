@@ -1,11 +1,15 @@
+using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
+using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Core.Entities;
 using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Core.ValueObjects;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace GlimpsesOfGlory.UnitTests;
 
-// Runs the abandoned checkout listing against an in-memory SQLite database with a frozen clock.
+// Runs the abandoned checkout listing and reminder against an in-memory SQLite database with a frozen clock.
 public sealed class AbandonedCheckoutServiceTests : IDisposable
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 30, 12, 0, 0, TimeSpan.Zero);
@@ -65,12 +69,104 @@ public sealed class AbandonedCheckoutServiceTests : IDisposable
         Assert.Equal(Now.AddHours(-3), checkout.CreatedAt);
     }
 
-    private AbandonedCheckoutService Service() => new(database.CreateDb(), new FixedTimeProvider(Now));
+    [Fact]
+    public async Task SendReminder_EmailsTheShopper_ThenStampsRemindedAtAndToken()
+    {
+        var id = await AddPendingCheckoutAsync("shopper@example.com", Now.AddHours(-3));
+        var emailSender = new RecordingEmailSender();
 
-    private async Task AddPendingCheckoutAsync(string email, DateTimeOffset createdAt, FulfillmentMethod fulfillment = FulfillmentMethod.Shipping, decimal subtotal = 20m, decimal shipping = 0m)
+        var result = await Service(emailSender).SendReminderAsync(id, "https://shop.example/", CancellationToken.None);
+
+        Assert.Equal(ReminderSendResult.Sent, result);
+        var stored = await LoadAsync(id);
+        Assert.Equal(Now, stored.RemindedAt);
+        Assert.NotNull(stored.RestoreToken);
+        // 32 random bytes, base64url without padding.
+        Assert.Equal(43, stored.RestoreToken.Length);
+        Assert.Matches("^[A-Za-z0-9_-]+$", stored.RestoreToken);
+
+        var sent = Assert.Single(emailSender.Reminders);
+        Assert.Equal("shopper@example.com", sent.Email);
+        Assert.Equal([("Candle", 2), ("Card", 1)], sent.Lines.Select(l => (l.ProductName, l.Quantity)));
+        Assert.Equal($"https://shop.example/cart/restore/{stored.RestoreToken}", sent.RestoreUrl);
+    }
+
+    [Fact]
+    public async Task SendReminder_GeneratesADifferentTokenPerCheckout()
+    {
+        var first = await AddPendingCheckoutAsync("first@example.com", Now.AddHours(-3));
+        var second = await AddPendingCheckoutAsync("second@example.com", Now.AddHours(-3));
+
+        await Service().SendReminderAsync(first, "https://shop.example", CancellationToken.None);
+        await Service().SendReminderAsync(second, "https://shop.example", CancellationToken.None);
+
+        Assert.NotEqual((await LoadAsync(first)).RestoreToken, (await LoadAsync(second)).RestoreToken);
+    }
+
+    [Fact]
+    public async Task SendReminder_WhenAlreadyReminded_SendsNothing_AndKeepsTheFirstToken()
+    {
+        var id = await AddPendingCheckoutAsync("shopper@example.com", Now.AddHours(-3));
+        await Service().SendReminderAsync(id, "https://shop.example", CancellationToken.None);
+        var firstToken = (await LoadAsync(id)).RestoreToken;
+        var emailSender = new RecordingEmailSender();
+
+        var result = await Service(emailSender).SendReminderAsync(id, "https://shop.example", CancellationToken.None);
+
+        Assert.Equal(ReminderSendResult.AlreadyReminded, result);
+        Assert.Empty(emailSender.Reminders);
+        Assert.Equal(firstToken, (await LoadAsync(id)).RestoreToken);
+    }
+
+    [Fact]
+    public async Task SendReminder_UnknownCheckout_ReportsNotFound()
+    {
+        var emailSender = new RecordingEmailSender();
+
+        var result = await Service(emailSender).SendReminderAsync(999, "https://shop.example", CancellationToken.None);
+
+        Assert.Equal(ReminderSendResult.NotFound, result);
+        Assert.Empty(emailSender.Reminders);
+    }
+
+    [Fact]
+    public async Task SendReminder_WhenTheEmailFails_ReportsFailed_AndStampsNothing()
+    {
+        var id = await AddPendingCheckoutAsync("shopper@example.com", Now.AddHours(-3));
+
+        var result = await Service(new RecordingEmailSender { Fail = true }).SendReminderAsync(id, "https://shop.example", CancellationToken.None);
+
+        Assert.Equal(ReminderSendResult.Failed, result);
+        var stored = await LoadAsync(id);
+        Assert.Null(stored.RemindedAt);
+        Assert.Null(stored.RestoreToken);
+    }
+
+    [Fact]
+    public async Task List_CarriesTheRemindedState()
+    {
+        var reminded = await AddPendingCheckoutAsync("reminded@example.com", Now.AddHours(-3));
+        await AddPendingCheckoutAsync("not-reminded@example.com", Now.AddHours(-4));
+        await Service().SendReminderAsync(reminded, "https://shop.example", CancellationToken.None);
+
+        var listed = await Service().GetAbandonedCheckoutsAsync(CancellationToken.None);
+
+        Assert.Equal([Now, null], listed.Select(c => c.RemindedAt));
+    }
+
+    private AbandonedCheckoutService Service(IEmailSender? emailSender = null) =>
+        new(database.CreateDb(), emailSender ?? new NullEmailSender(), new FixedTimeProvider(Now), NullLogger<AbandonedCheckoutService>.Instance);
+
+    private async Task<PendingCheckout> LoadAsync(int id)
     {
         await using var db = database.CreateDb();
-        db.PendingCheckouts.Add(new PendingCheckout
+        return await db.PendingCheckouts.AsNoTracking().SingleAsync(p => p.Id == id);
+    }
+
+    private async Task<int> AddPendingCheckoutAsync(string email, DateTimeOffset createdAt, FulfillmentMethod fulfillment = FulfillmentMethod.Shipping, decimal subtotal = 20m, decimal shipping = 0m)
+    {
+        await using var db = database.CreateDb();
+        var checkout = new PendingCheckout
         {
             StripePaymentIntentId = $"pi_{Guid.NewGuid():N}",
             Email = email,
@@ -84,8 +180,10 @@ public sealed class AbandonedCheckoutServiceTests : IDisposable
                 new PendingCheckoutLine { ProductId = 1, ProductName = "Candle", UnitPrice = 10m, Quantity = 2 },
                 new PendingCheckoutLine { ProductId = 2, ProductName = "Card", UnitPrice = 10m, Quantity = 1 },
             ],
-        });
+        };
+        db.PendingCheckouts.Add(checkout);
         await db.SaveChangesAsync();
+        return checkout.Id;
     }
 
     private async Task AddOrderAsync(string email, DateTimeOffset createdAt)
