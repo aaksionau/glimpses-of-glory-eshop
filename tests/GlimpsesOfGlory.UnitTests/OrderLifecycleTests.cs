@@ -233,9 +233,9 @@ public sealed class OrderLifecycleTests : IDisposable
         Assert.Equal(inMemory, inSql);
     }
 
-    // Read off OrderLifecycle itself, so a newly declared rule or transition can't skip the check above.
     private static readonly bool[] BothPaidStates = [false, true];
 
+    // Read off OrderLifecycle itself, so a newly declared rule or transition can't skip the check above.
     private static readonly Dictionary<string, OrderRule> RulesByName = typeof(OrderLifecycle)
         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
         .ToDictionary(f => f.Name, f => f.GetValue(null) switch

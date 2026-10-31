@@ -4,3 +4,7 @@ root = true
 # analyzers don't ask for hand edits to code that is regenerated, never maintained by hand.
 [src/GlimpsesOfGlory.Core/Migrations/*.cs]
 generated_code = true
+
+# Test names use Method_Condition_Result underscores (CA1707).
+[tests/**.cs]
+dotnet_diagnostic.CA1707.severity = none
