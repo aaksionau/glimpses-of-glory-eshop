@@ -14,13 +14,35 @@ public class EditModel(IAdminProductService adminProductService) : PageModel
 
     public int Id { get; private set; }
 
+    public string Name { get; private set; } = "";
+
+    public string Slug { get; private set; } = "";
+
     public bool IsActive { get; private set; }
+
+    // The saved values, for the header and sidebar: Input holds the posted (possibly invalid) ones after a failed save.
+    public bool IsPreorder { get; private set; }
+
+    public int StockQuantity { get; private set; }
+
+    public DateOnly? ExpectedAvailabilityDate { get; private set; }
 
     public IReadOnlyList<AdminProductPhoto> Photos { get; private set; } = [];
 
     public int PreorderedQuantity { get; private set; }
 
     public string? SavedMessage { get; private set; }
+
+    public string? VisibilityMessage { get; private set; }
+
+    public string? StockMessage { get; private set; }
+
+    // True when rendering the htmx response to an action: the fragments outside the swap target
+    // (header badges, sidebar) are then sent as out-of-band swaps.
+    public bool IsHtmxUpdate { get; private set; }
+
+    // The hx-swap-oob value for those fragments; null drops the attribute on a full page render.
+    public string? OutOfBandSwap => IsHtmxUpdate ? "true" : null;
 
     public async Task<IActionResult> OnGetAsync(int id, CancellationToken cancellationToken)
     {
@@ -34,8 +56,8 @@ public class EditModel(IAdminProductService adminProductService) : PageModel
         return Page();
     }
 
-    // Swaps just the #product-form fragment (hx-target) so saving edits or
-    // toggling visibility never triggers a full page reload (AC requirement).
+    // Swaps just the #product-form fragment (hx-target) so saving edits never triggers a
+    // full page reload (AC requirement); the sidebar and header badges follow out-of-band.
     public async Task<IActionResult> OnPostAsync(int id, CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -46,10 +68,8 @@ public class EditModel(IAdminProductService adminProductService) : PageModel
                 return NotFound();
             }
 
-            Id = invalidProduct.Id;
-            IsActive = invalidProduct.IsActive;
-            Photos = invalidProduct.Photos;
-            PreorderedQuantity = invalidProduct.PreorderedQuantity;
+            LoadSavedState(invalidProduct);
+            IsHtmxUpdate = true;
             return Partial("_ProductForm", this);
         }
 
@@ -67,10 +87,13 @@ public class EditModel(IAdminProductService adminProductService) : PageModel
         }
 
         LoadFrom(product);
-        SavedMessage = "Product updated.";
+        SavedMessage = "Changes saved.";
+        IsHtmxUpdate = true;
         return Partial("_ProductForm", this);
     }
 
+    // Posted with hx-swap="none": only the sidebar and header badges change (out-of-band),
+    // so unsaved edits in the details form survive a visibility toggle.
     public async Task<IActionResult> OnPostToggleActiveAsync(int id, CancellationToken cancellationToken)
     {
         var product = await adminProductService.GetProductAsync(id, cancellationToken);
@@ -87,10 +110,13 @@ public class EditModel(IAdminProductService adminProductService) : PageModel
             return NotFound();
         }
 
-        LoadFrom(refreshed);
-        return Partial("_ProductForm", this);
+        LoadSavedState(refreshed);
+        VisibilityMessage = refreshed.IsActive ? "Now visible on the storefront." : "Now hidden from the storefront.";
+        IsHtmxUpdate = true;
+        return Partial("_ProductSidebar", this);
     }
 
+    // Receiving stock rewrites the stock and preorder fields, so the details form is re-rendered too.
     public async Task<IActionResult> OnPostReceiveStockAsync(int id, int quantityReceived, CancellationToken cancellationToken)
     {
         await adminProductService.ReceiveStockAsync(id, quantityReceived, cancellationToken);
@@ -102,7 +128,8 @@ public class EditModel(IAdminProductService adminProductService) : PageModel
         }
 
         LoadFrom(product);
-        SavedMessage = "Stock received.";
+        StockMessage = "Stock received.";
+        IsHtmxUpdate = true;
         return Partial("_ProductForm", this);
     }
 
@@ -131,10 +158,7 @@ public class EditModel(IAdminProductService adminProductService) : PageModel
 
     private void LoadFrom(AdminProductDetail product)
     {
-        Id = product.Id;
-        IsActive = product.IsActive;
-        Photos = product.Photos;
-        PreorderedQuantity = product.PreorderedQuantity;
+        LoadSavedState(product);
         Input = new ProductFormInput
         {
             Name = product.Name,
@@ -144,6 +168,19 @@ public class EditModel(IAdminProductService adminProductService) : PageModel
             IsPreorder = product.IsPreorder,
             ExpectedAvailabilityDate = product.ExpectedAvailabilityDate,
         };
+    }
+
+    private void LoadSavedState(AdminProductDetail product)
+    {
+        Id = product.Id;
+        Name = product.Name;
+        Slug = product.Slug;
+        IsActive = product.IsActive;
+        IsPreorder = product.IsPreorder;
+        StockQuantity = product.StockQuantity;
+        ExpectedAvailabilityDate = product.ExpectedAvailabilityDate;
+        Photos = product.Photos;
+        PreorderedQuantity = product.PreorderedQuantity;
     }
 
     private async Task<IActionResult> PhotoListPartialAsync(int productId, CancellationToken cancellationToken)

@@ -1,0 +1,66 @@
+@model GlimpsesOfGlory.Web.Pages.Admin.Products.EditModel
+@{
+    const string PrimaryButton = "bg-black text-white hover:bg-black/80 px-4 py-2 rounded-lg font-semibold disabled:opacity-50";
+    const string SecondaryButton = "border border-black/20 bg-white hover:bg-gray-50 px-4 py-2 rounded-lg font-semibold disabled:opacity-50";
+}
+
+@* Shows the saved state (not the form's unsaved input); re-sent out-of-band after each htmx action. *@
+<div id="product-sidebar" class="flex flex-col gap-6" hx-swap-oob="@Model.OutOfBandSwap">
+    <section class="rounded-lg border border-black/10 bg-white p-4" aria-labelledby="product-visibility-heading">
+        <h2 id="product-visibility-heading" class="font-semibold mb-2">Storefront visibility</h2>
+        <p class="mb-3 text-sm text-gray-600">
+            @(Model.IsActive ? "Shoppers can find and buy this product." : "Hidden: shoppers can't see or buy this product.")
+        </p>
+        @if (Model.IsActive)
+        {
+            <p class="mb-3 text-sm"><a href="/products/@Model.Slug" target="_blank" rel="noopener" class="underline hover:no-underline">View on storefront</a></p>
+        }
+        <form hx-post="/admin/products/@Model.Id/edit?handler=ToggleActive" hx-swap="none" hx-disabled-elt="find button" asp-antiforgery="true">
+            <button type="submit" class="@(Model.IsActive ? SecondaryButton : PrimaryButton)">
+                @(Model.IsActive ? "Hide from storefront" : "Show on storefront")
+            </button>
+        </form>
+        @if (!string.IsNullOrEmpty(Model.VisibilityMessage))
+        {
+            <p role="status" class="mt-2 text-sm text-green-700">@Model.VisibilityMessage</p>
+        }
+    </section>
+
+    <section class="rounded-lg border border-black/10 bg-white p-4" aria-labelledby="product-inventory-heading">
+        <h2 id="product-inventory-heading" class="font-semibold mb-2">Inventory</h2>
+        <dl class="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm">
+            <dt class="text-gray-600">In stock</dt>
+            <dd class="text-right font-medium">@Model.StockQuantity</dd>
+            @if (Model.IsPreorder)
+            {
+                <dt class="text-gray-600">Sold via preorder</dt>
+                <dd class="text-right font-medium">@Model.PreorderedQuantity</dd>
+                <dt class="text-gray-600">Expected</dt>
+                <dd class="text-right">@(Model.ExpectedAvailabilityDate?.ToString("MMM d, yyyy") ?? "Not set")</dd>
+            }
+        </dl>
+
+        @if (Model.IsPreorder)
+        {
+            <form hx-post="/admin/products/@Model.Id/edit?handler=ReceiveStock" hx-target="#product-form" hx-swap="outerHTML" hx-disabled-elt="find button" asp-antiforgery="true"
+                  class="mt-4 flex flex-wrap items-end gap-3 border-t border-black/10 pt-4">
+                <label class="block">
+                    <span class="block mb-1 text-sm font-medium">Quantity received</span>
+                    <input name="quantityReceived" type="number" min="0" required class="w-28 border border-black/20 rounded px-3 py-2" />
+                </label>
+                <button type="submit" class="@SecondaryButton">Receive stock</button>
+            </form>
+            <p class="mt-2 text-xs text-gray-500">Preordered units are taken out of the quantity received, and the product leaves preorder.</p>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.StockMessage))
+        {
+            <p role="status" class="mt-2 text-sm text-green-700">@Model.StockMessage</p>
+        }
+    </section>
+</div>
+
+@if (Model.IsHtmxUpdate)
+{
+    <partial name="_ProductHeaderBadges" model="Model" />
+}
