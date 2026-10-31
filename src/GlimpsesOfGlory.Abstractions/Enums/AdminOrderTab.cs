@@ -4,7 +4,7 @@ namespace GlimpsesOfGlory.Abstractions.Enums;
 // shipped shows under both Needs action and Shipped.
 public enum AdminOrderTab
 {
-    // New orders, plus unpaid orders that aren't cancelled (see OrderTransitionPolicy.NeedsAction).
+    // New orders, plus unpaid orders that aren't cancelled (see OrderLifecycle.NeedsAction).
     NeedsAction,
 
     // Shipped or ready for pickup, and picked up.

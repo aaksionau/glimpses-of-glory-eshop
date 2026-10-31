@@ -11,8 +11,8 @@ public sealed class AdminDashboardService(AppDbContext db, TimeProvider timeProv
     public async Task<AdminDashboardMetrics> GetMetricsAsync(CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();
-        var toFulfill = await db.Orders.CountAsync(AdminQueryFilters.ToFulfill, cancellationToken);
-        var unpaidCash = await db.Orders.CountAsync(AdminQueryFilters.UnpaidCash, cancellationToken);
+        var toFulfill = await db.Orders.CountAsync(OrderLifecycle.ToFulfill.OnOrders, cancellationToken);
+        var unpaidCash = await db.Orders.CountAsync(OrderLifecycle.UnpaidCash.OnOrders, cancellationToken);
         var lowStock = await db.Products.CountAsync(AdminQueryFilters.LowStock, cancellationToken);
         var revenue7 = await RevenueSinceAsync(now.AddDays(-7), cancellationToken);
         var revenue30 = await RevenueSinceAsync(now.AddDays(-30), cancellationToken);
