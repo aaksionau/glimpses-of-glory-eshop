@@ -5,6 +5,7 @@ public enum AdminSection
     None,
     Dashboard,
     Orders,
+    AbandonedCheckouts,
     Products,
     Shipping,
 }
@@ -24,6 +25,7 @@ public static class AdminSections
     [
         new(AdminSection.Dashboard, "", "Dashboard"),
         new(AdminSection.Orders, "orders", "Orders"),
+        new(AdminSection.AbandonedCheckouts, "abandoned-checkouts", "Abandoned checkouts"),
         new(AdminSection.Products, "products", "Products"),
         new(AdminSection.Shipping, "shipping", "Shipping rates"),
     ];
