@@ -84,14 +84,33 @@ public sealed class AdminDashboardServiceTests : IDisposable
         Assert.Equal(3, all.Count);
     }
 
+    [Fact]
+    public async Task GetMetrics_CountsUnremindedAbandonedCheckouts_InTheListWindow_ExcludingConvertedAndReminded()
+    {
+        await AddPendingCheckoutAsync("counted@example.com", Now.AddHours(-2));
+        await AddPendingCheckoutAsync("counted-old@example.com", Now.AddDays(-29));
+        await AddPendingCheckoutAsync("too-new@example.com", Now.AddMinutes(-59));
+        await AddPendingCheckoutAsync("too-old@example.com", Now.AddDays(-31));
+        await AddPendingCheckoutAsync("reminded@example.com", Now.AddDays(-2), remindedAt: Now.AddDays(-1));
+        await AddPendingCheckoutAsync("converted@example.com", Now.AddDays(-2));
+        await AddOrderAsync(OrderStatus.New, PaymentMethod.Card, paidAt: Now.AddDays(-1), email: "converted@example.com", createdAt: Now.AddDays(-1));
+
+        var metrics = await Service().GetMetricsAsync(CancellationToken.None);
+        var listed = await new AbandonedCheckoutService(database.CreateDb(), new NullEmailSender(), new FixedTimeProvider(Now), NullLogger<AbandonedCheckoutService>.Instance)
+            .GetAbandonedCheckoutsAsync(CancellationToken.None);
+
+        Assert.Equal(2, metrics.UnremindedAbandonedCheckouts);
+        Assert.Equal(metrics.UnremindedAbandonedCheckouts, listed.Count(c => c.RemindedAt is null));
+    }
+
     private AdminDashboardService Service() => new(database.CreateDb(), new FixedTimeProvider(Now));
 
-    private async Task AddOrderAsync(OrderStatus status, PaymentMethod paymentMethod, DateTimeOffset? paidAt = null, decimal subtotal = 20m, decimal shipping = 0m)
+    private async Task AddOrderAsync(OrderStatus status, PaymentMethod paymentMethod, DateTimeOffset? paidAt = null, decimal subtotal = 20m, decimal shipping = 0m, string email = "shopper@example.com", DateTimeOffset? createdAt = null)
     {
         await using var db = database.CreateDb();
         db.Orders.Add(new Order
         {
-            Email = "shopper@example.com",
+            Email = email,
             FulfillmentMethod = paymentMethod == PaymentMethod.Cash ? FulfillmentMethod.Pickup : FulfillmentMethod.Shipping,
             ShippingAddress = new ShippingAddress { FullName = "Jane Shopper" },
             Status = status,
@@ -99,7 +118,23 @@ public sealed class AdminDashboardServiceTests : IDisposable
             PaidAt = paidAt,
             Subtotal = subtotal,
             ShippingCost = shipping,
-            CreatedAt = Now.AddDays(-40),
+            CreatedAt = createdAt ?? Now.AddDays(-40),
+        });
+        await db.SaveChangesAsync();
+    }
+
+    private async Task AddPendingCheckoutAsync(string email, DateTimeOffset createdAt, DateTimeOffset? remindedAt = null)
+    {
+        await using var db = database.CreateDb();
+        db.PendingCheckouts.Add(new PendingCheckout
+        {
+            StripePaymentIntentId = $"pi_{Guid.NewGuid():N}",
+            Email = email,
+            FulfillmentMethod = FulfillmentMethod.Shipping,
+            ShippingAddress = new ShippingAddress { FullName = "Jane Shopper" },
+            Subtotal = 20m,
+            CreatedAt = createdAt,
+            RemindedAt = remindedAt,
         });
         await db.SaveChangesAsync();
     }

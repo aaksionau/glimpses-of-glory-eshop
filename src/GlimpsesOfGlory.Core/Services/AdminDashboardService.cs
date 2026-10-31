@@ -14,9 +14,11 @@ public sealed class AdminDashboardService(AppDbContext db, TimeProvider timeProv
         var toFulfill = await db.Orders.CountAsync(OrderLifecycle.ToFulfill.OnOrders, cancellationToken);
         var unpaidCash = await db.Orders.CountAsync(OrderLifecycle.UnpaidCash.OnOrders, cancellationToken);
         var lowStock = await db.Products.CountAsync(AdminQueryFilters.LowStock, cancellationToken);
+        var unremindedAbandoned = await AdminQueryFilters.AbandonedCheckouts(db, now)
+            .CountAsync(p => p.RemindedAt == null, cancellationToken);
         var revenue7 = await RevenueSinceAsync(now.AddDays(-7), cancellationToken);
         var revenue30 = await RevenueSinceAsync(now.AddDays(-30), cancellationToken);
-        return new AdminDashboardMetrics(toFulfill, unpaidCash, lowStock, revenue7, revenue30);
+        return new AdminDashboardMetrics(toFulfill, unpaidCash, lowStock, unremindedAbandoned, revenue7, revenue30);
     }
 
     // Order.Total isn't mapped, so the sum is spelled out over its stored parts.
