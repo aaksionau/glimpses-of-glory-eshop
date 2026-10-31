@@ -6,10 +6,12 @@
 
     private string NavLinkClass(StorefrontSection section) =>
         "min-h-11 items-center px-3 border-b-2 transition-colors hover:text-gold-dark "
-        + (section != StorefrontSection.None && section == currentSection ? "border-gold text-gold-dark" : "border-transparent");
+        + (IsCurrent(section) ? "border-gold text-gold-dark" : "border-transparent");
 
-    private string? AriaCurrent(StorefrontSection section) =>
-        section != StorefrontSection.None && section == currentSection ? "page" : null;
+    private string? AriaCurrent(StorefrontSection section) => IsCurrent(section) ? "page" : null;
+
+    private bool IsCurrent(StorefrontSection section) =>
+        section != StorefrontSection.None && section == currentSection;
 }
 @{
     var request = Context.Request;
