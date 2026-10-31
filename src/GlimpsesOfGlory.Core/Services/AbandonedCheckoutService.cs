@@ -12,10 +12,6 @@ namespace GlimpsesOfGlory.Core.Services;
 
 public sealed class AbandonedCheckoutService(AppDbContext db, IEmailSender emailSender, TimeProvider timeProvider, ILogger<AbandonedCheckoutService> logger) : IAbandonedCheckoutService
 {
-    // Younger checkouts may still be mid-payment; older ones are too stale to chase.
-    private static readonly TimeSpan MinimumAge = TimeSpan.FromHours(1);
-    private static readonly TimeSpan MaximumAge = TimeSpan.FromDays(30);
-
     private const int RestoreTokenBytes = 32;
 
     private static readonly Expression<Func<PendingCheckout, AbandonedCheckout>> ToAbandonedCheckout = p => new AbandonedCheckout(
@@ -27,18 +23,11 @@ public sealed class AbandonedCheckoutService(AppDbContext db, IEmailSender email
         p.CreatedAt,
         p.RemindedAt);
 
-    public async Task<IReadOnlyList<AbandonedCheckout>> GetAbandonedCheckoutsAsync(CancellationToken cancellationToken)
-    {
-        var now = timeProvider.GetUtcNow();
-        var createdBefore = now - MinimumAge;
-        var createdAfter = now - MaximumAge;
-        return await db.PendingCheckouts
-            .Where(p => p.CreatedAt < createdBefore && p.CreatedAt > createdAfter)
-            .Where(p => !db.Orders.Any(o => o.Email == p.Email && o.CreatedAt > p.CreatedAt))
+    public async Task<IReadOnlyList<AbandonedCheckout>> GetAbandonedCheckoutsAsync(CancellationToken cancellationToken) =>
+        await AdminQueryFilters.AbandonedCheckouts(db, timeProvider.GetUtcNow())
             .OrderByDescending(p => p.CreatedAt)
             .Select(ToAbandonedCheckout)
             .ToListAsync(cancellationToken);
-    }
 
     public Task<AbandonedCheckout?> GetAbandonedCheckoutAsync(int id, CancellationToken cancellationToken) =>
         db.PendingCheckouts

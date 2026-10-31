@@ -16,6 +16,9 @@ public class IndexModel(IAdminDashboardService dashboardService) : PageModel
     private static readonly string UnpaidCashOrdersHref =
         new AdminOrderListState(AdminOrderTabs.Default, Search: null, PreorderOnly: false, Page: 1, UnpaidCashOnly: true).Href;
 
+    private static readonly string AbandonedCheckoutsHref =
+        AdminSections.Links.Single(l => l.Section == AdminSection.AbandonedCheckouts).Href;
+
     public IReadOnlyList<DashboardTile> Tiles { get; private set; } = [];
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
@@ -28,6 +31,7 @@ public class IndexModel(IAdminDashboardService dashboardService) : PageModel
         new("Orders to fulfill", Count(metrics.OrdersToFulfill), "New orders not yet shipped or ready for pickup.", OrdersToFulfillHref),
         new("Unpaid cash orders", Count(metrics.UnpaidCashOrders), "Cash still to collect on orders that aren't cancelled.", UnpaidCashOrdersHref),
         new("Low-stock products", Count(metrics.LowStockProducts), $"Visible products with {StockPolicy.LowStockThreshold} or fewer in stock, excluding preorders.", Products.IndexModel.LowStockHref),
+        new("Abandoned checkouts not yet reminded", Count(metrics.UnremindedAbandonedCheckouts), "Checkouts from the last 30 days that never became an order and haven't had a reminder.", AbandonedCheckoutsHref),
         new("Revenue, last 7 days", Money(metrics.RevenueLast7Days), "Paid orders, excluding cancelled ones.", null),
         new("Revenue, last 30 days", Money(metrics.RevenueLast30Days), "Paid orders, excluding cancelled ones.", null),
     ];
