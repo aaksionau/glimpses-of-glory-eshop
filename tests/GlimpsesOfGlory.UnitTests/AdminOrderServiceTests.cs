@@ -491,6 +491,8 @@ public sealed class AdminOrderServiceTests : IDisposable
 
         public Task SendReadyForPickupNotificationAsync(OrderReadyForPickupView order, CancellationToken cancellationToken) => Record(ReadyForPickup, order);
 
+        public Task SendAbandonedCheckoutReminderAsync(AbandonedCheckoutReminderView reminder, CancellationToken cancellationToken) => Task.CompletedTask;
+
         private Task Record<T>(List<T> sent, T email)
         {
             if (Fail)

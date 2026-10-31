@@ -31,6 +31,12 @@ public sealed class OrderNotifier(
         await SendAsync(order.Address.Email, $"Your order #{order.OrderId} is ready for pickup", html, cancellationToken);
     }
 
+    public async Task SendAbandonedCheckoutReminderAsync(AbandonedCheckoutReminderView reminder, CancellationToken cancellationToken)
+    {
+        var html = await viewRenderer.RenderAsync("~/Emails/AbandonedCheckoutReminder.cshtml", reminder);
+        await SendAsync(reminder.Email, "You left something in your cart – Glimpses of Glory", html, cancellationToken);
+    }
+
     private async Task SendAsync(string to, string subject, string html, CancellationToken cancellationToken)
     {
         var options = resendOptions.Value;

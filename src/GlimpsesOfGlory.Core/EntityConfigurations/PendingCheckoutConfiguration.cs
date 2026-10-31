@@ -10,6 +10,7 @@ internal sealed class PendingCheckoutConfiguration : IEntityTypeConfiguration<Pe
     public void Configure(EntityTypeBuilder<PendingCheckout> builder)
     {
         builder.HasIndex(p => p.StripePaymentIntentId).IsUnique();
+        builder.HasIndex(p => p.RestoreToken).IsUnique();
         builder.ConfigureCheckoutHeader();
 
         builder.HasMany(p => p.Lines)
