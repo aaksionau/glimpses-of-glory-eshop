@@ -52,5 +52,19 @@ jobs:
       - name: Build
         run: dotnet build ${{ env.SOLUTION }} --no-restore --configuration Release
 
+      # The app applies migrations at startup, so a model change committed without its
+      # migration would only surface in production. This check compares the model with the
+      # latest migration snapshot and opens no database connection; the dummy connection
+      # string only satisfies Program.cs, which requires one to build the host.
+      - name: Check for model changes without a migration
+        env:
+          ConnectionStrings__Default: Host=localhost;Database=ci_model_check;Username=ci;Password=ci
+        run: >-
+          dotnet ef migrations has-pending-model-changes
+          --project src/GlimpsesOfGlory.Core
+          --startup-project src/GlimpsesOfGlory.Web
+          --no-build
+          --configuration Release
+
       - name: Test
         run: dotnet test ${{ env.SOLUTION }} --no-build --configuration Release --verbosity normal
