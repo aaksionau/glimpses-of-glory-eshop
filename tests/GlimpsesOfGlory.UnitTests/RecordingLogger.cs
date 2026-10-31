@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 namespace GlimpsesOfGlory.UnitTests;
 
 // Records each log entry so a test can assert on what was logged and at what level.
-public sealed class CapturingLogger<T> : ILogger<T>
+public sealed class RecordingLogger<T> : ILogger<T>
 {
     public List<LogEntry> Entries { get; } = [];
 

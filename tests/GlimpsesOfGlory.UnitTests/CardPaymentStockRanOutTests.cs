@@ -15,7 +15,7 @@ public sealed class CardPaymentStockRanOutTests : IDisposable
     private const string PaymentIntentId = "pi_short";
 
     private readonly SqliteTestDatabase database = new();
-    private readonly CapturingLogger<OrderService> logger = new();
+    private readonly RecordingLogger<OrderService> logger = new();
 
     public void Dispose() => database.Dispose();
 
@@ -53,8 +53,32 @@ public sealed class CardPaymentStockRanOutTests : IDisposable
         Assert.Equal(1, check.Products.Single(p => p.Slug == "sunrise").StockQuantity);
     }
 
+    [Fact]
+    public async Task ConfirmPayment_WhenTwoLinesOfOneProductAreShortTogether_LogsTheirCombinedQuantity()
+    {
+        // Each Sunrise line fits the 1 left on its own; together they don't.
+        await SeedPaidCheckoutAsync((harbour, sunrise) =>
+        [
+            new PendingCheckoutLine { ProductId = sunrise.Id, ProductName = "Sunrise", UnitPrice = 20m, Quantity = 1 },
+            new PendingCheckoutLine { ProductId = sunrise.Id, ProductName = "Sunrise", UnitPrice = 20m, Quantity = 1 },
+        ]);
+
+        await OrderService().ConfirmPaymentAsync(PaymentIntentId, CancellationToken.None);
+
+        var error = Assert.Single(logger.Entries, e => e.Level == LogLevel.Error);
+        Assert.Contains("Sunrise (product", error.Message);
+        Assert.Contains("wanted 2, 1 left", error.Message);
+    }
+
     // Harbour (5 in stock) wants 1 and is fine; Sunrise had stock at checkout but only 1 is left now.
-    private async Task SeedPaidCheckoutAsync()
+    private Task SeedPaidCheckoutAsync() =>
+        SeedPaidCheckoutAsync((harbour, sunrise) =>
+        [
+            new PendingCheckoutLine { ProductId = harbour.Id, ProductName = "Harbour", UnitPrice = 15m, Quantity = 1 },
+            new PendingCheckoutLine { ProductId = sunrise.Id, ProductName = "Sunrise", UnitPrice = 20m, Quantity = 3 },
+        ]);
+
+    private async Task SeedPaidCheckoutAsync(Func<Product, Product, List<PendingCheckoutLine>> lines)
     {
         await using var db = database.CreateDb();
         var harbour = new Product { Name = "Harbour", Slug = "harbour", Description = "d", Price = 15m, StockQuantity = 5 };
@@ -70,11 +94,7 @@ public sealed class CardPaymentStockRanOutTests : IDisposable
             ShippingAddress = ShippingAddress.FromInfo(new ShippingAddressInfo("shopper@example.com", "Sam Shopper", null, null, null, null, null, null)),
             Subtotal = 75m,
             ShippingCost = 0m,
-            Lines =
-            [
-                new PendingCheckoutLine { ProductId = harbour.Id, ProductName = "Harbour", UnitPrice = 15m, Quantity = 1 },
-                new PendingCheckoutLine { ProductId = sunrise.Id, ProductName = "Sunrise", UnitPrice = 20m, Quantity = 3 },
-            ],
+            Lines = lines(harbour, sunrise),
         });
         await db.SaveChangesAsync();
     }

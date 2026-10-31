@@ -100,8 +100,9 @@ public sealed class OrderService(
             // Payment succeeded but stock ran out before confirmation - only possible if stock
             // changed between PaymentIntent creation and webhook delivery. The PendingCheckout is kept
             // for the refund, and returning normally keeps the webhook at 200 so Stripe doesn't retry.
-            var shortLines = await DescribeShortLinesAsync(pendingCheckout.Lines, cancellationToken);
+            var (shortLines, rereadFailure) = await DescribeShortLinesAsync(pendingCheckout.Lines, cancellationToken);
             logger.LogError(
+                rereadFailure,
                 "Payment {PaymentIntentId} from {Email} succeeded but no order was created because stock ran out: {ShortLines}. Manual follow-up (refund) needed",
                 paymentIntentId,
                 pendingCheckout.Email,
@@ -269,24 +270,38 @@ public sealed class OrderService(
             .ToList();
 
     // Re-reads stock (untracked, outside the rolled-back transaction) to say which in-stock lines
-    // of a paid checkout couldn't be reserved, e.g. "Sunrise (product 3): wanted 2, 1 left".
-    private async Task<string> DescribeShortLinesAsync(IEnumerable<PendingCheckoutLine> lines, CancellationToken cancellationToken)
+    // of a paid checkout couldn't be reserved, e.g. "Sunrise (product 3): wanted 2, 1 left". Lines for
+    // the same product are summed, as the reservation consumed them together. Never throws: a failed
+    // re-read is returned so the paid-but-orderless error is still logged and the webhook stays at 200.
+    private async Task<(string ShortLines, Exception? RereadFailure)> DescribeShortLinesAsync(
+        IEnumerable<PendingCheckoutLine> lines, CancellationToken cancellationToken)
     {
-        var stockLines = lines.Where(l => !l.IsPreorder).ToList();
-        var productIds = stockLines.Select(l => l.ProductId).ToList();
-        var stock = await dbContext.Products
-            .AsNoTracking()
-            .Where(p => productIds.Contains(p.Id))
-            .ToDictionaryAsync(p => p.Id, p => p.StockQuantity, cancellationToken);
+        try
+        {
+            var wanted = lines
+                .Where(l => !l.IsPreorder)
+                .GroupBy(l => l.ProductId)
+                .Select(g => (ProductId: g.Key, Name: g.First().ProductName, Quantity: g.Sum(l => l.Quantity)))
+                .ToList();
+            var productIds = wanted.Select(w => w.ProductId).ToList();
+            var products = await dbContext.Products
+                .AsNoTracking()
+                .Where(p => productIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, cancellationToken);
 
-        var shortLines = stockLines
-            .Select(l => (line: l, left: Math.Max(0, stock.GetValueOrDefault(l.ProductId))))
-            .Where(x => x.left < x.line.Quantity)
-            .Select(x => $"{x.line.ProductName} (product {x.line.ProductId}): wanted {x.line.Quantity}, {x.left} left")
-            .ToList();
+            var shortLines = wanted
+                .Select(w => (wanted: w, product: products.GetValueOrDefault(w.ProductId)))
+                .Where(x => x.product is null || !x.product.CanFulfill(x.wanted.Quantity))
+                .Select(x => $"{x.wanted.Name} (product {x.wanted.ProductId}): wanted {x.wanted.Quantity}, {Math.Max(0, x.product?.StockQuantity ?? 0)} left")
+                .ToList();
 
-        // Empty if stock came back between the failed reservation and this re-read.
-        return shortLines.Count == 0 ? "none short on re-read" : string.Join("; ", shortLines);
+            // Empty if stock came back between the failed reservation and this re-read.
+            return (shortLines.Count == 0 ? "none short on re-read" : string.Join("; ", shortLines), null);
+        }
+        catch (Exception ex)
+        {
+            return ("unknown (stock re-read failed)", ex);
+        }
     }
 
     private sealed record CartPricing(PricedCart? Priced, IReadOnlyList<UnavailableCartLine> UnavailableLines);
