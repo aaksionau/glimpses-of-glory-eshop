@@ -4,17 +4,20 @@
     ViewData["Title"] = "Payment";
 }
 
-<div class="py-4 max-w-xl mx-auto lg:max-w-5xl">
+<div class="py-4">
     <h1 class="text-3xl font-bold mb-6 font-display">Checkout</h1>
 
-    <partial name="_CheckoutSteps" model="3" />
+    <div class="flex flex-col gap-6 lg:grid lg:grid-cols-[22rem_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-10">
+        @* Steps sit above the main column; the summary spans both rows on the left. *@
+        <div class="lg:col-start-2 lg:row-start-1">
+            <partial name="_CheckoutSteps" model="3" />
+        </div>
 
-    <div class="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-10">
-        <aside class="lg:order-last lg:sticky lg:top-4">
+        <aside class="lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-4">
             <partial name="_CheckoutOrderSummary" model="Model.Summary" />
         </aside>
 
-        <div>
+        <div class="lg:col-start-2 lg:row-start-2">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="font-semibold text-lg">Pay by card</h2>
                 <a href="/checkout/review" class="text-sm text-gold-dark hover:underline">Back</a>
