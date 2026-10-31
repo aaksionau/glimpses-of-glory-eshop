@@ -58,7 +58,7 @@ This isn't compiler-enforced — .NET project references don't support per-file 
 
 ## Where external integrations go
 
-Decided in `docs/adr/0001-external-integrations-in-infrastructure-project.md`. An adapter to something outside the app — a payment provider, file/blob storage, a third-party HTTP API, an SDK package — goes in `GlimpsesOfGlory.Infrastructure/` (type-first: `Services/` for the adapter, `Options/` for settings only it reads), implementing an interface in `Abstractions/Services/`. Core services depend on that interface, never on the adapter or the SDK; the SDK `PackageReference` goes in `Infrastructure.csproj`, not Core's. Wire it in `Program.cs`. `ProjectBoundaryTests` fails if Core depends on Infrastructure or Stripe, if Infrastructure depends on Core, or if a Web type other than `Program` depends on Infrastructure.
+Decided in `docs/adr/0001-external-integrations-in-infrastructure-project.md`. An adapter to something outside the app — a payment provider, file/blob storage, a third-party HTTP API, an SDK package — goes in `GlimpsesOfGlory.Infrastructure/` (type-first: `Services/` for the adapter, `Options/` for settings only it reads), implementing an interface in `Abstractions/Services/`. Core services depend on that interface, never on the adapter or the SDK; the SDK `PackageReference` goes in `Infrastructure.csproj`, not Core's (version-less: every package version lives in the root `Directory.Packages.props`, Central Package Management). Wire it in `Program.cs`. `ProjectBoundaryTests` fails if Core depends on Infrastructure or Stripe, if Infrastructure depends on Core, or if a Web type other than `Program` depends on Infrastructure.
 
 Two deliberate exceptions:
 
