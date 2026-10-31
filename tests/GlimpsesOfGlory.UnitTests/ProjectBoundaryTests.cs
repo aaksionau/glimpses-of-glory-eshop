@@ -48,24 +48,18 @@ public class ProjectBoundaryTests
     [InlineData(StripeNamespace)]
     public void CoreTypes_DoNotDependOn(string forbiddenNamespace)
     {
-        var violators = DependentTypes(Types.InAssembly(CoreAssembly), forbiddenNamespace);
-
-        Assert.True(
-            violators.Count == 0,
+        AssertNoViolations(
+            DependentTypes(Types.InAssembly(CoreAssembly), forbiddenNamespace).Select(type => type.FullName),
             $"Core types must not depend on {forbiddenNamespace} (put the integration in " +
-            $"{InfrastructureNamespace} behind an Abstractions interface):" + Environment.NewLine +
-            string.Join(Environment.NewLine, violators.Select(type => type.FullName)));
+            $"{InfrastructureNamespace} behind an Abstractions interface)");
     }
 
     [Fact]
     public void InfrastructureTypes_DoNotDependOnCore()
     {
-        var violators = DependentTypes(Types.InAssembly(InfrastructureAssembly), CoreNamespace);
-
-        Assert.True(
-            violators.Count == 0,
-            $"Infrastructure types must not depend on {CoreNamespace} (implement an Abstractions interface instead):" +
-            Environment.NewLine + string.Join(Environment.NewLine, violators.Select(type => type.FullName)));
+        AssertNoViolations(
+            DependentTypes(Types.InAssembly(InfrastructureAssembly), CoreNamespace).Select(type => type.FullName),
+            $"Infrastructure types must not depend on {CoreNamespace} (implement an Abstractions interface instead)");
     }
 
     [Fact]
@@ -90,11 +84,11 @@ public class ProjectBoundaryTests
     [InlineData(InfrastructureNamespace)]
     public void AssemblyTypes_AllLiveUnderTheirProjectNamespace(string projectNamespace)
     {
-        // The boundary rules match a *namespace*; this keeps that equivalent to the project's *assembly*.
+        // The boundary rules match a *namespace*; this keeps that equivalent to the project's *assembly*
+        // (each project's assembly is named after its root namespace).
         // Compiler-generated and file-local types (e.g. source-generated regexes) have mangled '<' names
         // and can't be referenced from Web, so they're skipped.
-        var assembly = projectNamespace == CoreNamespace ? CoreAssembly : InfrastructureAssembly;
-        var outsiders = assembly.GetTypes()
+        var outsiders = Assembly.Load(projectNamespace).GetTypes()
             .Where(type => type.Namespace is not null && !OutermostType(type).Name.StartsWith('<'))
             .Where(type => type.Namespace != projectNamespace && !type.Namespace!.StartsWith(projectNamespace + ".", StringComparison.Ordinal))
             .Select(type => type.FullName)
@@ -126,15 +120,17 @@ public class ProjectBoundaryTests
 
     private static void AssertNoWebTypeOtherThanProgramDependsOn(string forbiddenNamespace, Assembly forbiddenAssembly)
     {
-        var violations = DependentTypesOtherThanProgram(Types.InAssembly(WebAssembly), forbiddenNamespace)
-            .Select(type => $"{type.FullName} -> {DescribeReferences(type, forbiddenAssembly)}")
-            .ToList();
+        AssertNoViolations(
+            DependentTypesOtherThanProgram(Types.InAssembly(WebAssembly), forbiddenNamespace)
+                .Select(type => $"{type.FullName} -> {DescribeReferences(type, forbiddenAssembly)}"),
+            $"Web types other than Program must not depend on {forbiddenNamespace} (inject an Abstractions interface instead)");
+    }
 
-        Assert.True(
-            violations.Count == 0,
-            $"Web types other than Program must not depend on {forbiddenNamespace} " +
-            "(inject an Abstractions interface instead):" + Environment.NewLine +
-            string.Join(Environment.NewLine, violations));
+    private static void AssertNoViolations(IEnumerable<string?> violations, string rule)
+    {
+        var list = violations.ToList();
+
+        Assert.True(list.Count == 0, rule + ":" + Environment.NewLine + string.Join(Environment.NewLine, list));
     }
 
     /// <summary>
