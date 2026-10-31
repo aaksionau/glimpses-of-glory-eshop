@@ -31,45 +31,45 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
             .Take(pageSize)
             .Select(o => new
             {
-                Summary = new AdminOrderSummary(
-                    o.Id,
-                    o.ShippingAddress.FullName,
-                    o.Email,
-                    o.Lines.Sum(l => l.Quantity),
-                    o.Total,
-                    o.Status,
-                    o.FulfillmentMethod,
-                    o.PaidAt != null,
-                    o.Lines.Any(l => l.IsPreorder),
-                    o.Lines.Where(l => l.IsPreorder).Min(l => l.ExpectedAvailabilityDate),
-                    false,
-                    false,
-                    o.InternalNote != null,
-                    o.CreatedAt),
-                o.PaymentMethod,
+                o.Id,
+                CustomerName = o.ShippingAddress.FullName,
+                o.Email,
+                ItemCount = o.Lines.Sum(l => l.Quantity),
+                o.Total,
+                o.CreatedAt,
+                HasPreorderLines = o.Lines.Any(l => l.IsPreorder),
+                EarliestExpectedAvailability = o.Lines.Where(l => l.IsPreorder).Min(l => l.ExpectedAvailabilityDate),
+                HasInternalNote = o.InternalNote != null,
+                Facts = new OrderFacts
+                {
+                    Status = o.Status,
+                    FulfillmentMethod = o.FulfillmentMethod,
+                    PaymentMethod = o.PaymentMethod,
+                    IsPaid = o.PaidAt != null,
+                },
             })
             .ToListAsync(cancellationToken);
 
-        // The lifecycle flags are filled in from the page's rows, so the rules run in memory only.
-        var items = rows.Select(r => WithLifecycleFlags(r.Summary, r.PaymentMethod)).ToList();
+        // The lifecycle flags are read off the page's rows, so the rules run in memory only. NeedsRefund
+        // comes from the same OrderLifecycle.Actions the detail page uses, so list and detail can't drift.
+        var items = rows.Select(r => new AdminOrderSummary(
+                Id: r.Id,
+                CustomerName: r.CustomerName,
+                Email: r.Email,
+                ItemCount: r.ItemCount,
+                Total: r.Total,
+                Status: r.Facts.Status,
+                FulfillmentMethod: r.Facts.FulfillmentMethod,
+                IsPaid: r.Facts.IsPaid,
+                HasPreorderLines: r.HasPreorderLines,
+                EarliestExpectedAvailability: r.EarliestExpectedAvailability,
+                NeedsRefund: OrderLifecycle.Actions(r.Facts).NeedsRefund,
+                NeedsAction: OrderLifecycle.NeedsAction.IsSatisfiedBy(r.Facts),
+                HasInternalNote: r.HasInternalNote,
+                CreatedAt: r.CreatedAt))
+            .ToList();
 
         return new AdminOrderPage(items, page, pageSize, totalCount);
-    }
-
-    private static AdminOrderSummary WithLifecycleFlags(AdminOrderSummary summary, PaymentMethod paymentMethod)
-    {
-        var facts = new OrderFacts
-        {
-            Status = summary.Status,
-            FulfillmentMethod = summary.FulfillmentMethod,
-            PaymentMethod = paymentMethod,
-            IsPaid = summary.IsPaid,
-        };
-        return summary with
-        {
-            NeedsRefund = OrderLifecycle.NeedsRefund.IsSatisfiedBy(facts),
-            NeedsAction = OrderLifecycle.NeedsAction.IsSatisfiedBy(facts),
-        };
     }
 
     // One COUNT query per tab; the DbContext can't run them concurrently.
