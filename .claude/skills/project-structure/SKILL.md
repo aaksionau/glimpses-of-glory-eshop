@@ -29,9 +29,9 @@ src/
     Pages/        Razor Pages (routing folders)
     Emails/       Razor email templates (OrderConfirmation.cshtml, ...)
     Email/        ResendEmailSender (IEmailSender over Resend's HTTP API), RazorViewToStringRenderer
-    TagHelpers/   FieldValidationAriaTagHelper, ValidationMessageIdTagHelper
+    TagHelpers/   FieldValidationAriaTagHelper, ValidationMessageIdTagHelper, FieldValidationMessages
     Formatting/   display text: *Labels, OrderBadges, OrderTimeline, RelativeTime, SeoText,
-                  PreorderNoteFormatter, CheckoutMessages, FieldValidationMessages
+                  PreorderNoteFormatter, CheckoutMessages
     Helpers/      what fits no more specific kind: session stores, CheckoutStepGuard,
                   AdminOrderListState, OrderCsvExport, nav sections, ...
     Dtos/ (CheckoutAddress.cs), Configuration/, Security/, Program.cs

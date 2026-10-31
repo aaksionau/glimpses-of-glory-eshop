@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace GlimpsesOfGlory.Web.Email;
 
-// Sends every store email (order confirmation, shipped, ready for pickup, abandoned-checkout reminder) through Resend's HTTP API (https://resend.com/docs/api-reference/emails/send-email).
+// Sends every store email (the IEmailSender methods) through Resend's HTTP API (https://resend.com/docs/api-reference/emails/send-email).
 public sealed class ResendEmailSender(
     HttpClient httpClient,
     RazorViewToStringRenderer viewRenderer,
