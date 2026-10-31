@@ -1,0 +1,11 @@
+@model GlimpsesOfGlory.Web.Pages.Admin.Products.EditModel
+
+@* Rendered in the page header; re-sent out-of-band after each htmx action so it stays in sync. *@
+<div id="product-header-badges" class="flex flex-wrap items-center gap-2" hx-swap-oob="@Model.OutOfBandSwap">
+    <span class="text-lg text-gray-500">@Model.Name</span>
+    <partial name="_Badge" model="ProductBadges.Visibility(Model.IsActive)" />
+    @if (Model.IsPreorder)
+    {
+        <partial name="_Badge" model="OrderBadges.Preorder" />
+    }
+</div>

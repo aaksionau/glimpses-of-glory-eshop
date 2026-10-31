@@ -1,40 +1,52 @@
 @model GlimpsesOfGlory.Web.Pages.Admin.Products.PhotoListViewModel
+@{
+    const string IconButton = "border border-black/20 bg-white hover:bg-gray-50 rounded px-2 py-1 text-xs disabled:opacity-30 disabled:hover:bg-white";
+}
 
 <div id="photo-list">
     @if (Model.Photos.Count > 0)
     {
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-            @foreach (var photo in Model.Photos)
+        <ol class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+            @for (var i = 0; i < Model.Photos.Count; i++)
             {
-                <div class="border border-black/10 rounded p-2">
-                    <img src="/product-photos/@photo.FileName" alt="Product photo" class="w-full h-32 object-cover rounded mb-2" />
-                    <div class="flex justify-between gap-1">
-                        <form hx-post="/admin/products/@Model.ProductId/edit?handler=MovePhoto" hx-target="#photo-list" hx-swap="outerHTML" asp-antiforgery="true">
+                var photo = Model.Photos[i];
+                var position = i + 1;
+                <li class="relative border border-black/10 rounded p-2">
+                    <img src="/product-photos/@photo.FileName" alt="Product photo @position" class="w-full h-32 object-cover rounded mb-2" />
+                    @if (i == 0)
+                    {
+                        <span class="absolute left-3 top-3"><partial name="_Badge" model="ProductBadges.MainPhoto" /></span>
+                    }
+                    <div class="flex items-center justify-between gap-1">
+                        <div class="flex gap-1">
+                            <form hx-post="/admin/products/@Model.ProductId/edit?handler=MovePhoto" hx-target="#photo-list" hx-swap="outerHTML" hx-disabled-elt="#photo-list button" asp-antiforgery="true">
+                                <input type="hidden" name="photoId" value="@photo.Id" />
+                                <input type="hidden" name="direction" value="-1" />
+                                <button type="submit" class="@IconButton" aria-label="Move photo @position earlier" disabled="@(i == 0)">&larr;</button>
+                            </form>
+                            <form hx-post="/admin/products/@Model.ProductId/edit?handler=MovePhoto" hx-target="#photo-list" hx-swap="outerHTML" hx-disabled-elt="#photo-list button" asp-antiforgery="true">
+                                <input type="hidden" name="photoId" value="@photo.Id" />
+                                <input type="hidden" name="direction" value="1" />
+                                <button type="submit" class="@IconButton" aria-label="Move photo @position later" disabled="@(i == Model.Photos.Count - 1)">&rarr;</button>
+                            </form>
+                        </div>
+                        <form hx-post="/admin/products/@Model.ProductId/edit?handler=RemovePhoto" hx-target="#photo-list" hx-swap="outerHTML" hx-confirm="Remove this photo? This can't be undone." hx-disabled-elt="#photo-list button" asp-antiforgery="true">
                             <input type="hidden" name="photoId" value="@photo.Id" />
-                            <input type="hidden" name="direction" value="-1" />
-                            <button type="submit" class="border border-black px-2 py-1 text-xs" aria-label="Move photo earlier">&larr;</button>
-                        </form>
-                        <form hx-post="/admin/products/@Model.ProductId/edit?handler=MovePhoto" hx-target="#photo-list" hx-swap="outerHTML" asp-antiforgery="true">
-                            <input type="hidden" name="photoId" value="@photo.Id" />
-                            <input type="hidden" name="direction" value="1" />
-                            <button type="submit" class="border border-black px-2 py-1 text-xs" aria-label="Move photo later">&rarr;</button>
-                        </form>
-                        <form hx-post="/admin/products/@Model.ProductId/edit?handler=RemovePhoto" hx-target="#photo-list" hx-swap="outerHTML" asp-antiforgery="true">
-                            <input type="hidden" name="photoId" value="@photo.Id" />
-                            <button type="submit" class="text-red-700 px-2 py-1 text-xs">Remove</button>
+                            <button type="submit" class="text-red-700 hover:underline px-2 py-1 text-xs" aria-label="Remove photo @position">Remove</button>
                         </form>
                     </div>
-                </div>
+                </li>
             }
-        </div>
+        </ol>
     }
     else
     {
-        <p class="text-gray-500 mb-4">No photos yet.</p>
+        <p class="text-gray-500 mb-4">No photos yet. The storefront shows a placeholder until you add one.</p>
     }
 
-    <form hx-post="/admin/products/@Model.ProductId/edit?handler=UploadPhoto" hx-target="#photo-list" hx-swap="outerHTML" hx-encoding="multipart/form-data" asp-antiforgery="true" class="flex flex-wrap items-center gap-2">
+    <form hx-post="/admin/products/@Model.ProductId/edit?handler=UploadPhoto" hx-target="#photo-list" hx-swap="outerHTML" hx-encoding="multipart/form-data" hx-disabled-elt="find button" asp-antiforgery="true"
+          class="flex flex-wrap items-center gap-2 border-t border-black/10 pt-4">
         <input type="file" name="photo" accept="image/*" required class="text-sm" />
-        <button type="submit" class="border border-black px-3 py-1 text-sm">Upload photo</button>
+        <button type="submit" class="border border-black/20 bg-white hover:bg-gray-50 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50">Upload photo</button>
     </form>
 </div>

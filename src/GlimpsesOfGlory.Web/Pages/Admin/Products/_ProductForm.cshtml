@@ -1,39 +1,28 @@
 @model GlimpsesOfGlory.Web.Pages.Admin.Products.EditModel
 
-<div id="product-form">
-    <div class="flex justify-end items-center mb-4">
-        <form hx-post="/admin/products/@Model.Id/edit?handler=ToggleActive" hx-target="#product-form" hx-swap="outerHTML" asp-antiforgery="true">
-            <button type="submit" class="border border-black px-3 py-1 text-sm">
-                @(Model.IsActive ? "Hide from storefront" : "Unhide")
-            </button>
-        </form>
-    </div>
+@* A failed save leaves the posted values in the fields, so they start out flagged as unsaved. *@
+<section id="product-form" class="rounded-lg border border-black/10 bg-white p-4" aria-labelledby="product-details-heading">
+    <h2 id="product-details-heading" class="font-semibold mb-3">Details</h2>
 
-    @if (!string.IsNullOrEmpty(Model.SavedMessage))
-    {
-        <p class="text-green-700 mb-4">@Model.SavedMessage</p>
-    }
-
-    <form hx-post="/admin/products/@Model.Id/edit" hx-target="#product-form" hx-swap="outerHTML" asp-antiforgery="true" class="flex flex-col gap-4 mb-8">
+    <form hx-post="/admin/products/@Model.Id/edit" hx-target="#product-form" hx-swap="outerHTML" hx-disabled-elt="find button[type='submit']" asp-antiforgery="true"
+          class="flex flex-col gap-4"
+          x-data="{ dirty: @(ViewData.ModelState.IsValid ? "false" : "true") }" x-on:input="dirty = true" x-on:change="dirty = true">
         <div asp-validation-summary="ModelOnly" class="text-red-600"></div>
 
         <partial name="_ProductFields" for="Input" />
 
-        <button type="submit" class="bg-black text-white px-6 py-3 rounded-lg font-semibold mt-2">Save changes</button>
-    </form>
-
-    @if (Model.Input.IsPreorder)
-    {
-        <div class="border border-black/20 rounded-lg p-4 mb-8">
-            <h3 class="font-semibold mb-1">Receive stock</h3>
-            <p class="text-sm text-gray-500 mb-3">@Model.PreorderedQuantity unit(s) already sold via preorder.</p>
-            <form hx-post="/admin/products/@Model.Id/edit?handler=ReceiveStock" hx-target="#product-form" hx-swap="outerHTML" asp-antiforgery="true" class="flex items-end gap-3">
-                <label class="block">
-                    <span class="block mb-1 font-medium">Quantity received</span>
-                    <input name="quantityReceived" type="number" min="0" required class="w-32 border border-black/20 rounded px-3 py-2" />
-                </label>
-                <button type="submit" class="border border-black px-4 py-2 text-sm font-semibold">Receive stock</button>
-            </form>
+        <div class="mt-2 flex flex-wrap items-center gap-3">
+            <button type="submit" class="bg-black text-white hover:bg-black/80 px-6 py-3 rounded-lg font-semibold disabled:opacity-50">Save changes</button>
+            <span x-show="dirty" x-cloak class="text-sm text-amber-700">Unsaved changes</span>
+            @if (!string.IsNullOrEmpty(Model.SavedMessage))
+            {
+                <span role="status" x-show="!dirty" class="text-sm text-green-700">@Model.SavedMessage</span>
+            }
         </div>
-    }
-</div>
+    </form>
+</section>
+
+@if (Model.IsHtmxUpdate)
+{
+    <partial name="_ProductSidebar" model="Model" />
+}
