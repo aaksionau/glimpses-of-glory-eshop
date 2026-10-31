@@ -1,8 +1,8 @@
 @model GlimpsesOfGlory.Web.Pages.Admin.Orders.DetailsModel
 @{
-    var primary = OrderActions.Primary(Model.Order);
-    var secondary = OrderActions.Secondary(Model.Order);
-    var resends = OrderResends.Available(Model.Order);
+    var primary = OrderActions.Primary(Model.Order.Actions);
+    var secondary = OrderActions.Secondary(Model.Order.Actions);
+    var resends = OrderResends.Available(Model.Order.Actions);
 
     const string PrimaryButton = "bg-black text-white hover:bg-black/80 px-4 py-2 rounded-lg font-semibold";
     const string SecondaryButton = "border border-black/20 bg-white hover:bg-gray-50 px-4 py-2 rounded-lg font-semibold";
@@ -76,7 +76,7 @@
         </div>
     }
 
-    @if (Model.Order.CanMarkCancelled)
+    @if (Model.Order.Actions.CanMarkCancelled)
     {
         <form hx-post="/admin/orders/@Model.Order.Id?handler=MarkCancelled" hx-target="#order-status" hx-swap="outerHTML" hx-confirm="Cancel order #@Model.Order.Id? This can't be undone." asp-antiforgery="true" class="mt-4 border-t border-black/10 pt-3 text-right" data-order-action="MarkCancelled">
             <button type="submit" class="min-h-11 px-2 text-sm font-semibold text-red-600 hover:text-red-700 hover:underline">Cancel order</button>

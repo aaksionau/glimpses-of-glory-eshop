@@ -40,36 +40,38 @@ public class AdminOrderDetailTests
             Carrier: null,
             TrackingUrl: null,
             InternalNote: null,
-            CreatedAt: new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero),
-            PaidAt: isPaid ? new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero) : null,
-            ShippedAt: null,
-            ReadyForPickupAt: null,
-            PickedUpAt: null,
-            CancelledAt: null,
-            CanMarkShipped: status == OrderStatus.New && fulfillmentMethod == FulfillmentMethod.Shipping,
-            CanMarkReadyForPickup: status == OrderStatus.New && fulfillmentMethod == FulfillmentMethod.Pickup,
-            CanMarkPickedUp: status == OrderStatus.ReadyForPickup,
-            CanMarkPaid: !isPaid && status != OrderStatus.Cancelled,
-            CanMarkCancelled: status == OrderStatus.New,
-            NeedsRefund: status == OrderStatus.Cancelled && paymentMethod == PaymentMethod.Card && isPaid,
-            CanResendConfirmation: status != OrderStatus.Cancelled,
-            CanResendShippedEmail: status == OrderStatus.Shipped,
-            CanResendReadyForPickupEmail: status == OrderStatus.ReadyForPickup);
+            Timestamps: new OrderTimestamps
+            {
+                CreatedAt = new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero),
+                PaidAt = isPaid ? new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero) : null,
+            },
+            Actions: new AdminOrderActions
+            {
+                CanMarkShipped = status == OrderStatus.New && fulfillmentMethod == FulfillmentMethod.Shipping,
+                CanMarkReadyForPickup = status == OrderStatus.New && fulfillmentMethod == FulfillmentMethod.Pickup,
+                CanMarkPickedUp = status == OrderStatus.ReadyForPickup,
+                CanMarkPaid = !isPaid && status != OrderStatus.Cancelled,
+                CanMarkCancelled = status == OrderStatus.New,
+                NeedsRefund = status == OrderStatus.Cancelled && paymentMethod == PaymentMethod.Card && isPaid,
+                CanResendConfirmation = status != OrderStatus.Cancelled,
+                CanResendShippedEmail = status == OrderStatus.Shipped,
+                CanResendReadyForPickupEmail = status == OrderStatus.ReadyForPickup,
+            });
 
     [Fact]
     public void Primary_NewUnpaidCashOrder_IsFulfilment_WithMarkPaidSecondary()
     {
         var order = Order(fulfillmentMethod: FulfillmentMethod.Pickup, paymentMethod: PaymentMethod.Cash, isPaid: false);
 
-        Assert.Equal(OrderAction.MarkReadyForPickup, OrderActions.Primary(order));
-        Assert.Equal([OrderAction.MarkPaid], OrderActions.Secondary(order));
+        Assert.Equal(OrderAction.MarkReadyForPickup, OrderActions.Primary(order.Actions));
+        Assert.Equal([OrderAction.MarkPaid], OrderActions.Secondary(order.Actions));
     }
 
     [Fact]
     public void Primary_NewShippingOrder_IsMarkShipped()
     {
-        Assert.Equal(OrderAction.MarkShipped, OrderActions.Primary(Order()));
-        Assert.Empty(OrderActions.Secondary(Order()));
+        Assert.Equal(OrderAction.MarkShipped, OrderActions.Primary(Order().Actions));
+        Assert.Empty(OrderActions.Secondary(Order().Actions));
     }
 
     [Fact]
@@ -77,7 +79,7 @@ public class AdminOrderDetailTests
     {
         var order = Order(status: OrderStatus.ReadyForPickup, fulfillmentMethod: FulfillmentMethod.Pickup);
 
-        Assert.Equal(OrderAction.MarkPickedUp, OrderActions.Primary(order));
+        Assert.Equal(OrderAction.MarkPickedUp, OrderActions.Primary(order.Actions));
     }
 
     [Fact]
@@ -85,8 +87,8 @@ public class AdminOrderDetailTests
     {
         var order = Order(status: OrderStatus.PickedUp, fulfillmentMethod: FulfillmentMethod.Pickup, paymentMethod: PaymentMethod.Cash, isPaid: false);
 
-        Assert.Equal(OrderAction.MarkPaid, OrderActions.Primary(order));
-        Assert.Empty(OrderActions.Secondary(order));
+        Assert.Equal(OrderAction.MarkPaid, OrderActions.Primary(order.Actions));
+        Assert.Empty(OrderActions.Secondary(order.Actions));
     }
 
     [Theory]
@@ -94,7 +96,7 @@ public class AdminOrderDetailTests
     [InlineData(OrderStatus.Cancelled)]
     public void Primary_NothingLeftToDo_IsNull(OrderStatus status)
     {
-        Assert.Null(OrderActions.Primary(Order(status: status)));
+        Assert.Null(OrderActions.Primary(Order(status: status).Actions));
     }
 
     [Fact]

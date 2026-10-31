@@ -21,19 +21,5 @@ public sealed record AdminOrderDetail(
     string? TrackingUrl,
     // Admin-only; null when there is no note.
     string? InternalNote,
-    DateTimeOffset CreatedAt,
-    // Null when the step hasn't happened - or happened before step timestamps were recorded.
-    DateTimeOffset? PaidAt,
-    DateTimeOffset? ShippedAt,
-    DateTimeOffset? ReadyForPickupAt,
-    DateTimeOffset? PickedUpAt,
-    DateTimeOffset? CancelledAt,
-    bool CanMarkShipped,
-    bool CanMarkReadyForPickup,
-    bool CanMarkPickedUp,
-    bool CanMarkPaid,
-    bool CanMarkCancelled,
-    bool NeedsRefund,
-    bool CanResendConfirmation,
-    bool CanResendShippedEmail,
-    bool CanResendReadyForPickupEmail);
+    OrderTimestamps Timestamps,
+    AdminOrderActions Actions);

@@ -1,12 +1,28 @@
+using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 
 namespace GlimpsesOfGlory.Core.Services;
 
 // Single source of truth for the order lifecycle. Each transition and rule is declared once here;
-// the admin UI gets it via the Can* flags on AdminOrderDetail, AdminOrderService enforces it so a
-// crafted POST can't skip it, and the admin lists and dashboard filter on the same rules in SQL.
+// the admin UI gets it via the AdminOrderActions built by Actions, AdminOrderService enforces it so
+// a crafted POST can't skip it, and the admin lists and dashboard filter on the same rules in SQL.
 public static class OrderLifecycle
 {
+    // What the admin can do to an order with these facts. The one place the detail page's actions
+    // (and the list rows' refund flag) are read off the rules below, so the two can't drift.
+    public static AdminOrderActions Actions(OrderFacts facts) => new()
+    {
+        CanMarkShipped = MarkShipped.IsAllowed(facts),
+        CanMarkReadyForPickup = MarkReadyForPickup.IsAllowed(facts),
+        CanMarkPickedUp = MarkPickedUp.IsAllowed(facts),
+        CanMarkPaid = MarkPaid.IsAllowed(facts),
+        CanMarkCancelled = MarkCancelled.IsAllowed(facts),
+        NeedsRefund = NeedsRefund.IsSatisfiedBy(facts),
+        CanResendConfirmation = CanResendConfirmation.IsSatisfiedBy(facts),
+        CanResendShippedEmail = CanResendShippedEmail.IsSatisfiedBy(facts),
+        CanResendReadyForPickupEmail = CanResendReadyForPickupEmail.IsSatisfiedBy(facts),
+    };
+
     // Shipping orders go New -> Shipped, which is final.
     public static readonly OrderTransition MarkShipped = new(
         new(s => s.Status == OrderStatus.New && s.FulfillmentMethod == FulfillmentMethod.Shipping),
