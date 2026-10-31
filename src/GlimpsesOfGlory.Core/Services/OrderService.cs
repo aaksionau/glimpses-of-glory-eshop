@@ -98,8 +98,16 @@ public sealed class OrderService(
         {
             await transaction.RollbackAsync(cancellationToken);
             // Payment succeeded but stock ran out before confirmation - only possible if stock
-            // changed between PaymentIntent creation and webhook delivery. The order is
-            // intentionally left uncreated here; this edge case needs manual follow-up (refund).
+            // changed between PaymentIntent creation and webhook delivery. No order is created and
+            // the PendingCheckout stays put so the details remain recoverable; the error log is what
+            // tells someone to follow up (refund). Returning normally keeps the webhook at 200 so
+            // Stripe doesn't retry into the same shortage.
+            var shortLines = await DescribeShortLinesAsync(pendingCheckout.Lines, cancellationToken);
+            logger.LogError(
+                "Payment {PaymentIntentId} from {Email} succeeded but no order was created because stock ran out: {ShortLines}. Manual follow-up (refund) needed",
+                paymentIntentId,
+                pendingCheckout.Email,
+                shortLines);
             return;
         }
 
@@ -261,6 +269,26 @@ public sealed class OrderService(
             .Where(x => x.product is null || !x.product.CanFulfill(x.line.Quantity))
             .Select(x => new UnavailableCartLine(x.line.ProductSlug, Math.Max(0, x.product?.StockQuantity ?? 0)))
             .ToList();
+
+    // Re-reads stock (untracked, outside the rolled-back transaction) to say which in-stock lines
+    // of a paid checkout couldn't be reserved, e.g. "Sunrise (product 3): wanted 2, 1 left".
+    private async Task<string> DescribeShortLinesAsync(IEnumerable<PendingCheckoutLine> lines, CancellationToken cancellationToken)
+    {
+        var stockLines = lines.Where(l => !l.IsPreorder).ToList();
+        var productIds = stockLines.Select(l => l.ProductId).ToList();
+        var stock = await dbContext.Products
+            .AsNoTracking()
+            .Where(p => productIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => p.StockQuantity, cancellationToken);
+
+        var shortLines = stockLines
+            .Where(l => stock.GetValueOrDefault(l.ProductId) < l.Quantity)
+            .Select(l => $"{l.ProductName} (product {l.ProductId}): wanted {l.Quantity}, {Math.Max(0, stock.GetValueOrDefault(l.ProductId))} left")
+            .ToList();
+
+        // Empty if stock came back between the failed reservation and this re-read.
+        return shortLines.Count == 0 ? "none short on re-read" : string.Join("; ", shortLines);
+    }
 
     private sealed record CartPricing(PricedCart? Priced, IReadOnlyList<UnavailableCartLine> UnavailableLines);
 
