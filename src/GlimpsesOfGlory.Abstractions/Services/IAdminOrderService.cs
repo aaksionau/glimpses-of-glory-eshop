@@ -18,8 +18,11 @@ public interface IAdminOrderService
 
     Task<AdminOrderDetail?> GetOrderAsync(int id, CancellationToken cancellationToken);
 
-    // Sends a shipping-notification email to the buyer on success.
+    // Shipping orders only. Sends a shipping-notification email to the buyer on success.
     Task<OrderUpdateResult> MarkShippedAsync(int id, string? trackingNumber, ShippingCarrier carrier, CancellationToken cancellationToken);
+
+    // Pickup orders only. Sends a ready-for-pickup email to the buyer on success.
+    Task<OrderUpdateResult> MarkReadyForPickupAsync(int id, CancellationToken cancellationToken);
 
     // Pickup orders only, once the buyer has collected an order that was ready for pickup.
     Task<OrderUpdateResult> MarkPickedUpAsync(int id, CancellationToken cancellationToken);
@@ -35,6 +38,9 @@ public interface IAdminOrderService
     // Re-sends the buyer's order confirmation email; any order that isn't cancelled. Changes nothing on the order.
     Task<EmailResendResult> ResendConfirmationAsync(int id, CancellationToken cancellationToken);
 
-    // Re-sends the shipped (or ready-for-pickup) email; only while the order is shipped/ready. Changes nothing on the order.
+    // Re-sends the shipped email; only while the order is shipped. Changes nothing on the order.
     Task<EmailResendResult> ResendShippedEmailAsync(int id, CancellationToken cancellationToken);
+
+    // Re-sends the ready-for-pickup email; only while the order is ready for pickup. Changes nothing on the order.
+    Task<EmailResendResult> ResendReadyForPickupEmailAsync(int id, CancellationToken cancellationToken);
 }

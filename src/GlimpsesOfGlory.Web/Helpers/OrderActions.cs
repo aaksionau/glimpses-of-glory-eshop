@@ -8,6 +8,7 @@ namespace GlimpsesOfGlory.Web.Helpers;
 public enum OrderAction
 {
     MarkShipped,
+    MarkReadyForPickup,
     MarkPickedUp,
     MarkPaid,
 }
@@ -22,9 +23,10 @@ public static class OrderActions
 
     public static IReadOnlyList<OrderAction> Secondary(AdminOrderDetail order) => Available(order).Skip(1).ToList();
 
-    public static string Label(OrderAction action, FulfillmentMethod fulfillmentMethod) => action switch
+    public static string Label(OrderAction action) => action switch
     {
-        OrderAction.MarkShipped => $"Mark {FulfillmentLabels.ShippedStatus(fulfillmentMethod).ToLowerInvariant()}",
+        OrderAction.MarkShipped => "Mark shipped",
+        OrderAction.MarkReadyForPickup => "Mark ready for pickup",
         OrderAction.MarkPickedUp => "Mark picked up",
         _ => "Mark as paid",
     };
@@ -34,6 +36,11 @@ public static class OrderActions
         if (order.CanMarkShipped)
         {
             yield return OrderAction.MarkShipped;
+        }
+
+        if (order.CanMarkReadyForPickup)
+        {
+            yield return OrderAction.MarkReadyForPickup;
         }
 
         if (order.CanMarkPickedUp)

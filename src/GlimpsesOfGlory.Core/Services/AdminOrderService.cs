@@ -222,6 +222,33 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
         return OrderUpdateResult.Updated;
     }
 
+    public async Task<OrderUpdateResult> MarkReadyForPickupAsync(int id, CancellationToken cancellationToken)
+    {
+        // Guarded like MarkShippedAsync, so a repeat click only emails the buyer once.
+        var result = await TransitionAsync(id, OrderLifecycle.MarkReadyForPickup, cancellationToken);
+        if (result != OrderUpdateResult.Updated)
+        {
+            return result;
+        }
+
+        var order = await LoadWithLinesAsync(id, cancellationToken);
+        if (order is null)
+        {
+            return OrderUpdateResult.Updated;
+        }
+        try
+        {
+            await emailSender.SendReadyForPickupNotificationAsync(order.ToReadyForPickupView(), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            // As for shipping: the status change stays committed and the failure is logged.
+            logger.LogError(ex, "Failed to send ready-for-pickup email for order {OrderId}", order.Id);
+        }
+
+        return OrderUpdateResult.Updated;
+    }
+
     public Task<OrderUpdateResult> MarkPickedUpAsync(int id, CancellationToken cancellationToken) =>
         TransitionAsync(id, OrderLifecycle.MarkPickedUp, cancellationToken);
 
@@ -282,6 +309,14 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
             OrderLifecycle.CanResendShippedEmail,
             order => emailSender.SendShippedNotificationAsync(order.ToShippedView(), cancellationToken),
             "shipping-notification",
+            cancellationToken);
+
+    public Task<EmailResendResult> ResendReadyForPickupEmailAsync(int id, CancellationToken cancellationToken) =>
+        ResendAsync(
+            id,
+            OrderLifecycle.CanResendReadyForPickupEmail,
+            order => emailSender.SendReadyForPickupNotificationAsync(order.ToReadyForPickupView(), cancellationToken),
+            "ready-for-pickup",
             cancellationToken);
 
     // Read-only: the order is loaded untracked and nothing is written, so a resend never touches
@@ -370,14 +405,17 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
             order.CreatedAt,
             order.PaidAt,
             order.ShippedAt,
+            order.ReadyForPickupAt,
             order.PickedUpAt,
             order.CancelledAt,
             OrderLifecycle.MarkShipped.IsAllowed(facts),
+            OrderLifecycle.MarkReadyForPickup.IsAllowed(facts),
             OrderLifecycle.MarkPickedUp.IsAllowed(facts),
             OrderLifecycle.MarkPaid.IsAllowed(facts),
             OrderLifecycle.MarkCancelled.IsAllowed(facts),
             OrderLifecycle.NeedsRefund.IsSatisfiedBy(facts),
             OrderLifecycle.CanResendConfirmation.IsSatisfiedBy(facts),
-            OrderLifecycle.CanResendShippedEmail.IsSatisfiedBy(facts));
+            OrderLifecycle.CanResendShippedEmail.IsSatisfiedBy(facts),
+            OrderLifecycle.CanResendReadyForPickupEmail.IsSatisfiedBy(facts));
     }
 }

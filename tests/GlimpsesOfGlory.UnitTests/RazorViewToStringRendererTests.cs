@@ -88,8 +88,6 @@ public class RazorViewToStringRendererTests
         const string url = "https://tools.usps.com/go/TrackConfirmAction?tLabels=9400111899223";
         var order = new OrderShippedView(
             OrderId: 44,
-            FulfillmentMethod: FulfillmentMethod.Shipping,
-            IsPaid: true,
             Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", "123 Main St", null, "Springfield", "IL", "62704", "US"),
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 1, false, null)],
             Total: 17.50m,
@@ -99,6 +97,23 @@ public class RazorViewToStringRendererTests
         var html = WebUtility.HtmlDecode(await CreateRenderer().RenderAsync("~/Emails/OrderShipped.cshtml", order));
 
         Assert.Contains($"<a href=\"{url}\"><strong>9400111899223</strong></a>", html);
+    }
+
+    [Fact]
+    public async Task RenderAsync_RendersOrderReadyForPickupTemplate_ForUnpaidCashOrder_AsksForCash()
+    {
+        var order = new OrderReadyForPickupView(
+            OrderId: 45,
+            IsPaid: false,
+            Address: new ShippingAddressInfo("shopper@example.com", "Jane Shopper", null, null, null, null, null, null),
+            Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
+            Total: 25.00m);
+
+        var html = await CreateRenderer().RenderAsync("~/Emails/OrderReadyForPickup.cshtml", order);
+
+        Assert.Contains("Order #45 is ready to collect", html);
+        Assert.Contains("bring $25.00 in cash", html);
+        Assert.DoesNotContain("Shipping to", html);
     }
 
     [Fact]

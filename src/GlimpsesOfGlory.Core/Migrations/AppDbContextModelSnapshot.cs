@@ -59,6 +59,9 @@ namespace GlimpsesOfGlory.Core.Migrations
                     b.Property<DateTimeOffset?>("PickedUpAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTimeOffset?>("ReadyForPickupAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTimeOffset?>("ShippedAt")
                         .HasColumnType("timestamp with time zone");
 

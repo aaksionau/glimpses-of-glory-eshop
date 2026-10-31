@@ -1,8 +1,6 @@
 @model GlimpsesOfGlory.Web.Pages.Admin.Orders.DetailsModel
-@using GlimpsesOfGlory.Abstractions.Enums
 @using GlimpsesOfGlory.Web.Helpers
 @{
-    var isPickup = Model.Order.FulfillmentMethod == FulfillmentMethod.Pickup;
     var primary = OrderActions.Primary(Model.Order);
     var secondary = OrderActions.Secondary(Model.Order);
 
@@ -11,10 +9,9 @@
 
     async Task RenderActionAsync(OrderAction action, bool isPrimary)
     {
-        var label = OrderActions.Label(action, Model.Order.FulfillmentMethod);
+        var label = OrderActions.Label(action);
         <form hx-post="/admin/orders/@Model.Order.Id?handler=@action" hx-target="#order-status" hx-swap="outerHTML" asp-antiforgery="true" class="flex flex-col gap-2" data-order-action="@action" data-primary="@(isPrimary ? "true" : "false")">
-            @* Pickup orders have nothing to track. *@
-            @if (action == OrderAction.MarkShipped && !isPickup)
+            @if (action == OrderAction.MarkShipped)
             {
                 <div class="flex gap-2">
                     <label class="block">
@@ -60,12 +57,12 @@
             }
         </div>
     }
-    else if (!Model.Order.CanResendConfirmation && !Model.Order.CanResendShippedEmail)
+    else if (!Model.Order.CanResendConfirmation && !Model.Order.CanResendShippedEmail && !Model.Order.CanResendReadyForPickupEmail)
     {
         <p class="text-sm text-gray-500">No further actions for this order.</p>
     }
 
-    @if (Model.Order.CanResendConfirmation || Model.Order.CanResendShippedEmail)
+    @if (Model.Order.CanResendConfirmation || Model.Order.CanResendShippedEmail || Model.Order.CanResendReadyForPickupEmail)
     {
         @* Resending never changes the order; the result shows in the messages above. *@
         <div class="mt-4 border-t border-black/10 pt-3 flex flex-col gap-2">
@@ -79,7 +76,13 @@
             @if (Model.Order.CanResendShippedEmail)
             {
                 <form hx-post="/admin/orders/@Model.Order.Id?handler=ResendShippedEmail" hx-target="#order-status" hx-swap="outerHTML" asp-antiforgery="true" data-order-action="ResendShippedEmail">
-                    <button type="submit" class="w-full @SecondaryButton">Resend @FulfillmentLabels.ShippedEmailName(Model.Order.FulfillmentMethod)</button>
+                    <button type="submit" class="w-full @SecondaryButton">Resend shipping email</button>
+                </form>
+            }
+            @if (Model.Order.CanResendReadyForPickupEmail)
+            {
+                <form hx-post="/admin/orders/@Model.Order.Id?handler=ResendReadyForPickupEmail" hx-target="#order-status" hx-swap="outerHTML" asp-antiforgery="true" data-order-action="ResendReadyForPickupEmail">
+                    <button type="submit" class="w-full @SecondaryButton">Resend ready-for-pickup email</button>
                 </form>
             }
         </div>
