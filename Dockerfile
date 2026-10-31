@@ -10,6 +10,9 @@ RUN npm run build
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 WORKDIR /src
+# Solution-wide build settings: central package versions and shared props are needed to restore;
+# .editorconfig carries the analyzer settings the warnings-as-errors build relies on.
+COPY Directory.Build.props Directory.Packages.props .editorconfig ./
 COPY src/GlimpsesOfGlory.Abstractions/GlimpsesOfGlory.Abstractions.csproj src/GlimpsesOfGlory.Abstractions/
 COPY src/GlimpsesOfGlory.Core/GlimpsesOfGlory.Core.csproj src/GlimpsesOfGlory.Core/
 COPY src/GlimpsesOfGlory.Infrastructure/GlimpsesOfGlory.Infrastructure.csproj src/GlimpsesOfGlory.Infrastructure/

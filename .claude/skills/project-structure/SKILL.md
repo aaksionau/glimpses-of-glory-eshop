@@ -7,6 +7,8 @@ description: Explains this repo's solution layout — the Abstractions/Core/Infr
 
 Six projects (`GlimpsesOfGloryEshop.slnx`): `GlimpsesOfGlory.Abstractions`, `GlimpsesOfGlory.Core`, `GlimpsesOfGlory.Infrastructure`, `GlimpsesOfGlory.Web`, `tests/GlimpsesOfGlory.UnitTests` (no database, no Docker), `tests/GlimpsesOfGlory.IntegrationTests` (every test that touches a database or the HTTP pipeline, against real Postgres via Testcontainers; needs Docker). Each test project's `README.md` says what belongs in it. Test doubles and helpers used by both (`FakeCartStore`, `FakeInventoryStore`, `InMemorySession`, `TestRazorRenderer`, …) live once in `tests/TestSupport/` (namespace `GlimpsesOfGlory.TestSupport`), which both projects compile in — when a double starts being used by the second project, move it there rather than copying it; doubles only one project uses stay in that project.
 
+Shared build settings live in the root `Directory.Build.props`. Package versions use NuGet Central Package Management: every `PackageVersion` (including transitive security pins) lives in the root `Directory.Packages.props`, and a `.csproj` `PackageReference` never carries a `Version`. To add a package, add its `PackageVersion` there and a version-less `PackageReference` in the project.
+
 ```
 src/
   GlimpsesOfGlory.Abstractions/    (no project references)

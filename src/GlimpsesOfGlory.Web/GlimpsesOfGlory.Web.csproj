@@ -9,11 +9,11 @@
   <ItemGroup>
     <!-- Required by `dotnet ef` tooling, which needs this package in the startup project.
          PrivateAssets keeps it out of the build output; no Core/EF types are used from Web code. -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Sentry.AspNetCore" Version="6.12.1" />
+    <PackageReference Include="Sentry.AspNetCore" />
   </ItemGroup>
 
   <PropertyGroup>
