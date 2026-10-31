@@ -13,18 +13,17 @@ public sealed class AbandonedCheckoutService(AppDbContext db, TimeProvider timeP
     public async Task<IReadOnlyList<AbandonedCheckout>> GetAbandonedCheckoutsAsync(CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();
-        var newest = now - MinimumAge;
-        var oldest = now - MaximumAge;
-        // PendingCheckout.Total isn't mapped, so the sum is spelled out over its stored parts.
+        var createdBefore = now - MinimumAge;
+        var createdAfter = now - MaximumAge;
         return await db.PendingCheckouts
-            .Where(p => p.CreatedAt < newest && p.CreatedAt > oldest)
+            .Where(p => p.CreatedAt < createdBefore && p.CreatedAt > createdAfter)
             .Where(p => !db.Orders.Any(o => o.Email == p.Email && o.CreatedAt > p.CreatedAt))
             .OrderByDescending(p => p.CreatedAt)
             .Select(p => new AbandonedCheckout(
                 p.Id,
                 p.Email,
                 p.Lines.OrderBy(l => l.Id).Select(l => new AbandonedCheckoutLine(l.ProductName, l.Quantity)).ToList(),
-                p.Subtotal + p.ShippingCost,
+                p.Total,
                 p.FulfillmentMethod,
                 p.CreatedAt))
             .ToListAsync(cancellationToken);

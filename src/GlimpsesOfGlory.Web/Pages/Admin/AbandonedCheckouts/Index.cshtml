@@ -1,6 +1,5 @@
 @page "/admin/abandoned-checkouts"
 @model GlimpsesOfGlory.Web.Pages.Admin.AbandonedCheckouts.IndexModel
-@using GlimpsesOfGlory.Abstractions.Enums
 @using GlimpsesOfGlory.Web.Helpers
 @{
     ViewData["Title"] = "Abandoned checkouts";
@@ -41,7 +40,7 @@
                             </ul>
                         </td>
                         <td class="py-2 pr-4 text-right tabular-nums">@checkout.Total.ToString("C")</td>
-                        <td class="py-2 pr-2 text-sm">@(checkout.FulfillmentMethod == FulfillmentMethod.Pickup ? "Pickup" : "Shipping")</td>
+                        <td class="py-2 pr-2 text-sm">@FulfillmentLabels.CostLabel(checkout.FulfillmentMethod)</td>
                         <td class="py-2 pr-2 whitespace-nowrap text-sm">
                             <time datetime="@checkout.CreatedAt.ToString("o")" title="@RelativeTime.FullTimestamp(checkout.CreatedAt)">@RelativeTime.Format(checkout.CreatedAt, Model.Now)</time>
                         </td>
