@@ -173,9 +173,9 @@ public sealed class OrderLifecycleTests
     [Fact]
     public void FactsOf_ReadsTheOrder()
     {
-        var order = NewOrder(OrderStatus.ReadyForPickup, FulfillmentMethod.Pickup, PaymentMethod.Cash, isPaid: true);
+        var facts = Facts(OrderStatus.ReadyForPickup, FulfillmentMethod.Pickup, PaymentMethod.Cash, isPaid: true);
 
-        Assert.Equal(Facts(OrderStatus.ReadyForPickup, FulfillmentMethod.Pickup, PaymentMethod.Cash, isPaid: true), OrderFacts.Of(order));
+        Assert.Equal(facts, OrderFacts.Of(OrderLifecycleRules.OrderWith(facts)));
     }
 
     // Each flag must read the rule it's named after (CanMarkShipped -> MarkShipped, NeedsRefund ->
@@ -186,25 +186,17 @@ public sealed class OrderLifecycleTests
         var flags = typeof(AdminOrderActions).GetProperties();
         Assert.NotEmpty(flags);
 
-        foreach (var facts in
-            from status in Enum.GetValues<OrderStatus>()
-            from fulfillmentMethod in Enum.GetValues<FulfillmentMethod>()
-            from paymentMethod in Enum.GetValues<PaymentMethod>()
-            from isPaid in BothPaidStates
-            select Facts(status, fulfillmentMethod, paymentMethod, isPaid))
+        foreach (var facts in OrderLifecycleRules.AllFacts())
         {
             var actions = OrderLifecycle.Actions(facts);
             foreach (var flag in flags)
             {
-                var rule = RulesByName.TryGetValue(flag.Name, out var named) ? named : RulesByName[flag.Name["Can".Length..]];
+                var rules = OrderLifecycleRules.ByName;
+                var rule = rules.TryGetValue(flag.Name, out var named) ? named : rules[flag.Name["Can".Length..]];
                 Assert.True(rule.IsSatisfiedBy(facts) == (bool)flag.GetValue(actions)!, $"{flag.Name} disagrees with its rule for {facts}");
             }
         }
     }
-
-    private static readonly bool[] BothPaidStates = [false, true];
-
-    private static IReadOnlyDictionary<string, OrderRule> RulesByName => OrderLifecycleRules.ByName;
 
     private static OrderFacts Facts(
         OrderStatus status,
@@ -218,16 +210,6 @@ public sealed class OrderLifecycleTests
             PaymentMethod = paymentMethod,
             IsPaid = isPaid,
         };
-
-    private static Order NewOrder(OrderStatus status, FulfillmentMethod fulfillmentMethod, PaymentMethod paymentMethod, bool isPaid) => new()
-    {
-        Email = "shopper@example.com",
-        ShippingAddress = new ShippingAddress { FullName = "Jane Shopper" },
-        Status = status,
-        FulfillmentMethod = fulfillmentMethod,
-        PaymentMethod = paymentMethod,
-        PaidAt = isPaid ? new DateTimeOffset(2026, 8, 1, 9, 0, 0, TimeSpan.Zero) : null,
-    };
 
     private static string StampedProperty(OrderTransition transition) =>
         ((System.Linq.Expressions.MemberExpression)transition.StepTimestamp.Body).Member.Name;

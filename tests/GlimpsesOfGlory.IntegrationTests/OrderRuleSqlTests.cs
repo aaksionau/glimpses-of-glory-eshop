@@ -1,7 +1,4 @@
-using GlimpsesOfGlory.Abstractions.Enums;
-using GlimpsesOfGlory.Core.Entities;
 using GlimpsesOfGlory.Core.Services;
-using GlimpsesOfGlory.Core.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 
 namespace GlimpsesOfGlory.IntegrationTests;
@@ -12,8 +9,6 @@ namespace GlimpsesOfGlory.IntegrationTests;
 [Collection(PostgresCollectionDefinition.Name)]
 public sealed class OrderRuleSqlTests(PostgresFixture postgres) : IAsyncLifetime
 {
-    private static readonly bool[] BothPaidStates = [false, true];
-
     private TestDatabase database = null!;
 
     public async Task InitializeAsync() => database = await postgres.CreateDatabaseAsync();
@@ -29,12 +24,7 @@ public sealed class OrderRuleSqlTests(PostgresFixture postgres) : IAsyncLifetime
         var rule = OrderLifecycleRules.ByName[ruleName];
         await using (var seed = database.CreateDb())
         {
-            seed.Orders.AddRange(
-                from status in Enum.GetValues<OrderStatus>()
-                from fulfillmentMethod in Enum.GetValues<FulfillmentMethod>()
-                from paymentMethod in Enum.GetValues<PaymentMethod>()
-                from isPaid in BothPaidStates
-                select NewOrder(status, fulfillmentMethod, paymentMethod, isPaid));
+            seed.Orders.AddRange(OrderLifecycleRules.AllFacts().Select(OrderLifecycleRules.OrderWith));
             await seed.SaveChangesAsync();
         }
 
@@ -45,14 +35,4 @@ public sealed class OrderRuleSqlTests(PostgresFixture postgres) : IAsyncLifetime
 
         Assert.Equal(inMemory, inSql);
     }
-
-    private static Order NewOrder(OrderStatus status, FulfillmentMethod fulfillmentMethod, PaymentMethod paymentMethod, bool isPaid) => new()
-    {
-        Email = "shopper@example.com",
-        ShippingAddress = new ShippingAddress { FullName = "Jane Shopper" },
-        Status = status,
-        FulfillmentMethod = fulfillmentMethod,
-        PaymentMethod = paymentMethod,
-        PaidAt = isPaid ? new DateTimeOffset(2026, 8, 1, 9, 0, 0, TimeSpan.Zero) : null,
-    };
 }
