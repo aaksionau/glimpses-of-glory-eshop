@@ -2,7 +2,7 @@ using System.Net;
 using System.Diagnostics;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
-using GlimpsesOfGlory.Web.Helpers;
+using GlimpsesOfGlory.Web.Email;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Razor;

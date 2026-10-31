@@ -1,4 +1,4 @@
-namespace GlimpsesOfGlory.Web.Helpers;
+namespace GlimpsesOfGlory.Web.Formatting;
 
 public static class CheckoutMessages
 {

@@ -6,6 +6,7 @@ using GlimpsesOfGlory.Core;
 using GlimpsesOfGlory.Core.Options;
 using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Web.Configuration;
+using GlimpsesOfGlory.Web.Email;
 using GlimpsesOfGlory.Web.Helpers;
 using GlimpsesOfGlory.Web.Security;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -92,7 +93,7 @@ builder.Services.AddScoped<IAbandonedCheckoutService, AbandonedCheckoutService>(
 
 builder.Services.Configure<ResendOptions>(builder.Configuration.GetSection("Resend"));
 builder.Services.AddScoped<RazorViewToStringRenderer>();
-builder.Services.AddHttpClient<IEmailSender, OrderNotifier>(client =>
+builder.Services.AddHttpClient<IEmailSender, ResendEmailSender>(client =>
     client.BaseAddress = new Uri("https://api.resend.com/"));
 
 // Local-disk product photo storage. In production this path should be a

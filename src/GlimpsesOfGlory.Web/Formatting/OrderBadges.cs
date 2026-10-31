@@ -1,7 +1,7 @@
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Web.Dtos;
 
-namespace GlimpsesOfGlory.Web.Helpers;
+namespace GlimpsesOfGlory.Web.Formatting;
 
 // One badge vocabulary for order and payment status across the admin pages.
 public static class OrderBadges

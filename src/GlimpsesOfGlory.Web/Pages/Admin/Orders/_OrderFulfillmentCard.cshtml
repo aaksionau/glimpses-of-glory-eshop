@@ -1,6 +1,5 @@
 @model GlimpsesOfGlory.Web.Pages.Admin.Orders.DetailsModel
 @using GlimpsesOfGlory.Abstractions.Enums
-@using GlimpsesOfGlory.Web.Helpers
 
 @* Re-sent out-of-band after each htmx action: marking shipped can add a tracking number. *@
 <section id="order-fulfillment" class="rounded-lg border border-black/10 bg-white p-4" aria-labelledby="order-fulfillment-heading" hx-swap-oob="@Model.OutOfBandSwap">
