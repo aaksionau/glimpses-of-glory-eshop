@@ -50,7 +50,7 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
         }
 
         var cart = await cartStore.GetCartAsync(cancellationToken);
-        var currentQuantity = cart.Lines.FirstOrDefault(l => l.ProductSlug == slug)?.Quantity ?? 0;
+        var currentQuantity = cart.QuantityOf(slug);
         var newQuantity = currentQuantity + quantity;
 
         var stockError = CheckStock(product, newQuantity);

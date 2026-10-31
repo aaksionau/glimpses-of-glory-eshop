@@ -71,6 +71,7 @@ builder.Services.AddSession(options =>
 
 builder.Services.AddScoped<ICartStore, SessionCartStore>();
 builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<ICartRestoreService, CartRestoreService>();
 builder.Services.AddScoped<CheckoutSessionStore>();
 
 builder.Services.AddScoped<IShippingSettingsService, ShippingSettingsService>();

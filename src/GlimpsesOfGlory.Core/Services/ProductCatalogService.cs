@@ -23,6 +23,26 @@ public sealed class ProductCatalogService(AppDbContext db) : IProductCatalogServ
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyDictionary<int, ProductSummary>> GetProductsByIdsAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken)
+    {
+        return await db.Products
+            .AsNoTracking()
+            .Where(p => ids.Contains(p.Id) && p.IsActive)
+            .Select(p => new
+            {
+                p.Id,
+                Summary = new ProductSummary(
+                    p.Slug,
+                    p.Name,
+                    p.Price,
+                    p.Photos.OrderBy(photo => photo.DisplayOrder).Select(photo => photo.FileName).FirstOrDefault(),
+                    p.StockQuantity,
+                    p.IsPreorder,
+                    p.ExpectedAvailabilityDate),
+            })
+            .ToDictionaryAsync(p => p.Id, p => p.Summary, cancellationToken);
+    }
+
     public async Task<ProductDetail?> GetProductBySlugAsync(string slug, CancellationToken cancellationToken)
     {
         return await db.Products

@@ -7,15 +7,6 @@ namespace GlimpsesOfGlory.UnitTests;
 
 public class CartServiceTests
 {
-    private sealed class FakeCartStore : ICartStore
-    {
-        public Cart Cart { get; } = new();
-
-        public Task<Cart> GetCartAsync(CancellationToken cancellationToken) => Task.FromResult(Cart);
-
-        public Task SaveCartAsync(Cart cart, CancellationToken cancellationToken) => Task.CompletedTask;
-    }
-
     private sealed class FakeProductCatalogService(ProductDetail? product) : IProductCatalogService
     {
         public Task<IReadOnlyList<ProductSummary>> GetProductsAsync(CancellationToken cancellationToken)
@@ -23,6 +14,9 @@ public class CartServiceTests
 
         public Task<ProductDetail?> GetProductBySlugAsync(string slug, CancellationToken cancellationToken)
             => Task.FromResult(product);
+
+        public Task<IReadOnlyDictionary<int, ProductSummary>> GetProductsByIdsAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
     }
 
     // With no tiers given, defaults to a single flat $7.50 tier.

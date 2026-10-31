@@ -14,4 +14,8 @@ public static class CheckoutMessages
     public const string PaymentFailed = "Your payment could not be processed. Please try again.";
 
     public const string PaymentProcessing = "Processing…";
+
+    public const string RestoreLinkExpired = "That cart link has expired; your current cart is below.";
+
+    public const string RestoredItemsUnavailable = "Some items from your previous cart are no longer available.";
 }
