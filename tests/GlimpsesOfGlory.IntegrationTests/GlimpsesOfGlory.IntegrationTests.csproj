@@ -17,7 +17,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
-  <!-- Stateless doubles shared with the unit tests rather than copied. -->
+  <!-- Doubles shared with the unit tests rather than copied. Each test builds its own instances,
+       so mutable ones (FakePaymentGateway.NextWebhookResult) are never shared between tests. -->
   <ItemGroup>
     <Compile Include="../GlimpsesOfGlory.UnitTests/FakePaymentGateway.cs" Link="Shared/FakePaymentGateway.cs" />
     <Compile Include="../GlimpsesOfGlory.UnitTests/FixedTimeProvider.cs" Link="Shared/FixedTimeProvider.cs" />
