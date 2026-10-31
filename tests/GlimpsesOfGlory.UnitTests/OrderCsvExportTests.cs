@@ -26,7 +26,7 @@ public class OrderCsvExportTests
     {
         var lines = await LinesAsync(
             Row(1, subtotal: 1234.5m, shipping: 0m, paidAt: new DateTimeOffset(2026, 10, 3, 14, 5, 0, TimeSpan.Zero)),
-            Row(2, fulfillment: FulfillmentMethod.Pickup, status: OrderStatus.Shipped, payment: PaymentMethod.Cash, subtotal: 20m, shipping: 0m));
+            Row(2, fulfillment: FulfillmentMethod.Pickup, status: OrderStatus.ReadyForPickup, payment: PaymentMethod.Cash, subtotal: 20m, shipping: 0m));
 
         Assert.Equal("1,2026-10-02 09:30,Jane Shopper,jane@example.com,Shipping,New,Card,2026-10-03 14:05,1234.50,0.00,1234.50", lines[1]);
         Assert.Equal("2,2026-10-02 09:30,Jane Shopper,jane@example.com,Pickup,Ready for pickup,Cash,,20.00,0.00,20.00", lines[2]);

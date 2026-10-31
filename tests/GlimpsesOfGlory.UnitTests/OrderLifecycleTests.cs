@@ -13,13 +13,24 @@ public sealed class OrderLifecycleTests : IDisposable
     public void Dispose() => database.Dispose();
 
     [Theory]
-    [InlineData(OrderStatus.New, true)]
-    [InlineData(OrderStatus.Shipped, false)]
-    [InlineData(OrderStatus.Cancelled, false)]
-    [InlineData(OrderStatus.PickedUp, false)]
-    public void MarkShipped_OnlyFromNew(OrderStatus status, bool expected)
+    [InlineData(OrderStatus.New, FulfillmentMethod.Shipping, true)]
+    [InlineData(OrderStatus.Shipped, FulfillmentMethod.Shipping, false)]
+    [InlineData(OrderStatus.Cancelled, FulfillmentMethod.Shipping, false)]
+    [InlineData(OrderStatus.New, FulfillmentMethod.Pickup, false)]
+    public void MarkShipped_OnlyForNewShippingOrders(OrderStatus status, FulfillmentMethod fulfillmentMethod, bool expected)
     {
-        Assert.Equal(expected, OrderLifecycle.MarkShipped.IsAllowed(Facts(status)));
+        Assert.Equal(expected, OrderLifecycle.MarkShipped.IsAllowed(Facts(status, fulfillmentMethod)));
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.New, FulfillmentMethod.Pickup, true)]
+    [InlineData(OrderStatus.ReadyForPickup, FulfillmentMethod.Pickup, false)]
+    [InlineData(OrderStatus.PickedUp, FulfillmentMethod.Pickup, false)]
+    [InlineData(OrderStatus.Cancelled, FulfillmentMethod.Pickup, false)]
+    [InlineData(OrderStatus.New, FulfillmentMethod.Shipping, false)]
+    public void MarkReadyForPickup_OnlyForNewPickupOrders(OrderStatus status, FulfillmentMethod fulfillmentMethod, bool expected)
+    {
+        Assert.Equal(expected, OrderLifecycle.MarkReadyForPickup.IsAllowed(Facts(status, fulfillmentMethod)));
     }
 
     [Theory]
@@ -33,14 +44,14 @@ public sealed class OrderLifecycleTests : IDisposable
     }
 
     [Theory]
-    [InlineData(OrderStatus.Shipped, FulfillmentMethod.Pickup, true)]
+    [InlineData(OrderStatus.ReadyForPickup, FulfillmentMethod.Pickup, true)]
     [InlineData(OrderStatus.New, FulfillmentMethod.Pickup, false)]
     [InlineData(OrderStatus.Cancelled, FulfillmentMethod.Pickup, false)]
     [InlineData(OrderStatus.PickedUp, FulfillmentMethod.Pickup, false)]
     [InlineData(OrderStatus.New, FulfillmentMethod.Shipping, false)]
     [InlineData(OrderStatus.Shipped, FulfillmentMethod.Shipping, false)]
     [InlineData(OrderStatus.Cancelled, FulfillmentMethod.Shipping, false)]
-    public void MarkPickedUp_OnlyForPickupOrdersReadyForPickup(OrderStatus status, FulfillmentMethod fulfillmentMethod, bool expected)
+    public void MarkPickedUp_OnlyFromReadyForPickup(OrderStatus status, FulfillmentMethod fulfillmentMethod, bool expected)
     {
         Assert.Equal(expected, OrderLifecycle.MarkPickedUp.IsAllowed(Facts(status, fulfillmentMethod)));
     }
@@ -51,6 +62,7 @@ public sealed class OrderLifecycleTests : IDisposable
     [InlineData(OrderStatus.Cancelled, false, false)]
     [InlineData(OrderStatus.New, true, false)]
     [InlineData(OrderStatus.Shipped, true, false)]
+    [InlineData(OrderStatus.ReadyForPickup, false, true)]
     [InlineData(OrderStatus.PickedUp, false, true)]
     [InlineData(OrderStatus.PickedUp, true, false)]
     public void MarkPaid_WhenUnpaidAndNotCancelled(OrderStatus status, bool isPaid, bool expected)
@@ -62,11 +74,13 @@ public sealed class OrderLifecycleTests : IDisposable
     public void Transitions_MoveToTheirStep_AndStampItsTimestamp()
     {
         Assert.Equal(OrderStatus.Shipped, OrderLifecycle.MarkShipped.TargetStatus);
+        Assert.Equal(OrderStatus.ReadyForPickup, OrderLifecycle.MarkReadyForPickup.TargetStatus);
         Assert.Equal(OrderStatus.PickedUp, OrderLifecycle.MarkPickedUp.TargetStatus);
         Assert.Equal(OrderStatus.Cancelled, OrderLifecycle.MarkCancelled.TargetStatus);
         Assert.Null(OrderLifecycle.MarkPaid.TargetStatus);
 
         Assert.Equal(nameof(Order.ShippedAt), StampedProperty(OrderLifecycle.MarkShipped));
+        Assert.Equal(nameof(Order.ReadyForPickupAt), StampedProperty(OrderLifecycle.MarkReadyForPickup));
         Assert.Equal(nameof(Order.PickedUpAt), StampedProperty(OrderLifecycle.MarkPickedUp));
         Assert.Equal(nameof(Order.CancelledAt), StampedProperty(OrderLifecycle.MarkCancelled));
         Assert.Equal(nameof(Order.PaidAt), StampedProperty(OrderLifecycle.MarkPaid));
@@ -89,6 +103,8 @@ public sealed class OrderLifecycleTests : IDisposable
     [InlineData(OrderStatus.New, false, true)]
     [InlineData(OrderStatus.Shipped, false, true)]
     [InlineData(OrderStatus.Shipped, true, false)]
+    [InlineData(OrderStatus.ReadyForPickup, false, true)]
+    [InlineData(OrderStatus.ReadyForPickup, true, false)]
     [InlineData(OrderStatus.PickedUp, false, true)]
     [InlineData(OrderStatus.PickedUp, true, false)]
     [InlineData(OrderStatus.Cancelled, false, false)]
@@ -111,13 +127,15 @@ public sealed class OrderLifecycleTests : IDisposable
     }
 
     [Theory]
-    [InlineData(OrderStatus.New, true)]
-    [InlineData(OrderStatus.Shipped, false)]
-    [InlineData(OrderStatus.PickedUp, false)]
-    [InlineData(OrderStatus.Cancelled, false)]
-    public void ToFulfill_OnlyNewOrders(OrderStatus status, bool expected)
+    [InlineData(OrderStatus.New, FulfillmentMethod.Shipping, true)]
+    [InlineData(OrderStatus.New, FulfillmentMethod.Pickup, true)]
+    [InlineData(OrderStatus.Shipped, FulfillmentMethod.Shipping, false)]
+    [InlineData(OrderStatus.ReadyForPickup, FulfillmentMethod.Pickup, false)]
+    [InlineData(OrderStatus.PickedUp, FulfillmentMethod.Pickup, false)]
+    [InlineData(OrderStatus.Cancelled, FulfillmentMethod.Shipping, false)]
+    public void ToFulfill_OnlyNewOrders(OrderStatus status, FulfillmentMethod fulfillmentMethod, bool expected)
     {
-        Assert.Equal(expected, OrderLifecycle.ToFulfill.IsSatisfiedBy(Facts(status)));
+        Assert.Equal(expected, OrderLifecycle.ToFulfill.IsSatisfiedBy(Facts(status, fulfillmentMethod)));
     }
 
     [Theory]
@@ -131,18 +149,21 @@ public sealed class OrderLifecycleTests : IDisposable
     }
 
     [Theory]
-    [InlineData(OrderStatus.New, false)]
-    [InlineData(OrderStatus.Shipped, true)]
-    [InlineData(OrderStatus.PickedUp, false)]
-    [InlineData(OrderStatus.Cancelled, false)]
-    public void CanResendShippedEmail_OnlyWhileShippedOrReady(OrderStatus status, bool expected)
+    [InlineData(OrderStatus.New, false, false)]
+    [InlineData(OrderStatus.Shipped, true, false)]
+    [InlineData(OrderStatus.ReadyForPickup, false, true)]
+    [InlineData(OrderStatus.PickedUp, false, false)]
+    [InlineData(OrderStatus.Cancelled, false, false)]
+    public void FulfilmentEmails_OnlyResendWhileInTheirStep(OrderStatus status, bool shippedEmail, bool readyForPickupEmail)
     {
-        Assert.Equal(expected, OrderLifecycle.CanResendShippedEmail.IsSatisfiedBy(Facts(status)));
+        Assert.Equal(shippedEmail, OrderLifecycle.CanResendShippedEmail.IsSatisfiedBy(Facts(status)));
+        Assert.Equal(readyForPickupEmail, OrderLifecycle.CanResendReadyForPickupEmail.IsSatisfiedBy(Facts(status)));
     }
 
     [Theory]
     [InlineData(OrderStatus.New, false, false)]
     [InlineData(OrderStatus.Shipped, true, false)]
+    [InlineData(OrderStatus.ReadyForPickup, true, false)]
     [InlineData(OrderStatus.PickedUp, true, false)]
     [InlineData(OrderStatus.Cancelled, false, true)]
     public void TabRules_SplitByStatus(OrderStatus status, bool shippedOrCollected, bool cancelled)
@@ -154,9 +175,9 @@ public sealed class OrderLifecycleTests : IDisposable
     [Fact]
     public void FactsOf_ReadsTheOrder()
     {
-        var order = NewOrder(OrderStatus.Shipped, FulfillmentMethod.Pickup, PaymentMethod.Cash, isPaid: true);
+        var order = NewOrder(OrderStatus.ReadyForPickup, FulfillmentMethod.Pickup, PaymentMethod.Cash, isPaid: true);
 
-        Assert.Equal(Facts(OrderStatus.Shipped, FulfillmentMethod.Pickup, PaymentMethod.Cash, isPaid: true), OrderFacts.Of(order));
+        Assert.Equal(Facts(OrderStatus.ReadyForPickup, FulfillmentMethod.Pickup, PaymentMethod.Cash, isPaid: true), OrderFacts.Of(order));
     }
 
     public static TheoryData<string> Rules() => new(RulesByName.Keys);

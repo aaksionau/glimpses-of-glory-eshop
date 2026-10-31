@@ -27,6 +27,7 @@ public sealed class Order : ICheckoutHeader
     // Stamped once by AdminOrderService when the order reaches each step; null for orders that
     // never reached it, and for orders that reached it before these columns existed.
     public DateTimeOffset? ShippedAt { get; set; }
+    public DateTimeOffset? ReadyForPickupAt { get; set; }
     public DateTimeOffset? PickedUpAt { get; set; }
     public DateTimeOffset? CancelledAt { get; set; }
     // Private to admins: never copied into a customer email or shown on a customer page.

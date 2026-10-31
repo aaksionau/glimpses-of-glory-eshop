@@ -25,13 +25,15 @@ public sealed record AdminOrderDetail(
     // Null when the step hasn't happened - or happened before step timestamps were recorded.
     DateTimeOffset? PaidAt,
     DateTimeOffset? ShippedAt,
+    DateTimeOffset? ReadyForPickupAt,
     DateTimeOffset? PickedUpAt,
     DateTimeOffset? CancelledAt,
     bool CanMarkShipped,
+    bool CanMarkReadyForPickup,
     bool CanMarkPickedUp,
     bool CanMarkPaid,
     bool CanMarkCancelled,
     bool NeedsRefund,
     bool CanResendConfirmation,
-    // The shipped email, or the ready-for-pickup email for pickup orders.
-    bool CanResendShippedEmail);
+    bool CanResendShippedEmail,
+    bool CanResendReadyForPickupEmail);

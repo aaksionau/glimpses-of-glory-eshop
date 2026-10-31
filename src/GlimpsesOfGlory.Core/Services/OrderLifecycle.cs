@@ -7,15 +7,20 @@ namespace GlimpsesOfGlory.Core.Services;
 // crafted POST can't skip it, and the admin lists and dashboard filter on the same rules in SQL.
 public static class OrderLifecycle
 {
-    // Shipped/ready-for-pickup can only be reached from New.
+    // Shipping orders go New -> Shipped, which is final.
     public static readonly OrderTransition MarkShipped = new(
-        new(s => s.Status == OrderStatus.New),
+        new(s => s.Status == OrderStatus.New && s.FulfillmentMethod == FulfillmentMethod.Shipping),
         OrderStatus.Shipped,
         o => o.ShippedAt);
 
-    // Shipped means "ready for pickup" for pickup orders; shipping orders have no further step.
+    // Pickup orders go New -> ReadyForPickup -> PickedUp.
+    public static readonly OrderTransition MarkReadyForPickup = new(
+        new(s => s.Status == OrderStatus.New && s.FulfillmentMethod == FulfillmentMethod.Pickup),
+        OrderStatus.ReadyForPickup,
+        o => o.ReadyForPickupAt);
+
     public static readonly OrderTransition MarkPickedUp = new(
-        new(s => s.Status == OrderStatus.Shipped && s.FulfillmentMethod == FulfillmentMethod.Pickup),
+        new(s => s.Status == OrderStatus.ReadyForPickup),
         OrderStatus.PickedUp,
         o => o.PickedUpAt);
 
@@ -34,9 +39,11 @@ public static class OrderLifecycle
     // mislead the buyer, so it's withheld.
     public static readonly OrderRule CanResendConfirmation = new(s => s.Status != OrderStatus.Cancelled);
 
-    // The shipped / ready-for-pickup email only fits while the order is in that step; once a pickup
-    // order is collected, "ready for pickup" is stale.
+    // Each fulfilment email only fits while the order is in that step; once a pickup order is
+    // collected, "ready for pickup" is stale.
     public static readonly OrderRule CanResendShippedEmail = new(s => s.Status == OrderStatus.Shipped);
+
+    public static readonly OrderRule CanResendReadyForPickupEmail = new(s => s.Status == OrderStatus.ReadyForPickup);
 
     // Cancelling doesn't touch the money, so a paid card order needs refunding by hand in Stripe.
     // Cash is settled in person and is out of scope.
@@ -44,7 +51,7 @@ public static class OrderLifecycle
         s.Status == OrderStatus.Cancelled && s.PaymentMethod == PaymentMethod.Card && s.IsPaid);
 
     // Placed and still waiting to be shipped or made ready for pickup.
-    public static readonly OrderRule ToFulfill = MarkShipped.Guard;
+    public static readonly OrderRule ToFulfill = MarkShipped.Guard.Or(MarkReadyForPickup.Guard);
 
     // Cash still to be collected on an order that hasn't been cancelled.
     public static readonly OrderRule UnpaidCash = new OrderRule(s => s.PaymentMethod == PaymentMethod.Cash).And(MarkPaid.Guard);
@@ -56,7 +63,7 @@ public static class OrderLifecycle
 
     // The Shipped tab: shipped, ready for pickup, or collected.
     public static readonly OrderRule ShippedOrCollected = new(s =>
-        s.Status == OrderStatus.Shipped || s.Status == OrderStatus.PickedUp);
+        s.Status == OrderStatus.Shipped || s.Status == OrderStatus.ReadyForPickup || s.Status == OrderStatus.PickedUp);
 
     public static readonly OrderRule Cancelled = new(s => s.Status == OrderStatus.Cancelled);
 }

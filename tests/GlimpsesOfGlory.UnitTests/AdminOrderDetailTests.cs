@@ -42,29 +42,39 @@ public class AdminOrderDetailTests
             CreatedAt: new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero),
             PaidAt: isPaid ? new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero) : null,
             ShippedAt: null,
+            ReadyForPickupAt: null,
             PickedUpAt: null,
             CancelledAt: null,
-            CanMarkShipped: status == OrderStatus.New,
-            CanMarkPickedUp: status == OrderStatus.Shipped && fulfillmentMethod == FulfillmentMethod.Pickup,
+            CanMarkShipped: status == OrderStatus.New && fulfillmentMethod == FulfillmentMethod.Shipping,
+            CanMarkReadyForPickup: status == OrderStatus.New && fulfillmentMethod == FulfillmentMethod.Pickup,
+            CanMarkPickedUp: status == OrderStatus.ReadyForPickup,
             CanMarkPaid: !isPaid && status != OrderStatus.Cancelled,
             CanMarkCancelled: status == OrderStatus.New,
             NeedsRefund: status == OrderStatus.Cancelled && paymentMethod == PaymentMethod.Card && isPaid,
             CanResendConfirmation: status != OrderStatus.Cancelled,
-            CanResendShippedEmail: status == OrderStatus.Shipped);
+            CanResendShippedEmail: status == OrderStatus.Shipped,
+            CanResendReadyForPickupEmail: status == OrderStatus.ReadyForPickup);
 
     [Fact]
     public void Primary_NewUnpaidCashOrder_IsFulfilment_WithMarkPaidSecondary()
     {
         var order = Order(fulfillmentMethod: FulfillmentMethod.Pickup, paymentMethod: PaymentMethod.Cash, isPaid: false);
 
-        Assert.Equal(OrderAction.MarkShipped, OrderActions.Primary(order));
+        Assert.Equal(OrderAction.MarkReadyForPickup, OrderActions.Primary(order));
         Assert.Equal([OrderAction.MarkPaid], OrderActions.Secondary(order));
+    }
+
+    [Fact]
+    public void Primary_NewShippingOrder_IsMarkShipped()
+    {
+        Assert.Equal(OrderAction.MarkShipped, OrderActions.Primary(Order()));
+        Assert.Empty(OrderActions.Secondary(Order()));
     }
 
     [Fact]
     public void Primary_ReadyForPickupOrder_IsMarkPickedUp()
     {
-        var order = Order(status: OrderStatus.Shipped, fulfillmentMethod: FulfillmentMethod.Pickup);
+        var order = Order(status: OrderStatus.ReadyForPickup, fulfillmentMethod: FulfillmentMethod.Pickup);
 
         Assert.Equal(OrderAction.MarkPickedUp, OrderActions.Primary(order));
     }
@@ -87,12 +97,49 @@ public class AdminOrderDetailTests
     }
 
     [Fact]
+    public void Timeline_ShippingOrder_EndsAtShipped()
+    {
+        var steps = OrderTimeline.Steps(Order(status: OrderStatus.Shipped));
+
+        Assert.Equal(["Placed", "Paid", "Shipped"], steps.Select(s => s.Label));
+        Assert.All(steps, s => Assert.True(s.IsComplete));
+    }
+
+    [Fact]
+    public void Timeline_PickupOrder_GoesThroughReadyForPickup_ToPickedUp()
+    {
+        var steps = OrderTimeline.Steps(Order(status: OrderStatus.ReadyForPickup, fulfillmentMethod: FulfillmentMethod.Pickup));
+
+        Assert.Equal(["Placed", "Paid", "Ready for pickup", "Picked up"], steps.Select(s => s.Label));
+        Assert.Equal([true, true, true, false], steps.Select(s => s.IsComplete));
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Shipped, "Shipped")]
+    [InlineData(OrderStatus.ReadyForPickup, "Ready for pickup")]
+    [InlineData(OrderStatus.PickedUp, "Picked up")]
+    public void StatusBadge_ReadsTheStatusDirectly(OrderStatus status, string label)
+    {
+        Assert.Equal(label, OrderBadges.Status(status).Text);
+    }
+
+    [Fact]
     public void EveryOrderAction_HasAMatchingPageHandler()
     {
         // _OrderStatus posts to ?handler={action}, so each enum member must name an OnPost{Action}Async handler.
         foreach (var action in Enum.GetValues<OrderAction>())
         {
             Assert.NotNull(typeof(DetailsModel).GetMethod($"OnPost{action}Async"));
+        }
+    }
+
+    [Fact]
+    public void EveryOrderResend_HasAMatchingPageHandler()
+    {
+        // _OrderStatus posts to ?handler={resend}, so each enum member must name an OnPost{Resend}Async handler.
+        foreach (var resend in Enum.GetValues<OrderResend>())
+        {
+            Assert.NotNull(typeof(DetailsModel).GetMethod($"OnPost{resend}Async"));
         }
     }
 
@@ -197,15 +244,15 @@ public class AdminOrderDetailTests
     }
 
     [Fact]
-    public async Task ResendShippedEmail_Failed_ShowsAnErrorInsteadOfFailingSilently()
+    public async Task ResendReadyForPickupEmail_Failed_ShowsAnErrorInsteadOfFailingSilently()
     {
-        var service = new FakeAdminOrderService(Order(status: OrderStatus.Shipped, fulfillmentMethod: FulfillmentMethod.Pickup)) { ResendResult = EmailResendResult.Failed };
+        var service = new FakeAdminOrderService(Order(status: OrderStatus.ReadyForPickup, fulfillmentMethod: FulfillmentMethod.Pickup)) { ResendResult = EmailResendResult.Failed };
         var model = CreateModel(service);
 
-        var result = await model.OnPostResendShippedEmailAsync(42, CancellationToken.None);
+        var result = await model.OnPostResendReadyForPickupEmailAsync(42, CancellationToken.None);
 
         Assert.IsType<PartialViewResult>(result);
-        Assert.Equal(["shipped"], service.Resent);
+        Assert.Equal(["ready for pickup"], service.Resent);
         Assert.Null(model.StatusMessage);
         Assert.Equal("The ready-for-pickup email couldn't be sent. Please try again later.", model.ErrorMessage);
     }
@@ -255,6 +302,8 @@ public class AdminOrderDetailTests
 
         public (string? TrackingNumber, ShippingCarrier Carrier)? ShippedWith { get; private set; }
 
+        public Task<OrderUpdateResult> MarkReadyForPickupAsync(int id, CancellationToken cancellationToken) => Update();
+
         public Task<OrderUpdateResult> MarkPickedUpAsync(int id, CancellationToken cancellationToken) => Update();
 
         public Task<OrderUpdateResult> MarkPaidAsync(int id, CancellationToken cancellationToken) => Update();
@@ -269,6 +318,8 @@ public class AdminOrderDetailTests
         public Task<EmailResendResult> ResendConfirmationAsync(int id, CancellationToken cancellationToken) => Resend(id, "confirmation");
 
         public Task<EmailResendResult> ResendShippedEmailAsync(int id, CancellationToken cancellationToken) => Resend(id, "shipped");
+
+        public Task<EmailResendResult> ResendReadyForPickupEmailAsync(int id, CancellationToken cancellationToken) => Resend(id, "ready for pickup");
 
         private Task<EmailResendResult> Resend(int id, string kind)
         {

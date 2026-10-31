@@ -110,41 +110,50 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
         return await OrderStatusPartialAsync(
             id,
             result,
-            order => $"Order marked as {FulfillmentLabels.ShippedStatus(order.FulfillmentMethod).ToLowerInvariant()} and the buyer has been emailed.",
+            "Order marked as shipped and the buyer has been emailed.",
             cancellationToken);
+    }
+
+    public async Task<IActionResult> OnPostMarkReadyForPickupAsync(int id, CancellationToken cancellationToken)
+    {
+        var result = await adminOrderService.MarkReadyForPickupAsync(id, cancellationToken);
+
+        return await OrderStatusPartialAsync(id, result, "Order marked as ready for pickup and the buyer has been emailed.", cancellationToken);
     }
 
     public async Task<IActionResult> OnPostMarkPickedUpAsync(int id, CancellationToken cancellationToken)
     {
         var result = await adminOrderService.MarkPickedUpAsync(id, cancellationToken);
 
-        return await OrderStatusPartialAsync(id, result, _ => "Order marked as picked up.", cancellationToken);
+        return await OrderStatusPartialAsync(id, result, "Order marked as picked up.", cancellationToken);
     }
 
     public async Task<IActionResult> OnPostMarkPaidAsync(int id, CancellationToken cancellationToken)
     {
         var result = await adminOrderService.MarkPaidAsync(id, cancellationToken);
 
-        return await OrderStatusPartialAsync(id, result, _ => "Order marked as paid.", cancellationToken);
+        return await OrderStatusPartialAsync(id, result, "Order marked as paid.", cancellationToken);
     }
 
     public async Task<IActionResult> OnPostMarkCancelledAsync(int id, CancellationToken cancellationToken)
     {
         var result = await adminOrderService.MarkCancelledAsync(id, cancellationToken);
 
-        return await OrderStatusPartialAsync(id, result, _ => "Order marked as cancelled.", cancellationToken);
+        return await OrderStatusPartialAsync(id, result, "Order marked as cancelled.", cancellationToken);
     }
 
     // Resends swap the same #order-status fragment, showing whether the email went out. They change
     // nothing on the order, so there's nothing to swap out of band.
     public Task<IActionResult> OnPostResendConfirmationAsync(int id, CancellationToken cancellationToken) =>
-        ResendEmailPartialAsync(id, adminOrderService.ResendConfirmationAsync, _ => "order confirmation email", cancellationToken);
+        ResendEmailPartialAsync(id, adminOrderService.ResendConfirmationAsync, "order confirmation email", cancellationToken);
 
     public Task<IActionResult> OnPostResendShippedEmailAsync(int id, CancellationToken cancellationToken) =>
-        ResendEmailPartialAsync(id, adminOrderService.ResendShippedEmailAsync, o => FulfillmentLabels.ShippedEmailName(o.FulfillmentMethod), cancellationToken);
+        ResendEmailPartialAsync(id, adminOrderService.ResendShippedEmailAsync, "shipping email", cancellationToken);
 
-    // emailName gets the reloaded order so the shipped email can be named by fulfillment method.
-    private async Task<IActionResult> ResendEmailPartialAsync(int id, Func<int, CancellationToken, Task<EmailResendResult>> resend, Func<AdminOrderDetail, string> emailName, CancellationToken cancellationToken)
+    public Task<IActionResult> OnPostResendReadyForPickupEmailAsync(int id, CancellationToken cancellationToken) =>
+        ResendEmailPartialAsync(id, adminOrderService.ResendReadyForPickupEmailAsync, "ready-for-pickup email", cancellationToken);
+
+    private async Task<IActionResult> ResendEmailPartialAsync(int id, Func<int, CancellationToken, Task<EmailResendResult>> resend, string emailName, CancellationToken cancellationToken)
     {
         var result = await resend(id, cancellationToken);
         if (result == EmailResendResult.NotFound)
@@ -154,24 +163,22 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
 
         return await ReloadPartialAsync(id, order =>
         {
-            var name = emailName(order);
             switch (result)
             {
                 case EmailResendResult.Sent:
-                    StatusMessage = $"The {name} was resent to {order.Address.Email}.";
+                    StatusMessage = $"The {emailName} was resent to {order.Address.Email}.";
                     break;
                 case EmailResendResult.NotAllowed:
-                    ErrorMessage = $"The {name} can't be resent for this order's current status. Nothing was sent.";
+                    ErrorMessage = $"The {emailName} can't be resent for this order's current status. Nothing was sent.";
                     break;
                 default:
-                    ErrorMessage = $"The {name} couldn't be sent. Please try again later.";
+                    ErrorMessage = $"The {emailName} couldn't be sent. Please try again later.";
                     break;
             }
         }, cancellationToken);
     }
 
-    // statusMessage gets the reloaded order so the wording can depend on it (e.g. shipped vs. ready for pickup).
-    private async Task<IActionResult> OrderStatusPartialAsync(int id, OrderUpdateResult result, Func<AdminOrderDetail, string> statusMessage, CancellationToken cancellationToken)
+    private async Task<IActionResult> OrderStatusPartialAsync(int id, OrderUpdateResult result, string statusMessage, CancellationToken cancellationToken)
     {
         if (result == OrderUpdateResult.NotFound)
         {
@@ -189,7 +196,7 @@ public class DetailsModel(IAdminOrderService adminOrderService) : PageModel
             }
             else
             {
-                StatusMessage = statusMessage(order);
+                StatusMessage = statusMessage;
             }
         }, cancellationToken);
     }

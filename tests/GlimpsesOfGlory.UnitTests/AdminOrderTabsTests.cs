@@ -158,6 +158,8 @@ public class AdminOrderTabsTests
 
         public Task<OrderUpdateResult> MarkShippedAsync(int id, string? trackingNumber, ShippingCarrier carrier, CancellationToken cancellationToken) => throw new NotSupportedException();
 
+        public Task<OrderUpdateResult> MarkReadyForPickupAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
+
         public Task<OrderUpdateResult> MarkPickedUpAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<OrderUpdateResult> MarkPaidAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
@@ -169,5 +171,7 @@ public class AdminOrderTabsTests
         public Task<EmailResendResult> ResendConfirmationAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<EmailResendResult> ResendShippedEmailAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<EmailResendResult> ResendReadyForPickupEmailAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

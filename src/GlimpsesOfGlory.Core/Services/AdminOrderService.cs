@@ -202,24 +202,49 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
             return result;
         }
 
-        // Loaded after the update, so the email shows exactly what was committed.
+        await NotifyAsync(
+            id,
+            order => emailSender.SendShippedNotificationAsync(order.ToShippedView(), cancellationToken),
+            "shipping-notification",
+            cancellationToken);
+        return OrderUpdateResult.Updated;
+    }
+
+    public async Task<OrderUpdateResult> MarkReadyForPickupAsync(int id, CancellationToken cancellationToken)
+    {
+        // Guarded like MarkShippedAsync, so a repeat click only emails the buyer once.
+        var result = await TransitionAsync(id, OrderLifecycle.MarkReadyForPickup, cancellationToken);
+        if (result != OrderUpdateResult.Updated)
+        {
+            return result;
+        }
+
+        await NotifyAsync(
+            id,
+            order => emailSender.SendReadyForPickupNotificationAsync(order.ToReadyForPickupView(), cancellationToken),
+            "ready-for-pickup",
+            cancellationToken);
+        return OrderUpdateResult.Updated;
+    }
+
+    // Emails the buyer after a committed transition. The order is loaded after the update, so the
+    // email shows exactly what was committed. A failed send shouldn't undo the status change, so
+    // it's logged for manual follow-up instead.
+    private async Task NotifyAsync(int id, Func<Order, Task> send, string emailKind, CancellationToken cancellationToken)
+    {
         var order = await LoadWithLinesAsync(id, cancellationToken);
         if (order is null)
         {
-            return OrderUpdateResult.Updated;
+            return;
         }
         try
         {
-            await emailSender.SendShippedNotificationAsync(order.ToShippedView(), cancellationToken);
+            await send(order);
         }
         catch (Exception ex)
         {
-            // The status change is already committed - a failed notification email
-            // shouldn't undo it. Log for manual follow-up instead.
-            logger.LogError(ex, "Failed to send shipping-notification email for order {OrderId}", order.Id);
+            logger.LogError(ex, "Failed to send {EmailKind} email for order {OrderId}", emailKind, order.Id);
         }
-
-        return OrderUpdateResult.Updated;
     }
 
     public Task<OrderUpdateResult> MarkPickedUpAsync(int id, CancellationToken cancellationToken) =>
@@ -282,6 +307,14 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
             OrderLifecycle.CanResendShippedEmail,
             order => emailSender.SendShippedNotificationAsync(order.ToShippedView(), cancellationToken),
             "shipping-notification",
+            cancellationToken);
+
+    public Task<EmailResendResult> ResendReadyForPickupEmailAsync(int id, CancellationToken cancellationToken) =>
+        ResendAsync(
+            id,
+            OrderLifecycle.CanResendReadyForPickupEmail,
+            order => emailSender.SendReadyForPickupNotificationAsync(order.ToReadyForPickupView(), cancellationToken),
+            "ready-for-pickup",
             cancellationToken);
 
     // Read-only: the order is loaded untracked and nothing is written, so a resend never touches
@@ -370,14 +403,17 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
             order.CreatedAt,
             order.PaidAt,
             order.ShippedAt,
+            order.ReadyForPickupAt,
             order.PickedUpAt,
             order.CancelledAt,
             OrderLifecycle.MarkShipped.IsAllowed(facts),
+            OrderLifecycle.MarkReadyForPickup.IsAllowed(facts),
             OrderLifecycle.MarkPickedUp.IsAllowed(facts),
             OrderLifecycle.MarkPaid.IsAllowed(facts),
             OrderLifecycle.MarkCancelled.IsAllowed(facts),
             OrderLifecycle.NeedsRefund.IsSatisfiedBy(facts),
             OrderLifecycle.CanResendConfirmation.IsSatisfiedBy(facts),
-            OrderLifecycle.CanResendShippedEmail.IsSatisfiedBy(facts));
+            OrderLifecycle.CanResendShippedEmail.IsSatisfiedBy(facts),
+            OrderLifecycle.CanResendReadyForPickupEmail.IsSatisfiedBy(facts));
     }
 }

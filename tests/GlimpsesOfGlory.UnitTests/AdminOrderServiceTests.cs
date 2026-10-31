@@ -79,6 +79,78 @@ public sealed class AdminOrderServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task MarkShipped_PickupOrder_IsRejected()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Pickup);
+
+        var result = await Service().MarkShippedAsync(id, null, ShippingCarrier.Usps, CancellationToken.None);
+
+        Assert.Equal(OrderUpdateResult.InvalidTransition, result);
+        Assert.Equal(OrderStatus.New, (await LoadAsync(id)).Status);
+    }
+
+    [Fact]
+    public async Task MarkReadyForPickup_MovesToReadyForPickup_StampsItsTimestamp_AndEmailsTheBuyer()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Pickup);
+        var emailSender = new RecordingEmailSender();
+
+        var result = await Service(emailSender).MarkReadyForPickupAsync(id, CancellationToken.None);
+
+        Assert.Equal(OrderUpdateResult.Updated, result);
+        var order = await LoadAsync(id);
+        Assert.Equal(OrderStatus.ReadyForPickup, order.Status);
+        Assert.Equal(T1, order.ReadyForPickupAt);
+        Assert.Null(order.ShippedAt);
+        Assert.Equal(id, Assert.Single(emailSender.ReadyForPickup).OrderId);
+        Assert.Empty(emailSender.Shipped);
+    }
+
+    [Fact]
+    public async Task MarkReadyForPickup_ShippingOrder_IsRejected()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Shipping);
+        var emailSender = new RecordingEmailSender();
+
+        var result = await Service(emailSender).MarkReadyForPickupAsync(id, CancellationToken.None);
+
+        Assert.Equal(OrderUpdateResult.InvalidTransition, result);
+        Assert.Equal(OrderStatus.New, (await LoadAsync(id)).Status);
+        Assert.Empty(emailSender.ReadyForPickup);
+    }
+
+    [Fact]
+    public async Task PickupOrder_GoesNew_ReadyForPickup_PickedUp()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Pickup);
+        var service = Service();
+
+        Assert.Equal(OrderUpdateResult.InvalidTransition, await service.MarkPickedUpAsync(id, CancellationToken.None));
+        Assert.Equal(OrderUpdateResult.Updated, await service.MarkReadyForPickupAsync(id, CancellationToken.None));
+        clock.Now = T2;
+        Assert.Equal(OrderUpdateResult.Updated, await service.MarkPickedUpAsync(id, CancellationToken.None));
+
+        var order = await LoadAsync(id);
+        Assert.Equal(OrderStatus.PickedUp, order.Status);
+        Assert.Equal(T1, order.ReadyForPickupAt);
+        Assert.Equal(T2, order.PickedUpAt);
+    }
+
+    [Fact]
+    public async Task ResendReadyForPickupEmail_OnlyWhileReadyForPickup()
+    {
+        var ready = await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.ReadyForPickup);
+        var pickedUp = await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.PickedUp);
+        var emailSender = new RecordingEmailSender();
+        var service = Service(emailSender);
+
+        Assert.Equal(EmailResendResult.Sent, await service.ResendReadyForPickupEmailAsync(ready, CancellationToken.None));
+        Assert.Equal(EmailResendResult.NotAllowed, await service.ResendReadyForPickupEmailAsync(pickedUp, CancellationToken.None));
+        Assert.Equal(EmailResendResult.NotAllowed, await service.ResendShippedEmailAsync(ready, CancellationToken.None));
+        Assert.Equal(ready, Assert.Single(emailSender.ReadyForPickup).OrderId);
+    }
+
+    [Fact]
     public async Task MarkPaid_StampsPaidAt_Once()
     {
         var id = await AddOrderAsync(FulfillmentMethod.Pickup);
@@ -136,14 +208,14 @@ public sealed class AdminOrderServiceTests : IDisposable
     {
         var newCash = await AddOrderAsync(FulfillmentMethod.Shipping);
         var newCard = await AddOrderAsync(FulfillmentMethod.Shipping, paymentMethod: PaymentMethod.Card, paidAt: T1);
-        var shippedUnpaidCash = await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.Shipped);
+        var readyUnpaidCash = await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.ReadyForPickup);
         var shippedPaid = await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Shipped, paymentMethod: PaymentMethod.Card, paidAt: T1);
         var pickedUpPaid = await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.PickedUp, paidAt: T1);
         var cancelledUnpaid = await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Cancelled);
         var service = Service();
 
-        Assert.Equal([newCash, newCard, shippedUnpaidCash], await IdsAsync(service, AdminOrderTab.NeedsAction));
-        Assert.Equal([shippedUnpaidCash, shippedPaid, pickedUpPaid], await IdsAsync(service, AdminOrderTab.Shipped));
+        Assert.Equal([newCash, newCard, readyUnpaidCash], await IdsAsync(service, AdminOrderTab.NeedsAction));
+        Assert.Equal([readyUnpaidCash, shippedPaid, pickedUpPaid], await IdsAsync(service, AdminOrderTab.Shipped));
         Assert.Equal([cancelledUnpaid], await IdsAsync(service, AdminOrderTab.Cancelled));
         Assert.Equal(6, (await IdsAsync(service, AdminOrderTab.All)).Count);
 
@@ -154,7 +226,8 @@ public sealed class AdminOrderServiceTests : IDisposable
     public async Task GetOrders_NeedsActionTab_AgreesWithTheRowHighlight()
     {
         await AddOrderAsync(FulfillmentMethod.Shipping);
-        await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.Shipped);
+        await AddOrderAsync(FulfillmentMethod.Pickup);
+        await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.ReadyForPickup);
         await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Shipped, paidAt: T1);
         await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Cancelled);
 
@@ -272,6 +345,7 @@ public sealed class AdminOrderServiceTests : IDisposable
     [Theory]
     [InlineData(typeof(OrderConfirmationView))]
     [InlineData(typeof(OrderShippedView))]
+    [InlineData(typeof(OrderReadyForPickupView))]
     public void CustomerFacingOrderViews_DoNotCarryTheInternalNote(Type customerView)
     {
         // These views feed the customer emails and the customer order pages; the note must stay admin-only.
@@ -335,8 +409,8 @@ public sealed class AdminOrderServiceTests : IDisposable
     private static void AssertUnchanged(Order before, Order after)
     {
         Assert.Equal(
-            (before.Status, before.TrackingNumber, before.CreatedAt, before.PaidAt, before.ShippedAt, before.PickedUpAt, before.CancelledAt),
-            (after.Status, after.TrackingNumber, after.CreatedAt, after.PaidAt, after.ShippedAt, after.PickedUpAt, after.CancelledAt));
+            (before.Status, before.TrackingNumber, before.CreatedAt, before.PaidAt, before.ShippedAt, before.ReadyForPickupAt, before.PickedUpAt, before.CancelledAt),
+            (after.Status, after.TrackingNumber, after.CreatedAt, after.PaidAt, after.ShippedAt, after.ReadyForPickupAt, after.PickedUpAt, after.CancelledAt));
     }
 
     private static async Task<List<int>> IdsAsync(AdminOrderService service, AdminOrderTab tab, AdminOrderFilter? filter = null)
@@ -401,6 +475,8 @@ public sealed class AdminOrderServiceTests : IDisposable
     {
         public List<OrderShippedView> Shipped { get; } = [];
 
+        public List<OrderReadyForPickupView> ReadyForPickup { get; } = [];
+
         public List<OrderConfirmationView> Confirmations { get; } = [];
 
         // Simulates the email provider rejecting the send.
@@ -412,6 +488,8 @@ public sealed class AdminOrderServiceTests : IDisposable
         public Task SendOrderConfirmationAsync(OrderConfirmationView order, CancellationToken cancellationToken) => Record(Confirmations, order);
 
         public Task SendShippedNotificationAsync(OrderShippedView order, CancellationToken cancellationToken) => Record(Shipped, order);
+
+        public Task SendReadyForPickupNotificationAsync(OrderReadyForPickupView order, CancellationToken cancellationToken) => Record(ReadyForPickup, order);
 
         private Task Record<T>(List<T> sent, T email)
         {

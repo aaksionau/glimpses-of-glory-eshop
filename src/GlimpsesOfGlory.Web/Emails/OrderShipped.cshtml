@@ -1,9 +1,4 @@
 @model GlimpsesOfGlory.Abstractions.Dtos.OrderShippedView
-@using GlimpsesOfGlory.Abstractions.Enums
-@using GlimpsesOfGlory.Web.Helpers
-@{
-    var isPickup = Model.FulfillmentMethod == FulfillmentMethod.Pickup;
-}
 <!DOCTYPE html>
 <html>
 <head>
@@ -11,20 +6,8 @@
     <title>Order Shipped</title>
 </head>
 <body style="font-family: sans-serif; color: #1f2937;">
-    @if (isPickup)
-    {
-        <h1>Your order is ready for pickup, @Model.Address.FullName!</h1>
-        <p>Order #@Model.OrderId is ready to collect.</p>
-        @if (!Model.IsPaid)
-        {
-            <p><strong>@PaymentLabels.CashDueNote(Model.Total)</strong></p>
-        }
-    }
-    else
-    {
-        <h1>Your order is on its way, @Model.Address.FullName!</h1>
-        <p>Order #@Model.OrderId has shipped.</p>
-    }
+    <h1>Your order is on its way, @Model.Address.FullName!</h1>
+    <p>Order #@Model.OrderId has shipped.</p>
 
     @if (!string.IsNullOrWhiteSpace(Model.TrackingNumber))
     {
@@ -64,19 +47,16 @@
         <strong>Total: @Model.Total.ToString("C")</strong>
     </p>
 
-    @if (!isPickup)
-    {
-        <h2>Shipping to</h2>
-        <p>
-            @Model.Address.FullName<br />
-            @Model.Address.AddressLine1<br />
-            @if (!string.IsNullOrWhiteSpace(Model.Address.AddressLine2))
-            {
-                @Model.Address.AddressLine2<text><br /></text>
-            }
-            @Model.Address.City, @Model.Address.State @Model.Address.PostalCode<br />
-            @Model.Address.Country
-        </p>
-    }
+    <h2>Shipping to</h2>
+    <p>
+        @Model.Address.FullName<br />
+        @Model.Address.AddressLine1<br />
+        @if (!string.IsNullOrWhiteSpace(Model.Address.AddressLine2))
+        {
+            @Model.Address.AddressLine2<text><br /></text>
+        }
+        @Model.Address.City, @Model.Address.State @Model.Address.PostalCode<br />
+        @Model.Address.Country
+    </p>
 </body>
 </html>

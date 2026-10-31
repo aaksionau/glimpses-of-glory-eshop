@@ -9,4 +9,7 @@ public enum OrderStatus
 
     // Final step for pickup orders only: the buyer has collected an order that was ready for pickup.
     PickedUp = 3,
+
+    // Pickup orders only: made ready to collect (the pickup counterpart of Shipped).
+    ReadyForPickup = 4,
 }

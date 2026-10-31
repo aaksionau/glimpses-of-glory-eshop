@@ -15,11 +15,11 @@ public static class OrderBadges
     private const string Neutral = "bg-white text-gray-700 border-gray-300";
 
     // New = amber, Shipped/Ready for pickup = blue, Picked up (completed) = green, Cancelled = gray.
-    public static Badge Status(OrderStatus status, FulfillmentMethod fulfillmentMethod) =>
-        new(FulfillmentLabels.Status(status, fulfillmentMethod), status switch
+    public static Badge Status(OrderStatus status) =>
+        new(FulfillmentLabels.Status(status), status switch
         {
             OrderStatus.New => Amber,
-            OrderStatus.Shipped => Blue,
+            OrderStatus.Shipped or OrderStatus.ReadyForPickup => Blue,
             OrderStatus.PickedUp => Green,
             _ => Gray,
         });

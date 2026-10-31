@@ -43,7 +43,7 @@ public static class OrderCsvExport
                 Text(row.CustomerName),
                 Text(row.Email),
                 FulfillmentLabels.CostLabel(row.FulfillmentMethod),
-                FulfillmentLabels.Status(row.Status, row.FulfillmentMethod),
+                FulfillmentLabels.Status(row.Status),
                 PaymentLabels.Method(row.PaymentMethod),
                 row.PaidAt is { } paidAt ? Timestamp(paidAt) : "",
                 Money(row.Subtotal),
