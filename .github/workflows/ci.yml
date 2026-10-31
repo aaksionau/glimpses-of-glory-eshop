@@ -66,5 +66,7 @@ jobs:
           --no-build
           --configuration Release
 
+      # Includes GlimpsesOfGlory.IntegrationTests, which starts Postgres with Testcontainers;
+      # GitHub-hosted Ubuntu runners ship with Docker, so nothing extra is needed here.
       - name: Test
         run: dotnet test ${{ env.SOLUTION }} --no-build --configuration Release --verbosity normal

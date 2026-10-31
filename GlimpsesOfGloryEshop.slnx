@@ -5,6 +5,7 @@
     <Project Path="src/GlimpsesOfGlory.Web/GlimpsesOfGlory.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/GlimpsesOfGlory.IntegrationTests/GlimpsesOfGlory.IntegrationTests.csproj" />
     <Project Path="tests/GlimpsesOfGlory.UnitTests/GlimpsesOfGlory.UnitTests.csproj" />
   </Folder>
 </Solution>
