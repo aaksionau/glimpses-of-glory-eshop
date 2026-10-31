@@ -39,8 +39,7 @@ internal static class SeoEndpoints
         var baseUrl = BaseUrl(request);
         var products = await productCatalogService.GetProductsAsync(cancellationToken);
 
-        var urls = new List<string> { $"{baseUrl}/", $"{baseUrl}/products" };
-        urls.AddRange(products.Select(p => $"{baseUrl}/products/{p.Slug}"));
+        string[] urls = [$"{baseUrl}/", $"{baseUrl}/products", .. products.Select(p => $"{baseUrl}/products/{p.Slug}")];
 
         var document = new XDocument(
             new XDeclaration("1.0", "utf-8", null),

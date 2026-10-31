@@ -5,6 +5,7 @@ using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Core.Entities;
 using GlimpsesOfGlory.Core.ValueObjects;
+using GlimpsesOfGlory.UnitTests;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 
@@ -59,7 +60,7 @@ public sealed class EndpointTests(PostgresFixture postgres) : IAsyncLifetime
         var productId = await SeedPendingCheckoutAsync();
         factory.PaymentGateway.NextWebhookResult = new(PaymentEventOutcome.Succeeded, PaymentIntentId, null);
 
-        using var response = await PostWebhookAsync(WebhookPaymentGateway.ValidSignature);
+        using var response = await PostWebhookAsync(FakePaymentGateway.ValidSignature);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         await using var db = database.CreateDb();
@@ -83,7 +84,7 @@ public sealed class EndpointTests(PostgresFixture postgres) : IAsyncLifetime
         await SeedPendingCheckoutAsync();
         factory.PaymentGateway.NextWebhookResult = new(outcome, PaymentIntentId, outcome == PaymentEventOutcome.Failed ? "Card declined" : null);
 
-        using var response = await PostWebhookAsync(WebhookPaymentGateway.ValidSignature);
+        using var response = await PostWebhookAsync(FakePaymentGateway.ValidSignature);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         await AssertCheckoutStillPendingAsync();

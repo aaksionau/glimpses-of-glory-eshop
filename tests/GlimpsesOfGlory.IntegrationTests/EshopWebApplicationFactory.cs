@@ -13,7 +13,7 @@ public sealed class EshopWebApplicationFactory(TestDatabase database) : WebAppli
 {
     private readonly string photosPath = Directory.CreateTempSubdirectory("eshop-photos-").FullName;
 
-    internal WebhookPaymentGateway PaymentGateway { get; } = new();
+    internal FakePaymentGateway PaymentGateway { get; } = new();
 
     internal RecordingEmailSender EmailSender { get; } = new();
 
