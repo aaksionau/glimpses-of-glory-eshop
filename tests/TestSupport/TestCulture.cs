@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
-namespace GlimpsesOfGlory.UnitTests;
+namespace GlimpsesOfGlory.TestSupport;
 
 /// <summary>
 /// Pins the test run to en-US, mirroring Program.cs, so rendered money ("$25.00") doesn't

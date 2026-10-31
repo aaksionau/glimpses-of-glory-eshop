@@ -5,7 +5,6 @@ using GlimpsesOfGlory.Core;
 using GlimpsesOfGlory.Core.Entities;
 using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Core.ValueObjects;
-using GlimpsesOfGlory.UnitTests;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 

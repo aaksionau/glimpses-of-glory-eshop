@@ -3,7 +3,7 @@ using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Exceptions;
 using GlimpsesOfGlory.Abstractions.Services;
 
-namespace GlimpsesOfGlory.UnitTests;
+namespace GlimpsesOfGlory.IntegrationTests;
 
 // IPaymentGateway double: builds dashboard links, and answers a webhook signed with
 // ValidSignature with NextWebhookResult (any other signature fails verification the way

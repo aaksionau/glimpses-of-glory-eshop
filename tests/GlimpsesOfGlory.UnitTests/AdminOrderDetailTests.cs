@@ -274,7 +274,7 @@ public class AdminOrderDetailTests
     // Just the slip itself (without the layout the renderer wraps it in), with entities decoded.
     private static async Task<string> RenderSlipAsync(AdminOrderDetail order)
     {
-        var html = await RazorViewToStringRendererTests.CreateRenderer().RenderAsync("~/Pages/Admin/Orders/_PackingSlip.cshtml", order);
+        var html = await TestRazorRenderer.Create().RenderAsync("~/Pages/Admin/Orders/_PackingSlip.cshtml", order);
         return WebUtility.HtmlDecode(Regex.Match(html, "<article id=\"packing-slip\".*?</article>", RegexOptions.Singleline).Value);
     }
 

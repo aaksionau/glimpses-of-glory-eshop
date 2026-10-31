@@ -25,7 +25,7 @@ public class ResendEmailSenderTests
     private static ResendEmailSender CreateSender(CapturingHandler handler) =>
         new(
             new HttpClient(handler) { BaseAddress = new Uri("https://api.resend.com/") },
-            RazorViewToStringRendererTests.CreateRenderer(),
+            TestRazorRenderer.Create(),
             Options.Create(new ResendOptions { ApiKey = "re_test", FromAddress = "shop@example.com" }));
 
     private static AbandonedCheckoutReminderView Reminder() =>

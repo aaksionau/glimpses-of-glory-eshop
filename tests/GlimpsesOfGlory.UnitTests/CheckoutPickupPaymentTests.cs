@@ -76,15 +76,6 @@ public class CheckoutPickupPaymentTests
         };
     }
 
-    private sealed class NullTempDataProvider : ITempDataProvider
-    {
-        public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
-
-        public void SaveTempData(HttpContext context, IDictionary<string, object> values)
-        {
-        }
-    }
-
     private sealed class RecordingCartService : ICartService
     {
         public bool Cleared { get; private set; }

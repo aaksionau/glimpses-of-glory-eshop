@@ -5,14 +5,17 @@ using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Core.ValueObjects;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace GlimpsesOfGlory.UnitTests;
+namespace GlimpsesOfGlory.IntegrationTests;
 
 // The optional phone given at checkout survives the PendingCheckout copy and reaches the admin.
-public sealed class CheckoutPhoneTests : IDisposable
+[Collection(PostgresCollectionDefinition.Name)]
+public sealed class CheckoutPhoneTests(PostgresFixture postgres) : IAsyncLifetime
 {
-    private readonly SqliteTestDatabase database = new();
+    private TestDatabase database = null!;
 
-    public void Dispose() => database.Dispose();
+    public async Task InitializeAsync() => database = await postgres.CreateDatabaseAsync();
+
+    public async Task DisposeAsync() => await database.DisposeAsync();
 
     // Card orders wait in a PendingCheckout until Stripe confirms payment; the phone must survive that copy.
     [Fact]

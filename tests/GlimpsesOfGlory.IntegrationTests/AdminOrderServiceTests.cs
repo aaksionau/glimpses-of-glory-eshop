@@ -9,19 +9,22 @@ using GlimpsesOfGlory.Core.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace GlimpsesOfGlory.UnitTests;
+namespace GlimpsesOfGlory.IntegrationTests;
 
-// Runs AdminOrderService against an in-memory SQLite database, since its status changes are
-// ExecuteUpdate calls that need a relational provider.
-public sealed class AdminOrderServiceTests : IDisposable
+// Runs AdminOrderService against a migrated Postgres database, one request at a time.
+// AdminOrderServicePostgresTests covers the concurrent and transactional paths.
+[Collection(PostgresCollectionDefinition.Name)]
+public sealed class AdminOrderServiceTests(PostgresFixture postgres) : IAsyncLifetime
 {
     private static readonly DateTimeOffset T1 = new(2026, 8, 2, 10, 0, 0, TimeSpan.Zero);
     private static readonly DateTimeOffset T2 = new(2026, 8, 3, 12, 0, 0, TimeSpan.Zero);
 
-    private readonly SqliteTestDatabase database = new();
+    private TestDatabase database = null!;
     private readonly ManualTimeProvider clock = new(T1);
 
-    public void Dispose() => database.Dispose();
+    public async Task InitializeAsync() => database = await postgres.CreateDatabaseAsync();
+
+    public async Task DisposeAsync() => await database.DisposeAsync();
 
     [Fact]
     public async Task MarkShipped_StampsShippedAt()
@@ -368,7 +371,7 @@ public sealed class AdminOrderServiceTests : IDisposable
         await Service(emailSender).MarkShippedAsync(id, "TRACK1", ShippingCarrier.Usps, CancellationToken.None);
 
         var sent = Assert.Single(emailSender.Shipped);
-        var html = await RazorViewToStringRendererTests.CreateRenderer().RenderAsync("~/Emails/OrderShipped.cshtml", sent);
+        var html = await TestRazorRenderer.Create().RenderAsync("~/Emails/OrderShipped.cshtml", sent);
         Assert.Contains("TRACK1", html);
         Assert.DoesNotContain(note, html);
     }

@@ -1,9 +1,10 @@
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Services;
 
-namespace GlimpsesOfGlory.UnitTests;
+namespace GlimpsesOfGlory.IntegrationTests;
 
-// IEmailSender double that records each email instead of sending it, or fails on demand.
+// IEmailSender double that records each email instead of sending it, or fails on demand. Not
+// thread-safe, but in the Postgres race tests only the winning transition sends an email.
 internal sealed class RecordingEmailSender : IEmailSender
 {
     public List<OrderShippedView> Shipped { get; } = [];

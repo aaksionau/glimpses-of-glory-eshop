@@ -1,7 +1,7 @@
 using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Core.Services;
 
-namespace GlimpsesOfGlory.UnitTests;
+namespace GlimpsesOfGlory.TestSupport;
 
 // In-memory IInventoryStore double with a real conditional-decrement contract (via a
 // lock), so tests can exercise the "can't oversell under concurrency" guarantee without

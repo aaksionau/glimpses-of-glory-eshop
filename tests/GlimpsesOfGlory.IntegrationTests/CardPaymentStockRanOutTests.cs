@@ -6,18 +6,21 @@ using GlimpsesOfGlory.Core.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace GlimpsesOfGlory.UnitTests;
+namespace GlimpsesOfGlory.IntegrationTests;
 
 // Stripe confirms a payment, but the stock sold out between creating the PaymentIntent and the
 // webhook arriving: no order can be made, so the shortfall must be logged for a manual refund.
-public sealed class CardPaymentStockRanOutTests : IDisposable
+[Collection(PostgresCollectionDefinition.Name)]
+public sealed class CardPaymentStockRanOutTests(PostgresFixture postgres) : IAsyncLifetime
 {
     private const string PaymentIntentId = "pi_short";
 
-    private readonly SqliteTestDatabase database = new();
+    private TestDatabase database = null!;
     private readonly RecordingLogger<OrderService> logger = new();
 
-    public void Dispose() => database.Dispose();
+    public async Task InitializeAsync() => database = await postgres.CreateDatabaseAsync();
+
+    public async Task DisposeAsync() => await database.DisposeAsync();
 
     [Fact]
     public async Task ConfirmPayment_WhenStockRanOut_LogsAnErrorNamingThePaymentBuyerAndShortProduct()

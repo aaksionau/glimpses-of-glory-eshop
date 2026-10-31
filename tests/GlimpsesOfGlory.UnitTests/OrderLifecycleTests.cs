@@ -3,16 +3,13 @@ using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Core.Entities;
 using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Core.ValueObjects;
-using Microsoft.EntityFrameworkCore;
 
 namespace GlimpsesOfGlory.UnitTests;
 
-public sealed class OrderLifecycleTests : IDisposable
+// OrderLifecycle's rules in memory. The SQL form of each rule (OnOrders) is checked against these
+// in GlimpsesOfGlory.IntegrationTests' OrderRuleSqlTests.
+public sealed class OrderLifecycleTests
 {
-    private readonly SqliteTestDatabase database = new();
-
-    public void Dispose() => database.Dispose();
-
     [Theory]
     [InlineData(OrderStatus.New, FulfillmentMethod.Shipping, true)]
     [InlineData(OrderStatus.Shipped, FulfillmentMethod.Shipping, false)]
@@ -176,9 +173,9 @@ public sealed class OrderLifecycleTests : IDisposable
     [Fact]
     public void FactsOf_ReadsTheOrder()
     {
-        var order = NewOrder(OrderStatus.ReadyForPickup, FulfillmentMethod.Pickup, PaymentMethod.Cash, isPaid: true);
+        var facts = Facts(OrderStatus.ReadyForPickup, FulfillmentMethod.Pickup, PaymentMethod.Cash, isPaid: true);
 
-        Assert.Equal(Facts(OrderStatus.ReadyForPickup, FulfillmentMethod.Pickup, PaymentMethod.Cash, isPaid: true), OrderFacts.Of(order));
+        Assert.Equal(facts, OrderFacts.Of(OrderLifecycleRules.OrderWith(facts)));
     }
 
     // Each flag must read the rule it's named after (CanMarkShipped -> MarkShipped, NeedsRefund ->
@@ -188,62 +185,18 @@ public sealed class OrderLifecycleTests : IDisposable
     {
         var flags = typeof(AdminOrderActions).GetProperties();
         Assert.NotEmpty(flags);
+        var rules = OrderLifecycleRules.ByName;
 
-        foreach (var facts in
-            from status in Enum.GetValues<OrderStatus>()
-            from fulfillmentMethod in Enum.GetValues<FulfillmentMethod>()
-            from paymentMethod in Enum.GetValues<PaymentMethod>()
-            from isPaid in BothPaidStates
-            select Facts(status, fulfillmentMethod, paymentMethod, isPaid))
+        foreach (var facts in OrderLifecycleRules.AllFacts())
         {
             var actions = OrderLifecycle.Actions(facts);
             foreach (var flag in flags)
             {
-                var rule = RulesByName.TryGetValue(flag.Name, out var named) ? named : RulesByName[flag.Name["Can".Length..]];
+                var rule = rules.TryGetValue(flag.Name, out var named) ? named : rules[flag.Name["Can".Length..]];
                 Assert.True(rule.IsSatisfiedBy(facts) == (bool)flag.GetValue(actions)!, $"{flag.Name} disagrees with its rule for {facts}");
             }
         }
     }
-
-    public static TheoryData<string> Rules() => new(RulesByName.Keys);
-
-    // The SQL form of every rule must pick exactly the orders its in-memory form accepts, over every
-    // combination of facts - this is what keeps dashboard counts and list tabs in step with the badges.
-    [Theory]
-    [MemberData(nameof(Rules))]
-    public async Task OnOrders_MatchesIsSatisfiedBy_ForEveryCombinationOfFacts(string ruleName)
-    {
-        var rule = RulesByName[ruleName];
-        await using (var seed = database.CreateDb())
-        {
-            seed.Orders.AddRange(
-                from status in Enum.GetValues<OrderStatus>()
-                from fulfillmentMethod in Enum.GetValues<FulfillmentMethod>()
-                from paymentMethod in Enum.GetValues<PaymentMethod>()
-                from isPaid in BothPaidStates
-                select NewOrder(status, fulfillmentMethod, paymentMethod, isPaid));
-            await seed.SaveChangesAsync();
-        }
-
-        await using var db = database.CreateDb();
-        var orders = await db.Orders.AsNoTracking().ToListAsync();
-        var inMemory = orders.Where(o => rule.IsSatisfiedBy(OrderFacts.Of(o))).Select(o => o.Id).Order().ToList();
-        var inSql = await db.Orders.Where(rule.OnOrders).Select(o => o.Id).OrderBy(id => id).ToListAsync();
-
-        Assert.Equal(inMemory, inSql);
-    }
-
-    private static readonly bool[] BothPaidStates = [false, true];
-
-    // Read off OrderLifecycle itself, so a newly declared rule or transition can't skip the check above.
-    private static readonly Dictionary<string, OrderRule> RulesByName = typeof(OrderLifecycle)
-        .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-        .ToDictionary(f => f.Name, f => f.GetValue(null) switch
-        {
-            OrderRule rule => rule,
-            OrderTransition transition => transition.Guard,
-            var other => throw new InvalidOperationException($"Unexpected OrderLifecycle member {f.Name}: {other}"),
-        });
 
     private static OrderFacts Facts(
         OrderStatus status,
@@ -257,16 +210,6 @@ public sealed class OrderLifecycleTests : IDisposable
             PaymentMethod = paymentMethod,
             IsPaid = isPaid,
         };
-
-    private static Order NewOrder(OrderStatus status, FulfillmentMethod fulfillmentMethod, PaymentMethod paymentMethod, bool isPaid) => new()
-    {
-        Email = "shopper@example.com",
-        ShippingAddress = new ShippingAddress { FullName = "Jane Shopper" },
-        Status = status,
-        FulfillmentMethod = fulfillmentMethod,
-        PaymentMethod = paymentMethod,
-        PaidAt = isPaid ? new DateTimeOffset(2026, 8, 1, 9, 0, 0, TimeSpan.Zero) : null,
-    };
 
     private static string StampedProperty(OrderTransition transition) =>
         ((System.Linq.Expressions.MemberExpression)transition.StepTimestamp.Body).Member.Name;
