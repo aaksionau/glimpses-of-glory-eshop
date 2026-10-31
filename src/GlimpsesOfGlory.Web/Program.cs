@@ -31,6 +31,10 @@ CultureInfo.DefaultThreadCurrentUICulture = defaultCulture;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// GlitchTip speaks the Sentry protocol, so the Sentry SDK ships errors and log events there.
+// Options bind from the "Sentry" config section; with no Sentry__Dsn set the SDK stays disabled.
+builder.WebHost.UseSentry();
+
 // Add services to the container.
 builder.Services.AddRazorPages(options =>
 {
