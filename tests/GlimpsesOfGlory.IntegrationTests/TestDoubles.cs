@@ -22,18 +22,6 @@ internal sealed class RecordingEmailSender : IEmailSender
     public Task SendAbandonedCheckoutReminderAsync(AbandonedCheckoutReminderView reminder, CancellationToken cancellationToken) => Task.CompletedTask;
 }
 
-// The admin order paths under test never talk to the payment provider.
-internal sealed class UnusedPaymentGateway : IPaymentGateway
-{
-    public Task<PaymentIntentSetup> CreatePaymentIntentAsync(decimal amount, string? receiptEmail, CancellationToken cancellationToken) => throw new NotSupportedException();
-
-    public Task<PaymentIntentSetup> UpdatePaymentIntentAsync(string paymentIntentId, decimal amount, string? receiptEmail, CancellationToken cancellationToken) => throw new NotSupportedException();
-
-    public PaymentWebhookResult HandleWebhookEvent(string payload, string signatureHeader) => throw new NotSupportedException();
-
-    public string GetPaymentDashboardUrl(string paymentIntentId) => $"https://dashboard.test/{paymentIntentId}";
-}
-
 // Passes every call to the real store, but fails restock number failOnRestock (1-based), after the
 // earlier restocks have already been written inside the cancel transaction.
 internal sealed class FailingRestockInventoryStore(IInventoryStore inner, int failOnRestock) : IInventoryStore

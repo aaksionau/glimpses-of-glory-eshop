@@ -6,6 +6,7 @@ using GlimpsesOfGlory.Core.Entities;
 using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Core.ValueObjects;
 using Microsoft.EntityFrameworkCore;
+using GlimpsesOfGlory.UnitTests;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace GlimpsesOfGlory.IntegrationTests;
@@ -122,8 +123,9 @@ public sealed class AdminOrderServicePostgresTests(PostgresFixture postgres) : I
     [Fact]
     public async Task OrdersList_IsNewestFirst_ByCreatedAt_WithIdBreakingTies()
     {
+        var newestCreatedAt = new DateTimeOffset(2026, 10, 30, 23, 59, 59, 999, TimeSpan.Zero);
         var oldest = await AddOrderAsync(createdAt: new DateTimeOffset(2026, 1, 15, 8, 0, 0, TimeSpan.Zero));
-        var newest = await AddOrderAsync(createdAt: new DateTimeOffset(2026, 10, 30, 23, 59, 59, 999, TimeSpan.Zero));
+        var newest = await AddOrderAsync(createdAt: newestCreatedAt);
         var tiedA = await AddOrderAsync(createdAt: new DateTimeOffset(2026, 6, 1, 12, 0, 0, TimeSpan.Zero));
         var middle = await AddOrderAsync(createdAt: new DateTimeOffset(2026, 6, 1, 12, 0, 0, 1, TimeSpan.Zero));
         var tiedB = await AddOrderAsync(createdAt: new DateTimeOffset(2026, 6, 1, 12, 0, 0, TimeSpan.Zero));
@@ -135,7 +137,7 @@ public sealed class AdminOrderServicePostgresTests(PostgresFixture postgres) : I
         var service = Service(db);
         var onePage = (await service.GetOrdersAsync(AdminOrderTab.All, AdminOrderFilter.None, 1, 50, CancellationToken.None)).Orders;
         Assert.Equal(expected, onePage.Select(o => o.Id));
-        Assert.Equal(new DateTimeOffset(2026, 10, 30, 23, 59, 59, 999, TimeSpan.Zero), onePage[0].CreatedAt);
+        Assert.Equal(newestCreatedAt, onePage[0].CreatedAt);
 
         var paged = new List<int>();
         for (var page = 1; page <= 3; page++)
@@ -160,7 +162,7 @@ public sealed class AdminOrderServicePostgresTests(PostgresFixture postgres) : I
     }
 
     private AdminOrderService Service(AppDbContext db, IEmailSender? emailSender = null, IInventoryStore? inventoryStore = null) =>
-        new(db, new OrderLineInventory(inventoryStore ?? new EfInventoryStore(db)), new UnusedPaymentGateway(), emailSender ?? new RecordingEmailSender(), new FixedTimeProvider(Now), NullLogger<AdminOrderService>.Instance);
+        new(db, new OrderLineInventory(inventoryStore ?? new EfInventoryStore(db)), new FakePaymentGateway(), emailSender ?? new NullEmailSender(), new FixedTimeProvider(Now), NullLogger<AdminOrderService>.Instance);
 
     private async Task<List<int>> SearchAsync(string search)
     {
@@ -217,10 +219,5 @@ public sealed class AdminOrderServicePostgresTests(PostgresFixture postgres) : I
     {
         await using var db = database.CreateDb();
         return await db.Products.Where(p => p.Id == productId).Select(p => p.StockQuantity).SingleAsync();
-    }
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
     }
 }

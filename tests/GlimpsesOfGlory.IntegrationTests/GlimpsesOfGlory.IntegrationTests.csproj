@@ -19,6 +19,13 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- Stateless doubles shared with the unit tests rather than copied. -->
+  <ItemGroup>
+    <Compile Include="../GlimpsesOfGlory.UnitTests/FakePaymentGateway.cs" Link="Shared/FakePaymentGateway.cs" />
+    <Compile Include="../GlimpsesOfGlory.UnitTests/FixedTimeProvider.cs" Link="Shared/FixedTimeProvider.cs" />
+    <Compile Include="../GlimpsesOfGlory.UnitTests/NullEmailSender.cs" Link="Shared/NullEmailSender.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\GlimpsesOfGlory.Core\GlimpsesOfGlory.Core.csproj" />
   </ItemGroup>

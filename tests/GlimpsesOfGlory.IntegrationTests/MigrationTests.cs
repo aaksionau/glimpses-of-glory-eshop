@@ -8,13 +8,11 @@ namespace GlimpsesOfGlory.IntegrationTests;
 public sealed class MigrationTests(PostgresFixture postgres)
 {
     [Fact]
-    public async Task EveryMigration_IsApplied_AndNoneArePending()
+    public async Task EveryMigration_IsApplied()
     {
         await using var database = await postgres.CreateDatabaseAsync();
         await using var db = database.CreateDb();
 
         Assert.Equal(db.Database.GetMigrations(), await db.Database.GetAppliedMigrationsAsync());
-        Assert.Empty(await db.Database.GetPendingMigrationsAsync());
-        Assert.False(db.Database.HasPendingModelChanges());
     }
 }

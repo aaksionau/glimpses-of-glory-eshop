@@ -1,6 +1,5 @@
 using GlimpsesOfGlory.Core;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Npgsql;
 
 namespace GlimpsesOfGlory.IntegrationTests;
 
@@ -11,12 +10,6 @@ public sealed class TestDatabase(string connectionString, Func<Task> drop) : IAs
     public AppDbContext CreateDb(params IInterceptor[] interceptors) =>
         new(PostgresFixture.OptionsBuilder(connectionString).AddInterceptors(interceptors).Options);
 
-    public async ValueTask DisposeAsync()
-    {
-        await using (var connection = new NpgsqlConnection(connectionString))
-        {
-            NpgsqlConnection.ClearPool(connection);
-        }
-        await drop();
-    }
+    // DROP ... WITH (FORCE) closes any connections still pooled against it.
+    public async ValueTask DisposeAsync() => await drop();
 }
