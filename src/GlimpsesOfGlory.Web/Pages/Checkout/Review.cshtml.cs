@@ -22,15 +22,10 @@ public class ReviewModel(ICartService cartService, IOrderService orderService, C
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         var cart = await cartService.GetSummaryAsync(cancellationToken);
-        if (cart.Lines.Count == 0)
-        {
-            return RedirectToPage("/Cart/Index");
-        }
-
         var address = checkoutSessionStore.GetAddress();
-        if (address is null)
+        if (CheckoutStepGuard.ShouldRedirect(cart, address, out var redirect))
         {
-            return RedirectToPage("/Checkout/Index");
+            return redirect;
         }
 
         Cart = cart;
@@ -43,9 +38,9 @@ public class ReviewModel(ICartService cartService, IOrderService orderService, C
     public async Task<IActionResult> OnPostPickupPaymentAsync(PaymentMethod paymentMethod, CancellationToken cancellationToken)
     {
         var address = checkoutSessionStore.GetAddress();
-        if (address is null)
+        if (CheckoutStepGuard.ShouldRedirect(address, out var redirect))
         {
-            return RedirectToPage("/Checkout/Index");
+            return redirect;
         }
 
         // Cash is only offered for local pickup.

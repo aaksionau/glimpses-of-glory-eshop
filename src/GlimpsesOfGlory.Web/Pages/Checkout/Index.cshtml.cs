@@ -23,9 +23,9 @@ public class IndexModel(ICartService cartService, CheckoutSessionStore checkoutS
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         var cart = await cartService.GetSummaryAsync(cancellationToken);
-        if (cart.Lines.Count == 0)
+        if (CheckoutStepGuard.ShouldRedirect(cart, out var redirect))
         {
-            return RedirectToPage("/Cart/Index");
+            return redirect;
         }
 
         Cart = cart;
@@ -36,9 +36,9 @@ public class IndexModel(ICartService cartService, CheckoutSessionStore checkoutS
     public async Task<IActionResult> OnPostAsync(CancellationToken cancellationToken)
     {
         var cart = await cartService.GetSummaryAsync(cancellationToken);
-        if (cart.Lines.Count == 0)
+        if (CheckoutStepGuard.ShouldRedirect(cart, out var redirect))
         {
-            return RedirectToPage("/Cart/Index");
+            return redirect;
         }
 
         Cart = cart;
