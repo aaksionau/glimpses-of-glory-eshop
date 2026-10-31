@@ -1,7 +1,7 @@
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Services;
 
-namespace GlimpsesOfGlory.UnitTests;
+namespace GlimpsesOfGlory.TestSupport;
 
 // IEmailSender double that sends nothing.
 internal sealed class NullEmailSender : IEmailSender

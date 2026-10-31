@@ -5,18 +5,21 @@ using GlimpsesOfGlory.Core.Entities;
 using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Core.ValueObjects;
 
-namespace GlimpsesOfGlory.UnitTests;
+namespace GlimpsesOfGlory.IntegrationTests;
 
-// Restores a reminder's Pending Checkout into a cart, against an in-memory SQLite database.
-public sealed class CartRestoreServiceTests : IDisposable
+// Restores a reminder's Pending Checkout into a cart, against a migrated Postgres database.
+[Collection(PostgresCollectionDefinition.Name)]
+public sealed class CartRestoreServiceTests(PostgresFixture postgres) : IAsyncLifetime
 {
     private const string Token = "restore-token";
     private const string PaymentIntentId = "pi_restored";
 
-    private readonly SqliteTestDatabase database = new();
+    private TestDatabase database = null!;
     private readonly FakeCartStore cartStore = new();
 
-    public void Dispose() => database.Dispose();
+    public async Task InitializeAsync() => database = await postgres.CreateDatabaseAsync();
+
+    public async Task DisposeAsync() => await database.DisposeAsync();
 
     [Fact]
     public async Task Restore_IntoAnEmptyCart_AddsTheStoredLines()

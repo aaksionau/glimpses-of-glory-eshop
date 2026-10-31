@@ -7,17 +7,20 @@ using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Core.ValueObjects;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace GlimpsesOfGlory.UnitTests;
+namespace GlimpsesOfGlory.IntegrationTests;
 
-// Runs the dashboard metric queries against an in-memory SQLite database, and checks each number
+// Runs the dashboard metric queries against a migrated Postgres database, and checks each number
 // agrees with the filtered admin list its tile links to.
-public sealed class AdminDashboardServiceTests : IDisposable
+[Collection(PostgresCollectionDefinition.Name)]
+public sealed class AdminDashboardServiceTests(PostgresFixture postgres) : IAsyncLifetime
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 30, 12, 0, 0, TimeSpan.Zero);
 
-    private readonly SqliteTestDatabase database = new();
+    private TestDatabase database = null!;
 
-    public void Dispose() => database.Dispose();
+    public async Task InitializeAsync() => database = await postgres.CreateDatabaseAsync();
+
+    public async Task DisposeAsync() => await database.DisposeAsync();
 
     [Fact]
     public async Task GetMetrics_CountsVisibleLowStockProducts_ExcludingPreorders()

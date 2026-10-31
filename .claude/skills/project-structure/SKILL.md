@@ -5,7 +5,7 @@ description: Explains this repo's solution layout — the Abstractions/Core/Web/
 
 # Project structure
 
-Five projects (`GlimpsesOfGloryEshop.slnx`): `GlimpsesOfGlory.Abstractions`, `GlimpsesOfGlory.Core`, `GlimpsesOfGlory.Web`, `tests/GlimpsesOfGlory.UnitTests`, `tests/GlimpsesOfGlory.IntegrationTests` (real Postgres via Testcontainers; needs Docker — see its `README.md` for when a test belongs there instead of the SQLite-backed unit tests).
+Five projects (`GlimpsesOfGloryEshop.slnx`): `GlimpsesOfGlory.Abstractions`, `GlimpsesOfGlory.Core`, `GlimpsesOfGlory.Web`, `tests/GlimpsesOfGlory.UnitTests` (no database, no Docker), `tests/GlimpsesOfGlory.IntegrationTests` (every test that touches a database or the HTTP pipeline, against real Postgres via Testcontainers; needs Docker). Each test project's `README.md` says what belongs in it. Test doubles and helpers used by both (`FakeCartStore`, `FakePaymentGateway`, `FixedTimeProvider`, …) live once in `tests/TestSupport/` (namespace `GlimpsesOfGlory.TestSupport`), which both projects compile in — add new shared doubles there, not to either project.
 
 ```
 src/

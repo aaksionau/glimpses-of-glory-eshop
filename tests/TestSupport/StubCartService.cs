@@ -1,7 +1,7 @@
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Services;
 
-namespace GlimpsesOfGlory.UnitTests;
+namespace GlimpsesOfGlory.TestSupport;
 
 // ICartService double that always returns the given cart; clearing it is a no-op.
 internal sealed class StubCartService(CartSummary cart) : ICartService

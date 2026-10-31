@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Http;
 
-namespace GlimpsesOfGlory.UnitTests;
+namespace GlimpsesOfGlory.TestSupport;
 
 // ISession double backed by a dictionary, for page models that use the checkout session store.
 internal sealed class InMemorySession : ISession

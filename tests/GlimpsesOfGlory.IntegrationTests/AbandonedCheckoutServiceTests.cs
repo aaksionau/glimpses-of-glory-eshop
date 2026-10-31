@@ -7,16 +7,19 @@ using GlimpsesOfGlory.Core.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace GlimpsesOfGlory.UnitTests;
+namespace GlimpsesOfGlory.IntegrationTests;
 
-// Runs the abandoned checkout listing and reminder against an in-memory SQLite database with a frozen clock.
-public sealed class AbandonedCheckoutServiceTests : IDisposable
+// Runs the abandoned checkout listing and reminder against a migrated Postgres database with a frozen clock.
+[Collection(PostgresCollectionDefinition.Name)]
+public sealed class AbandonedCheckoutServiceTests(PostgresFixture postgres) : IAsyncLifetime
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 30, 12, 0, 0, TimeSpan.Zero);
 
-    private readonly SqliteTestDatabase database = new();
+    private TestDatabase database = null!;
 
-    public void Dispose() => database.Dispose();
+    public async Task InitializeAsync() => database = await postgres.CreateDatabaseAsync();
+
+    public async Task DisposeAsync() => await database.DisposeAsync();
 
     [Fact]
     public async Task List_IncludesOnlyCheckoutsBetweenOneHourAndThirtyDaysOld()

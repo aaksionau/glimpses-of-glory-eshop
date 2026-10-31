@@ -3,16 +3,13 @@ using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Core.Entities;
 using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Core.ValueObjects;
-using Microsoft.EntityFrameworkCore;
 
 namespace GlimpsesOfGlory.UnitTests;
 
-public sealed class OrderLifecycleTests : IDisposable
+// OrderLifecycle's rules in memory. The SQL form of each rule (OnOrders) is checked against these
+// in GlimpsesOfGlory.IntegrationTests' OrderRuleSqlTests.
+public sealed class OrderLifecycleTests
 {
-    private readonly SqliteTestDatabase database = new();
-
-    public void Dispose() => database.Dispose();
-
     [Theory]
     [InlineData(OrderStatus.New, FulfillmentMethod.Shipping, true)]
     [InlineData(OrderStatus.Shipped, FulfillmentMethod.Shipping, false)]
@@ -205,45 +202,9 @@ public sealed class OrderLifecycleTests : IDisposable
         }
     }
 
-    public static TheoryData<string> Rules() => new(RulesByName.Keys);
-
-    // The SQL form of every rule must pick exactly the orders its in-memory form accepts, over every
-    // combination of facts - this is what keeps dashboard counts and list tabs in step with the badges.
-    [Theory]
-    [MemberData(nameof(Rules))]
-    public async Task OnOrders_MatchesIsSatisfiedBy_ForEveryCombinationOfFacts(string ruleName)
-    {
-        var rule = RulesByName[ruleName];
-        await using (var seed = database.CreateDb())
-        {
-            seed.Orders.AddRange(
-                from status in Enum.GetValues<OrderStatus>()
-                from fulfillmentMethod in Enum.GetValues<FulfillmentMethod>()
-                from paymentMethod in Enum.GetValues<PaymentMethod>()
-                from isPaid in BothPaidStates
-                select NewOrder(status, fulfillmentMethod, paymentMethod, isPaid));
-            await seed.SaveChangesAsync();
-        }
-
-        await using var db = database.CreateDb();
-        var orders = await db.Orders.AsNoTracking().ToListAsync();
-        var inMemory = orders.Where(o => rule.IsSatisfiedBy(OrderFacts.Of(o))).Select(o => o.Id).Order().ToList();
-        var inSql = await db.Orders.Where(rule.OnOrders).Select(o => o.Id).OrderBy(id => id).ToListAsync();
-
-        Assert.Equal(inMemory, inSql);
-    }
-
     private static readonly bool[] BothPaidStates = [false, true];
 
-    // Read off OrderLifecycle itself, so a newly declared rule or transition can't skip the check above.
-    private static readonly Dictionary<string, OrderRule> RulesByName = typeof(OrderLifecycle)
-        .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-        .ToDictionary(f => f.Name, f => f.GetValue(null) switch
-        {
-            OrderRule rule => rule,
-            OrderTransition transition => transition.Guard,
-            var other => throw new InvalidOperationException($"Unexpected OrderLifecycle member {f.Name}: {other}"),
-        });
+    private static IReadOnlyDictionary<string, OrderRule> RulesByName => OrderLifecycleRules.ByName;
 
     private static OrderFacts Facts(
         OrderStatus status,

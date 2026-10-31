@@ -18,16 +18,19 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using CartIndexModel = GlimpsesOfGlory.Web.Pages.Cart.IndexModel;
 
-namespace GlimpsesOfGlory.UnitTests;
+namespace GlimpsesOfGlory.IntegrationTests;
 
 // When checkout can't get stock, the shopper lands back on the cart with each short line flagged.
-public sealed class CheckoutUnavailableItemsTests : IDisposable
+[Collection(PostgresCollectionDefinition.Name)]
+public sealed class CheckoutUnavailableItemsTests(PostgresFixture postgres) : IAsyncLifetime
 {
     private static readonly ShippingAddressInfo PickupAddress = new("shopper@example.com", "Sam Shopper", null, null, null, null, null, null);
 
-    private readonly SqliteTestDatabase database = new();
+    private TestDatabase database = null!;
 
-    public void Dispose() => database.Dispose();
+    public async Task InitializeAsync() => database = await postgres.CreateDatabaseAsync();
+
+    public async Task DisposeAsync() => await database.DisposeAsync();
 
     [Fact]
     public async Task CreatePaymentIntent_ListsEachShortLine_WithHowManyAreLeft()
@@ -62,7 +65,7 @@ public sealed class CheckoutUnavailableItemsTests : IDisposable
     {
         await SeedProductsAsync();
         // Prices fine (sunrise has 2), but another order takes one sunrise just as the transaction starts.
-        var db = database.CreateDb(new CompetingOrderInterceptor("UPDATE Products SET StockQuantity = 1 WHERE Slug = 'sunrise'"));
+        var db = database.CreateDb(new CompetingOrderInterceptor("""UPDATE "Products" SET "StockQuantity" = 1 WHERE "Slug" = 'sunrise'"""));
         var cart = Cart(("harbour", 1), ("sunrise", 2));
 
         var result = await OrderService(db, cart).PlaceCashOrderAsync(PickupAddress, CancellationToken.None);

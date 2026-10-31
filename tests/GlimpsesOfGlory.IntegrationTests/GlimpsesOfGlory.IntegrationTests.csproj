@@ -17,14 +17,12 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
-  <!-- Doubles shared with the unit tests rather than copied. Each test builds its own instances,
-       so mutable ones (FakePaymentGateway.NextWebhookResult) are never shared between tests. -->
+  <!-- Test doubles shared with GlimpsesOfGlory.UnitTests live once, in tests/TestSupport, and are compiled
+       into both projects. Each test builds its own instances, so mutable ones
+       (FakePaymentGateway.NextWebhookResult) are never shared between tests. -->
   <ItemGroup>
-    <Compile Include="../GlimpsesOfGlory.UnitTests/FakePaymentGateway.cs" Link="Shared/FakePaymentGateway.cs" />
-    <Compile Include="../GlimpsesOfGlory.UnitTests/FixedTimeProvider.cs" Link="Shared/FixedTimeProvider.cs" />
-    <Compile Include="../GlimpsesOfGlory.UnitTests/NullEmailSender.cs" Link="Shared/NullEmailSender.cs" />
-    <!-- Not thread-safe, but in the race tests only the winning transition sends an email. -->
-    <Compile Include="../GlimpsesOfGlory.UnitTests/RecordingEmailSender.cs" Link="Shared/RecordingEmailSender.cs" />
+    <Compile Include="../TestSupport/*.cs" Link="TestSupport/%(Filename)%(Extension)" />
+    <Using Include="GlimpsesOfGlory.TestSupport" />
   </ItemGroup>
 
   <ItemGroup>

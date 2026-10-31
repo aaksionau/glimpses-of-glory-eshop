@@ -4,21 +4,41 @@ Tests that run against a real Postgres, started by Testcontainers, so **Docker m
 One container serves the whole run; its schema is built once by the app's real migrations
 (`Database.MigrateAsync()`), and every test gets a fresh copy of that database.
 
-## Here or in the SQLite unit tests?
+## What belongs here
 
-Write the test in `GlimpsesOfGlory.UnitTests` (in-memory SQLite via `SqliteTestDatabase`) by
-default: it is fast and needs no Docker.
+Every test that needs a database or the HTTP pipeline:
 
-Put it here only when the behavior under test depends on Postgres itself, for example:
-
+- services whose queries run through `AppDbContext` (order, checkout, cart restore, dashboard,
+  abandoned checkouts, ...) and PageModel tests that drive such a service;
+- the SQL form of rules (`OrderRule.OnOrders` must agree with its in-memory form);
 - row locking and concurrency (two contexts racing a status-guarded `ExecuteUpdate`);
 - transaction semantics (a rollback undoing writes made by several statements);
-- how a LINQ expression is translated to SQL (`ToLower().Contains`, date functions, ...);
-- `DateTimeOffset` / `timestamptz` storage, comparison and ordering — the SQLite tests store
-  these as binary, so they can't tell you how Postgres sorts them;
-- the migrations themselves.
+- `DateTimeOffset` / `timestamptz` storage, comparison and ordering;
+- the migrations themselves;
+- requests through the real pipeline (see below).
 
-If the SQLite tests would give the same answer as Postgres, the test belongs there.
+Tests that need no database belong in `GlimpsesOfGlory.UnitTests`. There is deliberately no
+SQLite or in-memory provider anywhere, so query tests always run on the provider production uses.
+
+## Writing a test
+
+Join the shared container with `[Collection(PostgresCollectionDefinition.Name)]`, take
+`PostgresFixture` in the constructor, and get a fresh database per test in `IAsyncLifetime`:
+
+```csharp
+private TestDatabase database = null!;
+
+public async Task InitializeAsync() => database = await postgres.CreateDatabaseAsync();
+
+public async Task DisposeAsync() => await database.DisposeAsync();
+```
+
+`database.CreateDb()` returns a new `AppDbContext` (and connection) each call. Raw SQL must use
+Postgres' quoted identifiers (`UPDATE "Products" SET "StockQuantity" = ...`).
+
+Test doubles shared with the unit tests live in `tests/TestSupport/` (namespace
+`GlimpsesOfGlory.TestSupport`); doubles only this project uses (`FirstQueryRendezvous`,
+`FailingRestockInventoryStore`) live here.
 
 ## HTTP tests through the real pipeline
 

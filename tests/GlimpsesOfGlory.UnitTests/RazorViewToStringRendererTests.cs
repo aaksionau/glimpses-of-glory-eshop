@@ -1,67 +1,16 @@
 using System.Net;
-using System.Diagnostics;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Web.Email;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.ApplicationParts;
-using Microsoft.AspNetCore.Mvc.Razor;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
 
 namespace GlimpsesOfGlory.UnitTests;
 
 public class RazorViewToStringRendererTests
 {
-    private sealed class TestWebHostEnvironment : IWebHostEnvironment
-    {
-        public string ApplicationName { get; set; } = string.Empty;
-        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
-        public string ContentRootPath { get; set; } = string.Empty;
-        public string EnvironmentName { get; set; } = "Development";
-        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
-        public string WebRootPath { get; set; } = string.Empty;
-    }
-
-    // Builds just enough of the ASP.NET Core Razor view engine (no Kestrel, no HTTP
-    // request, no database) to render a .cshtml view to a string, mirroring how
-    // Program.cs wires RazorViewToStringRenderer via AddRazorPages().
-    internal static RazorViewToStringRenderer CreateRenderer()
-    {
-        var webAssembly = typeof(RazorViewToStringRenderer).Assembly;
-
-        var services = new ServiceCollection();
-
-        var environment = new TestWebHostEnvironment
-        {
-            ApplicationName = webAssembly.GetName().Name!,
-            ContentRootPath = AppContext.BaseDirectory,
-        };
-        services.AddSingleton<IWebHostEnvironment>(environment);
-        services.AddSingleton<Microsoft.Extensions.Hosting.IHostEnvironment>(environment);
-
-        var partManager = new ApplicationPartManager();
-        partManager.ApplicationParts.Add(new CompiledRazorAssemblyPart(webAssembly));
-        services.AddSingleton(partManager);
-
-        services.AddSingleton(new DiagnosticListener("GlimpsesOfGlory.UnitTests"));
-        services.AddSingleton<DiagnosticSource>(sp => sp.GetRequiredService<DiagnosticListener>());
-        services.AddLogging();
-        services.AddRazorPages();
-
-        var provider = services.BuildServiceProvider();
-
-        return new RazorViewToStringRenderer(
-            provider.GetRequiredService<IRazorViewEngine>(),
-            provider.GetRequiredService<ITempDataProvider>(),
-            provider);
-    }
-
     [Fact]
     public async Task RenderAsync_RendersOrderConfirmationTemplate_WithOrderDetails()
     {
-        var renderer = CreateRenderer();
+        var renderer = TestRazorRenderer.Create();
         var order = new OrderConfirmationView(
             OrderId: 42,
             FulfillmentMethod: FulfillmentMethod.Shipping,
@@ -94,7 +43,7 @@ public class RazorViewToStringRendererTests
             TrackingNumber: "9400111899223",
             TrackingUrl: url);
 
-        var html = WebUtility.HtmlDecode(await CreateRenderer().RenderAsync("~/Emails/OrderShipped.cshtml", order));
+        var html = WebUtility.HtmlDecode(await TestRazorRenderer.Create().RenderAsync("~/Emails/OrderShipped.cshtml", order));
 
         Assert.Contains($"<a href=\"{url}\"><strong>9400111899223</strong></a>", html);
     }
@@ -109,7 +58,7 @@ public class RazorViewToStringRendererTests
             Lines: [new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null)],
             Total: 25.00m);
 
-        var html = await CreateRenderer().RenderAsync("~/Emails/OrderReadyForPickup.cshtml", order);
+        var html = await TestRazorRenderer.Create().RenderAsync("~/Emails/OrderReadyForPickup.cshtml", order);
 
         Assert.Contains("Order #45 is ready to collect", html);
         Assert.Contains("bring $25.00 in cash", html);
@@ -119,7 +68,7 @@ public class RazorViewToStringRendererTests
     [Fact]
     public async Task RenderAsync_RendersOrderConfirmationTemplate_ForCashOrder_AsksForCash()
     {
-        var renderer = CreateRenderer();
+        var renderer = TestRazorRenderer.Create();
         var order = new OrderConfirmationView(
             OrderId: 46,
             FulfillmentMethod: FulfillmentMethod.Pickup,

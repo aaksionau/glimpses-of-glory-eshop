@@ -1,7 +1,7 @@
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Services;
 
-namespace GlimpsesOfGlory.UnitTests;
+namespace GlimpsesOfGlory.TestSupport;
 
 // In-memory ICartStore; Cart is whatever was last saved.
 internal sealed class FakeCartStore : ICartStore
