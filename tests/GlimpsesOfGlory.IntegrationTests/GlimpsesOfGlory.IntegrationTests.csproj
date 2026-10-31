@@ -24,6 +24,8 @@
     <Compile Include="../GlimpsesOfGlory.UnitTests/FakePaymentGateway.cs" Link="Shared/FakePaymentGateway.cs" />
     <Compile Include="../GlimpsesOfGlory.UnitTests/FixedTimeProvider.cs" Link="Shared/FixedTimeProvider.cs" />
     <Compile Include="../GlimpsesOfGlory.UnitTests/NullEmailSender.cs" Link="Shared/NullEmailSender.cs" />
+    <!-- Not thread-safe, but in the race tests only the winning transition sends an email. -->
+    <Compile Include="../GlimpsesOfGlory.UnitTests/RecordingEmailSender.cs" Link="Shared/RecordingEmailSender.cs" />
   </ItemGroup>
 
   <ItemGroup>

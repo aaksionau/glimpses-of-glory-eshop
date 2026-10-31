@@ -5,8 +5,8 @@ using GlimpsesOfGlory.Core;
 using GlimpsesOfGlory.Core.Entities;
 using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Core.ValueObjects;
-using Microsoft.EntityFrameworkCore;
 using GlimpsesOfGlory.UnitTests;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace GlimpsesOfGlory.IntegrationTests;
@@ -115,6 +115,7 @@ public sealed class AdminOrderServicePostgresTests(PostgresFixture postgres) : I
         Assert.Equal([bob], await SearchAsync("SHOP.TE"));
         Assert.Equal([bob], await SearchAsync($"#{bob}"));
         Assert.Equal([bob], await SearchAsync($" # {bob} "));
+        Assert.Equal([bob], await SearchAsync($"{bob}"));
         Assert.Empty(await SearchAsync("#999999"));
         Assert.Empty(await SearchAsync("nobody"));
         Assert.Equal(3, (await SearchAsync("   ")).Count);
