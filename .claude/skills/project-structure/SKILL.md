@@ -7,6 +7,8 @@ description: Explains this repo's solution layout — the Abstractions/Core/Infr
 
 Six projects (`GlimpsesOfGloryEshop.slnx`): `GlimpsesOfGlory.Abstractions`, `GlimpsesOfGlory.Core`, `GlimpsesOfGlory.Infrastructure`, `GlimpsesOfGlory.Web`, `tests/GlimpsesOfGlory.UnitTests` (no database, no Docker), `tests/GlimpsesOfGlory.IntegrationTests` (every test that touches a database or the HTTP pipeline, against real Postgres via Testcontainers; needs Docker). Each test project's `README.md` says what belongs in it. Test doubles and helpers used by both (`FakeCartStore`, `FakeInventoryStore`, `InMemorySession`, `TestRazorRenderer`, …) live once in `tests/TestSupport/` (namespace `GlimpsesOfGlory.TestSupport`), which both projects compile in — when a double starts being used by the second project, move it there rather than copying it; doubles only one project uses stay in that project.
 
+Shared build settings live in the root `Directory.Build.props`. Package versions use NuGet Central Package Management: every `PackageVersion` (including transitive security pins) lives in the root `Directory.Packages.props`, and a `.csproj` `PackageReference` never carries a `Version`. To add a package, add its `PackageVersion` there and a version-less `PackageReference` in the project.
+
 ```
 src/
   GlimpsesOfGlory.Abstractions/    (no project references)
@@ -58,7 +60,7 @@ This isn't compiler-enforced — .NET project references don't support per-file 
 
 ## Where external integrations go
 
-Decided in `docs/adr/0001-external-integrations-in-infrastructure-project.md`. An adapter to something outside the app — a payment provider, file/blob storage, a third-party HTTP API, an SDK package — goes in `GlimpsesOfGlory.Infrastructure/` (type-first: `Services/` for the adapter, `Options/` for settings only it reads), implementing an interface in `Abstractions/Services/`. Core services depend on that interface, never on the adapter or the SDK; the SDK `PackageReference` goes in `Infrastructure.csproj`, not Core's (version-less: every package version lives in the root `Directory.Packages.props`, Central Package Management). Wire it in `Program.cs`. `ProjectBoundaryTests` fails if Core depends on Infrastructure or Stripe, if Infrastructure depends on Core, or if a Web type other than `Program` depends on Infrastructure.
+Decided in `docs/adr/0001-external-integrations-in-infrastructure-project.md`. An adapter to something outside the app — a payment provider, file/blob storage, a third-party HTTP API, an SDK package — goes in `GlimpsesOfGlory.Infrastructure/` (type-first: `Services/` for the adapter, `Options/` for settings only it reads), implementing an interface in `Abstractions/Services/`. Core services depend on that interface, never on the adapter or the SDK; the SDK `PackageReference` goes in `Infrastructure.csproj`, not Core's. Wire it in `Program.cs`. `ProjectBoundaryTests` fails if Core depends on Infrastructure or Stripe, if Infrastructure depends on Core, or if a Web type other than `Program` depends on Infrastructure.
 
 Two deliberate exceptions:
 
