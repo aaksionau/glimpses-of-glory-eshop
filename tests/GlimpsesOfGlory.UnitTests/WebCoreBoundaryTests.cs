@@ -40,11 +40,13 @@ public class WebCoreBoundaryTests
     {
         // Guards against the boundary test passing vacuously: a PageModel-shaped type that injects
         // AppDbContext must be reported, naming the Core type and where it is referenced.
-        var references = FindCoreReferences(typeof(PageModelInjectingDbContext)).ToList();
+        var dbContextReferences = FindCoreReferences(typeof(PageModelInjectingDbContext))
+            .Where(r => r.StartsWith(typeof(AppDbContext).FullName!))
+            .ToList();
 
-        Assert.Contains(references, r => r.StartsWith(typeof(AppDbContext).FullName!) && r.Contains("constructor parameter db"));
-        Assert.Contains(references, r => r.StartsWith(typeof(AppDbContext).FullName!) && r.Contains("field"));
-        Assert.Contains(references, r => r.StartsWith(typeof(AppDbContext).FullName!) && r.Contains("parameter dbs of Use"));
+        Assert.Contains(dbContextReferences, r => r.Contains("constructor parameter db"));
+        Assert.Contains(dbContextReferences, r => r.Contains("field"));
+        Assert.Contains(dbContextReferences, r => r.Contains("parameter dbs of Use"));
     }
 
     private sealed class PageModelInjectingDbContext(AppDbContext db)
