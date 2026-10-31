@@ -21,13 +21,36 @@
     </div>
 </section>
 
+@* Featured pieces sit straight under the hero so a phone reaches products within the first two screens. *@
+<section class="container mx-auto px-4 py-10 md:py-24" data-testid="featured">
+    <div class="mb-6 text-center md:mb-10">
+        <p class="mb-3 text-sm font-semibold uppercase tracking-widest text-gold-dark">Shop</p>
+        <h2 class="text-3xl font-bold md:text-4xl">Featured pieces</h2>
+    </div>
+
+    @if (Model.FeaturedProducts.Count == 0)
+    {
+        <p class="text-center text-ink-light">New pieces are on their way &mdash; check back soon.</p>
+    }
+    else
+    {
+        <partial name="_ProductGrid" model="Model.FeaturedProducts" />
+
+        <div class="mt-10 text-center">
+            <a asp-page="/Products/Index" class="inline-block rounded-full border border-ink px-6 py-3 font-semibold transition-colors hover:bg-ink hover:text-white">
+                View all products
+            </a>
+        </div>
+    }
+</section>
+
 <section id="about" class="container mx-auto max-w-2xl px-4 py-16 text-center md:py-24">
-    <img src="/images/amy-aksionova.jpg" alt="Portrait of Amy Aksionova"
+    <img src="/images/amy-aksionova.jpg" alt="Portrait of Amy Aksionova" width="128" height="128" loading="lazy" decoding="async"
          class="mx-auto mb-6 h-28 w-28 rounded-full object-cover shadow-lg ring-4 ring-white md:h-32 md:w-32" />
     <p class="mb-3 text-sm font-semibold uppercase tracking-widest text-gold-dark">About the artist</p>
     <h2 class="mb-4 text-3xl font-bold md:text-4xl">Amy Aksionova</h2>
     <p class="mb-4 leading-relaxed text-ink-light">
-        As a teenager, I started nature photography in order to capture beautiful sunsets <br/> and unusual clouds near my home in Minnesota. God’s everyday wonders are often “hidden in plain view.” I enjoy noticing them and capturing their beauty with my camera. 
+        As a teenager, I started nature photography in order to capture beautiful sunsets and unusual clouds near my home in Minnesota. God’s everyday wonders are often “hidden in plain view.” I enjoy noticing them and capturing their beauty with my camera. 
         Much love and gratitude to my husband, who gives moral and technical support, and who gave me some of the beautiful flowers displayed in my work.
     </p>
 </section>
@@ -60,32 +83,4 @@
             </p>
         </div>
     </div>
-</section>
-
-<section class="container mx-auto px-4 py-16 md:py-24">
-    <div class="mb-10 text-center">
-        <p class="mb-3 text-sm font-semibold uppercase tracking-widest text-gold-dark">Shop</p>
-        <h2 class="text-3xl font-bold md:text-4xl">Featured pieces</h2>
-    </div>
-
-    @if (Model.FeaturedProducts.Count == 0)
-    {
-        <p class="text-center text-ink-light">New pieces are on their way &mdash; check back soon.</p>
-    }
-    else
-    {
-        <div class="flex flex-wrap justify-center gap-6">
-            @foreach (var product in Model.FeaturedProducts)
-            {
-                <div class="w-[calc(50%-0.75rem)] sm:w-[calc(33.333%-1rem)] lg:w-[calc(25%-1.125rem)]">
-                    <partial name="_ProductCard" model="product" />
-                </div>
-            }
-        </div>
-        <div class="mt-10 text-center">
-            <a asp-page="/Products/Index" class="inline-block rounded-full border border-ink px-6 py-3 font-semibold transition-colors hover:bg-ink hover:text-white">
-                View all products
-            </a>
-        </div>
-    }
 </section>

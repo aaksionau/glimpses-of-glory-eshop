@@ -1,8 +1,20 @@
 @using GlimpsesOfGlory.Abstractions.Services
+@using GlimpsesOfGlory.Web.Helpers
 @inject ICartStore CartStore
+@functions {
+    private StorefrontSection currentSection;
+
+    private string NavLinkClass(StorefrontSection section) =>
+        "min-h-11 items-center px-3 border-b-2 transition-colors hover:text-gold-dark "
+        + (section != StorefrontSection.None && section == currentSection ? "border-gold text-gold-dark" : "border-transparent");
+
+    private string? AriaCurrent(StorefrontSection section) =>
+        section != StorefrontSection.None && section == currentSection ? "page" : null;
+}
 @{
     var request = Context.Request;
     var path = request.Path.Value ?? "";
+    currentSection = StorefrontSections.FromPath(path);
     var isUserFlowPage = path.StartsWith("/admin", StringComparison.OrdinalIgnoreCase)
         || path.StartsWith("/cart", StringComparison.OrdinalIgnoreCase)
         || path.StartsWith("/checkout", StringComparison.OrdinalIgnoreCase);
@@ -54,17 +66,25 @@
 </head>
 <body class="min-h-screen overflow-x-hidden bg-cream text-ink flex flex-col">
     <header class="sticky top-0 z-40 border-b border-ink/10 bg-cream/95 backdrop-blur">
-        <div class="container mx-auto flex items-center justify-between gap-4 px-4 py-4">
-            <a asp-area="" asp-page="/Index" class="flex flex-col leading-tight">
+        <div class="container mx-auto flex items-center justify-between gap-4 px-4 py-2 sm:py-3">
+            <a asp-area="" asp-page="/Index" class="flex min-h-11 flex-col justify-center leading-tight">
                 <span class="font-display text-xl md:text-2xl font-bold text-ink">Glimpses of Glory</span>
                 <span class="hidden sm:block text-[0.65rem] tracking-widest uppercase text-gold-dark">Photography of God’s Beautiful Handiwork</span>
             </a>
-            <nav class="flex items-center gap-4 sm:gap-6 text-sm font-medium text-ink">
-                <a asp-area="" asp-page="/Index" class="hover:text-gold-dark transition-colors">Home</a>
-                <a asp-area="" asp-page="/Products/Index" class="hover:text-gold-dark transition-colors">Shop</a>
-                <a href="/#about" class="hidden sm:inline hover:text-gold-dark transition-colors">About</a>
-                <a asp-area="" asp-page="/Cart/Index" class="relative flex items-center gap-1.5 hover:text-gold-dark transition-colors">
-                    Cart
+            @* Each link is at least 44px tall (min-h-11) with side padding, so it is an easy tap target on a phone.
+               The current section gets aria-current and a gold underline. "Home" repeats the logo link, so phones skip it. *@
+            <nav aria-label="Main" class="-mr-3 flex items-center gap-1 sm:gap-2 text-sm font-medium text-ink">
+                <a asp-area="" asp-page="/Index" class="@NavLinkClass(StorefrontSection.Home) hidden sm:inline-flex" aria-current="@AriaCurrent(StorefrontSection.Home)">Home</a>
+                <a asp-area="" asp-page="/Products/Index" class="@NavLinkClass(StorefrontSection.Shop) inline-flex" aria-current="@AriaCurrent(StorefrontSection.Shop)">Shop</a>
+                <a href="/#about" class="@NavLinkClass(StorefrontSection.None) hidden sm:inline-flex">About</a>
+                <a asp-area="" asp-page="/Cart/Index" class="@NavLinkClass(StorefrontSection.Cart) inline-flex gap-1.5" aria-current="@AriaCurrent(StorefrontSection.Cart)" data-testid="header-cart">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6" aria-hidden="true" focusable="false">
+                        <path d="M6 6h15l-1.5 9h-12z" />
+                        <path d="M6 6 5 3H2" />
+                        <circle cx="9" cy="20" r="1.25" />
+                        <circle cx="18" cy="20" r="1.25" />
+                    </svg>
+                    <span class="sr-only sm:not-sr-only">Cart</span>
                     <span id="cart-count">
                         @if (cartItemCount > 0)
                         {

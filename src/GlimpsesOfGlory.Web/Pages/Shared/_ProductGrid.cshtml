@@ -1,0 +1,14 @@
+@model IReadOnlyList<GlimpsesOfGlory.Abstractions.Dtos.ProductSummary>
+@{
+    // A partial never takes a layout; this also keeps it renderable on its own (in tests).
+    Layout = null;
+}
+
+@* The one product grid, shared by the home page's featured pieces and All products. gap-4 on phones
+   leaves the two-column cards more room. *@
+<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4" data-testid="product-grid">
+    @foreach (var product in Model)
+    {
+        <partial name="_ProductCard" model="product" />
+    }
+</div>

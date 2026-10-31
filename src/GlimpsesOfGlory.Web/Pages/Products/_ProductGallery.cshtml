@@ -13,7 +13,9 @@
 }
 else
 {
-    @* One photo shows at a time. A sideways swipe on the main photo or the lightbox moves between photos
+    @* Only the first photo loads up front; the other photos, the thumbnails and the lightbox's copies are lazy, and the hidden ones
+       (display: none from the server, so even before Alpine starts; x-show takes over) wait until they're shown. Every photo carries its width/height so nothing shifts as it arrives.
+       One photo shows at a time. A sideways swipe on the main photo or the lightbox moves between photos
        and cancels its tap, so it doesn't also open or close the lightbox. The lightbox traps focus (Alpine's x-trap),
        closes on Escape, the close button or a tap on the backdrop, and hands focus back to the photo. *@
     <div x-data="{
@@ -46,8 +48,12 @@ else
             {
                 <img src="/product-photos/@photos[i]"
                      alt="@Model.Name photo @(i + 1)"
+                     width="600" height="800"
                      class="absolute inset-0 w-full h-full object-cover"
                      loading="@(i == 0 ? null : "lazy")"
+                     fetchpriority="@(i == 0 ? "high" : null)"
+                     decoding="async"
+                     style="@(i == 0 ? null : "display: none")"
                      x-show="active === @i" />
             }
         </button>
@@ -63,7 +69,7 @@ else
                             x-bind:class="active === @i ? 'border-gold' : 'border-transparent'"
                             x-bind:aria-current="active === @i ? 'true' : null"
                             x-on:click="show(@i)">
-                        <img src="/product-photos/@photos[i]" alt="" class="w-full h-full object-cover" />
+                        <img src="/product-photos/@photos[i]" alt="" width="64" height="64" loading="lazy" decoding="async" class="w-full h-full object-cover" />
                     </button>
                 }
             </div>
@@ -89,6 +95,7 @@ else
                      alt="@Model.Name photo @(i + 1)"
                      class="max-w-full max-h-full object-contain"
                      loading="lazy"
+                     decoding="async"
                      x-show="active === @i" />
             }
 
