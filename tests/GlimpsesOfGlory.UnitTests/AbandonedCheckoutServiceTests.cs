@@ -201,29 +201,4 @@ public sealed class AbandonedCheckoutServiceTests : IDisposable
         });
         await db.SaveChangesAsync();
     }
-
-    private sealed class RecordingEmailSender : IEmailSender
-    {
-        public List<AbandonedCheckoutReminderView> Reminders { get; } = [];
-
-        // Simulates the email provider rejecting the send.
-        public bool Fail { get; init; }
-
-        public Task SendOrderConfirmationAsync(OrderConfirmationView order, CancellationToken cancellationToken) => Task.CompletedTask;
-
-        public Task SendShippedNotificationAsync(OrderShippedView order, CancellationToken cancellationToken) => Task.CompletedTask;
-
-        public Task SendReadyForPickupNotificationAsync(OrderReadyForPickupView order, CancellationToken cancellationToken) => Task.CompletedTask;
-
-        public Task SendAbandonedCheckoutReminderAsync(AbandonedCheckoutReminderView reminder, CancellationToken cancellationToken)
-        {
-            if (Fail)
-            {
-                throw new HttpRequestException("Resend rejected email (500)");
-            }
-
-            Reminders.Add(reminder);
-            return Task.CompletedTask;
-        }
-    }
 }

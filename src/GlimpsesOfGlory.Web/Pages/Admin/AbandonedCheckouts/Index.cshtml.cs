@@ -29,7 +29,7 @@ public class IndexModel(IAbandonedCheckoutService abandonedCheckoutService, Time
         var siteBaseUrl = $"{Request.Scheme}://{Request.Host}";
         var result = await abandonedCheckoutService.SendReminderAsync(id, siteBaseUrl, cancellationToken);
         var checkout = await abandonedCheckoutService.GetAbandonedCheckoutAsync(id, cancellationToken);
-        if (result == ReminderSendResult.NotFound || checkout is null)
+        if (checkout is null)
         {
             return NotFound();
         }

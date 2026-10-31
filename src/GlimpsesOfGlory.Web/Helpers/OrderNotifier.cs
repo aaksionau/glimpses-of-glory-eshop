@@ -34,7 +34,7 @@ public sealed class OrderNotifier(
     public async Task SendAbandonedCheckoutReminderAsync(AbandonedCheckoutReminderView reminder, CancellationToken cancellationToken)
     {
         var html = await viewRenderer.RenderAsync("~/Emails/AbandonedCheckoutReminder.cshtml", reminder);
-        await SendAsync(reminder.Email, "You left something in your cart – Glimpses of Glory", html, cancellationToken);
+        await SendAsync(reminder.Email, "You left something in your cart â€“ Glimpses of Glory", html, cancellationToken);
     }
 
     private async Task SendAsync(string to, string subject, string html, CancellationToken cancellationToken)
