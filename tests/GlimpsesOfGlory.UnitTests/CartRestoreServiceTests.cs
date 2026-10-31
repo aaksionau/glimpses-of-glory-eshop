@@ -27,7 +27,7 @@ public sealed class CartRestoreServiceTests : IDisposable
 
         var result = await Service().RestoreAsync(Token, CancellationToken.None);
 
-        Assert.Equal(CartRestoreStatus.Restored, result.Status);
+        Assert.NotNull(result.PaymentIntentId);
         Assert.Equal(0, result.SkippedLineCount);
         Assert.Equal([("candle", 2), ("card", 1)], cartStore.Cart.Lines.Select(l => (l.ProductSlug, l.Quantity)));
     }
@@ -108,7 +108,7 @@ public sealed class CartRestoreServiceTests : IDisposable
 
         var result = await Service().RestoreAsync(Token, CancellationToken.None);
 
-        Assert.Equal(CartRestoreStatus.Restored, result.Status);
+        Assert.NotNull(result.PaymentIntentId);
         Assert.Equal(2, result.SkippedLineCount);
         Assert.Equal(["candle"], cartStore.Cart.Lines.Select(l => l.ProductSlug));
     }
@@ -126,7 +126,11 @@ public sealed class CartRestoreServiceTests : IDisposable
         Assert.Equal([("mug", 2)], cartStore.Cart.Lines.Select(l => (l.ProductSlug, l.Quantity)));
     }
 
-    private CartRestoreService Service() => new(database.CreateDb(), cartStore);
+    private CartRestoreService Service()
+    {
+        var db = database.CreateDb();
+        return new(db, new ProductCatalogService(db), cartStore);
+    }
 
     private void AddToCart(string slug, int quantity) =>
         cartStore.Cart.SetLineQuantity(slug, slug, 1m, null, quantity, false, null);
@@ -166,18 +170,5 @@ public sealed class CartRestoreServiceTests : IDisposable
             Lines = lines.Select(l => new PendingCheckoutLine { ProductId = l.ProductId, ProductName = "Old name", UnitPrice = 1m, Quantity = l.Quantity }).ToList(),
         });
         await db.SaveChangesAsync();
-    }
-
-    private sealed class FakeCartStore : ICartStore
-    {
-        public Cart Cart { get; private set; } = new();
-
-        public Task<Cart> GetCartAsync(CancellationToken cancellationToken) => Task.FromResult(Cart);
-
-        public Task SaveCartAsync(Cart cart, CancellationToken cancellationToken)
-        {
-            Cart = cart;
-            return Task.CompletedTask;
-        }
     }
 }

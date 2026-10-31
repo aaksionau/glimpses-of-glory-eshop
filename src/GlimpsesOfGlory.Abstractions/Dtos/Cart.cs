@@ -8,6 +8,8 @@ public sealed class Cart
 
     public decimal Subtotal => Lines.Sum(l => l.UnitPrice * l.Quantity);
 
+    public int QuantityOf(string productSlug) => Lines.FirstOrDefault(l => l.ProductSlug == productSlug)?.Quantity ?? 0;
+
     public void SetLineQuantity(
         string productSlug,
         string productName,
