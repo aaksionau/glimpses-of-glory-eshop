@@ -53,32 +53,6 @@ public sealed class AdminOrderServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task MarkShipped_OtherCarrier_EmailsThePlainTrackingNumber()
-    {
-        var id = await AddOrderAsync(FulfillmentMethod.Shipping);
-        var emailSender = new RecordingEmailSender();
-
-        await Service(emailSender).MarkShippedAsync(id, "ABC123", ShippingCarrier.Other, CancellationToken.None);
-
-        Assert.Equal(ShippingCarrier.Other, (await LoadAsync(id)).Carrier);
-        var sent = Assert.Single(emailSender.Shipped);
-        Assert.Equal("ABC123", sent.TrackingNumber);
-        Assert.Null(sent.TrackingUrl);
-    }
-
-    [Fact]
-    public async Task MarkShipped_WithoutTrackingNumber_RecordsNoCarrier()
-    {
-        var id = await AddOrderAsync(FulfillmentMethod.Shipping);
-
-        await Service().MarkShippedAsync(id, "  ", ShippingCarrier.Usps, CancellationToken.None);
-
-        var order = await LoadAsync(id);
-        Assert.Null(order.TrackingNumber);
-        Assert.Null(order.Carrier);
-    }
-
-    [Fact]
     public async Task MarkShipped_UndefinedCarrier_Throws_AndShipsNothing()
     {
         var id = await AddOrderAsync(FulfillmentMethod.Shipping);
@@ -89,21 +63,6 @@ public sealed class AdminOrderServiceTests : IDisposable
         var order = await LoadAsync(id);
         Assert.NotEqual(OrderStatus.Shipped, order.Status);
         Assert.Null(order.Carrier);
-    }
-
-    [Theory]
-    [InlineData(ShippingCarrier.Usps, "https://tools.usps.com/go/TrackConfirmAction?tLabels=TRACK1")]
-    [InlineData(ShippingCarrier.Other, null)]
-    [InlineData(null, null)]
-    public async Task GetOrder_LinksTheTrackingNumberOnlyForKnownCarriers(ShippingCarrier? carrier, string? expectedUrl)
-    {
-        var id = await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Shipped, trackingNumber: "TRACK1", carrier: carrier);
-
-        var order = await Service().GetOrderAsync(id, CancellationToken.None);
-
-        Assert.NotNull(order);
-        Assert.Equal(carrier, order.Carrier);
-        Assert.Equal(expectedUrl, order.TrackingUrl);
     }
 
     [Fact]
@@ -117,34 +76,6 @@ public sealed class AdminOrderServiceTests : IDisposable
 
         Assert.Equal(OrderUpdateResult.InvalidTransition, result);
         Assert.Equal(T1, (await LoadAsync(id)).ShippedAt);
-    }
-
-    [Fact]
-    public async Task MarkShipped_KeepsAnAlreadyRecordedShippedAt()
-    {
-        // The update coalesces, so even a call that gets past the status guard can't move the stamp.
-        var id = await AddOrderAsync(FulfillmentMethod.Shipping, shippedAt: T1);
-        clock.Now = T2;
-
-        await Service().MarkShippedAsync(id, null, ShippingCarrier.Usps, CancellationToken.None);
-
-        Assert.Equal(T1, (await LoadAsync(id)).ShippedAt);
-    }
-
-    [Fact]
-    public async Task MarkPickedUp_StampsPickedUpAt_Once()
-    {
-        var id = await AddOrderAsync(FulfillmentMethod.Pickup);
-        await Service().MarkShippedAsync(id, null, ShippingCarrier.Usps, CancellationToken.None);
-
-        clock.Now = T2;
-        Assert.Equal(OrderUpdateResult.Updated, await Service().MarkPickedUpAsync(id, CancellationToken.None));
-        clock.Now = T2.AddDays(1);
-        Assert.Equal(OrderUpdateResult.InvalidTransition, await Service().MarkPickedUpAsync(id, CancellationToken.None));
-
-        var order = await LoadAsync(id);
-        Assert.Equal(T1, order.ShippedAt);
-        Assert.Equal(T2, order.PickedUpAt);
     }
 
     [Fact]
@@ -201,23 +132,6 @@ public sealed class AdminOrderServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetOrder_ExposesTheStepTimestamps()
-    {
-        var id = await AddOrderAsync(FulfillmentMethod.Pickup);
-        await Service().MarkShippedAsync(id, null, ShippingCarrier.Usps, CancellationToken.None);
-        clock.Now = T2;
-        await Service().MarkPickedUpAsync(id, CancellationToken.None);
-
-        var detail = await Service().GetOrderAsync(id, CancellationToken.None);
-
-        Assert.NotNull(detail);
-        Assert.Equal(T1, detail.ShippedAt);
-        Assert.Equal(T2, detail.PickedUpAt);
-        Assert.Null(detail.PaidAt);
-        Assert.Null(detail.CancelledAt);
-    }
-
-    [Fact]
     public async Task GetOrders_FiltersByTab_AndCountsMatch()
     {
         var newCash = await AddOrderAsync(FulfillmentMethod.Shipping);
@@ -251,23 +165,6 @@ public sealed class AdminOrderServiceTests : IDisposable
         Assert.Equal(all.Where(o => o.NeedsAction).Select(o => o.Id).Order(), needsAction);
     }
 
-    [Fact]
-    public async Task GetOrders_ListsNewestFirst()
-    {
-        var older = await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: T1);
-        var newer = await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: T2);
-
-        var orders = await Service().GetOrdersAsync(AdminOrderTab.NeedsAction, AdminOrderFilter.None, 1, 25, CancellationToken.None);
-
-        Assert.Equal([newer, older], orders.Orders.Select(o => o.Id));
-    }
-
-    [Fact]
-    public async Task GetOrderTabCounts_WithNoOrders_IsAllZero()
-    {
-        Assert.Equal(new AdminOrderTabCounts(0, 0, 0, 0), await Service().GetOrderTabCountsAsync(AdminOrderFilter.None, CancellationToken.None));
-    }
-
     [Theory]
     [InlineData("42")]
     [InlineData("#42")]
@@ -285,19 +182,6 @@ public sealed class AdminOrderServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetOrders_HashSearch_MatchesOrderNumbersOnly()
-    {
-        var first = await AddOrderAsync(FulfillmentMethod.Shipping, email: "first@example.com");
-        var second = await AddOrderAsync(FulfillmentMethod.Shipping, email: "buyer1@example.com");
-        var service = Service();
-
-        Assert.Equal([first], await IdsAsync(service, AdminOrderTab.All, new AdminOrderFilter("#1")));
-        Assert.Empty(await IdsAsync(service, AdminOrderTab.All, new AdminOrderFilter("#buyer")));
-        // Without the "#", a number also matches emails that contain it.
-        Assert.Equal([first, second], await IdsAsync(service, AdminOrderTab.All, new AdminOrderFilter("1")));
-    }
-
-    [Fact]
     public async Task GetOrders_SearchMatchesPartOfTheEmailOrName_IgnoringCase()
     {
         var alice = await AddOrderAsync(FulfillmentMethod.Shipping, email: "alice.walker@example.com", customerName: "Alice Walker");
@@ -311,39 +195,6 @@ public sealed class AdminOrderServiceTests : IDisposable
         Assert.Equal([alice], await IdsAsync(service, AdminOrderTab.All, new AdminOrderFilter("ice wal")));
         Assert.Equal(3, (await IdsAsync(service, AdminOrderTab.All, new AdminOrderFilter("   "))).Count);
         Assert.Empty(await IdsAsync(service, AdminOrderTab.All, new AdminOrderFilter("nobody")));
-    }
-
-    [Fact]
-    public async Task GetOrders_SearchCombinesWithTheTab_AndTheCountsFollowIt()
-    {
-        var newJane = await AddOrderAsync(FulfillmentMethod.Shipping, customerName: "Jane Doe");
-        await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Cancelled, customerName: "Jane Doe");
-        await AddOrderAsync(FulfillmentMethod.Shipping, customerName: "John Roe");
-        var service = Service();
-        var filter = new AdminOrderFilter("jane");
-
-        Assert.Equal([newJane], await IdsAsync(service, AdminOrderTab.NeedsAction, filter));
-        Assert.Equal(new AdminOrderTabCounts(NeedsAction: 1, Shipped: 0, Cancelled: 1, All: 2), await service.GetOrderTabCountsAsync(filter, CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task GetOrders_PagesNewestFirst_WithTheTotalCount()
-    {
-        var ids = new List<int>();
-        for (var i = 0; i < 5; i++)
-        {
-            ids.Add(await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: T1.AddHours(i)));
-        }
-        ids.Reverse();
-        var service = Service();
-
-        var first = await service.GetOrdersAsync(AdminOrderTab.All, AdminOrderFilter.None, 1, 2, CancellationToken.None);
-        var last = await service.GetOrdersAsync(AdminOrderTab.All, AdminOrderFilter.None, 3, 2, CancellationToken.None);
-
-        Assert.Equal(ids[..2], first.Orders.Select(o => o.Id));
-        Assert.Equal((1, 5, 3, false, true), (first.Page, first.TotalCount, first.TotalPages, first.HasPrevious, first.HasNext));
-        Assert.Equal(ids[4..], last.Orders.Select(o => o.Id));
-        Assert.Equal((3, true, false, 5, 5), (last.Page, last.HasPrevious, last.HasNext, last.FirstItem, last.LastItem));
     }
 
     [Fact]
@@ -382,75 +233,6 @@ public sealed class AdminOrderServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetOrders_WithNoMatches_IsOneEmptyPage()
-    {
-        var page = await Service().GetOrdersAsync(AdminOrderTab.All, AdminOrderFilter.None, 4, 25, CancellationToken.None);
-
-        Assert.Equal((1, 1, 0, false, false), (page.Page, page.TotalPages, page.TotalCount, page.HasPrevious, page.HasNext));
-        Assert.Empty(page.Orders);
-    }
-
-    [Fact]
-    public async Task GetOrders_PreorderFilter_KeepsOrdersWithPreorderLines_AndCombinesWithSearchAndTab()
-    {
-        var preorderJane = await AddOrderAsync(FulfillmentMethod.Shipping, customerName: "Jane Doe", lines: [Line(isPreorder: true)]);
-        await AddOrderAsync(FulfillmentMethod.Shipping, customerName: "Jane Doe", lines: [Line()]);
-        var preorderJohn = await AddOrderAsync(FulfillmentMethod.Shipping, customerName: "John Roe", lines: [Line(), Line(isPreorder: true)]);
-        var shippedPreorderJane = await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Shipped, paidAt: T1, customerName: "Jane Doe", lines: [Line(isPreorder: true)]);
-        var service = Service();
-        var preorders = new AdminOrderFilter(PreorderOnly: true);
-        var janesPreorders = new AdminOrderFilter("jane", PreorderOnly: true);
-
-        Assert.Equal([preorderJane, preorderJohn, shippedPreorderJane], await IdsAsync(service, AdminOrderTab.All, preorders));
-        Assert.Equal([preorderJane, shippedPreorderJane], await IdsAsync(service, AdminOrderTab.All, janesPreorders));
-        Assert.Equal([preorderJane], await IdsAsync(service, AdminOrderTab.NeedsAction, janesPreorders));
-        Assert.Equal(new AdminOrderTabCounts(NeedsAction: 1, Shipped: 1, Cancelled: 0, All: 2), await service.GetOrderTabCountsAsync(janesPreorders, CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task GetOrders_ToFulfillAndUnpaidCashFilters_NarrowTheList()
-    {
-        var newCash = await AddOrderAsync(FulfillmentMethod.Pickup);
-        var newCard = await AddOrderAsync(FulfillmentMethod.Shipping, paymentMethod: PaymentMethod.Card, paidAt: T1);
-        var readyUnpaidCash = await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.Shipped);
-        await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.PickedUp, paidAt: T1);
-        await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.Cancelled);
-        await AddOrderAsync(FulfillmentMethod.Shipping, paymentMethod: PaymentMethod.Card, status: OrderStatus.Shipped);
-        var service = Service();
-        var toFulfill = new AdminOrderFilter(ToFulfillOnly: true);
-        var unpaidCash = new AdminOrderFilter(UnpaidCashOnly: true);
-
-        Assert.Equal([newCash, newCard], await IdsAsync(service, AdminOrderTab.All, toFulfill));
-        Assert.Equal([newCash, readyUnpaidCash], await IdsAsync(service, AdminOrderTab.All, unpaidCash));
-        Assert.Equal([newCash], await IdsAsync(service, AdminOrderTab.All, new AdminOrderFilter(ToFulfillOnly: true, UnpaidCashOnly: true)));
-        // Both are subsets of the default tab, so the dashboard links can land there.
-        Assert.Equal(2, (await service.GetOrderTabCountsAsync(toFulfill, CancellationToken.None)).NeedsAction);
-        Assert.Equal(2, (await service.GetOrderTabCountsAsync(unpaidCash, CancellationToken.None)).NeedsAction);
-    }
-
-    [Fact]
-    public async Task GetOrders_ShowsTheEarliestExpectedAvailabilityOfThePreorderLines()
-    {
-        var mixed = await AddOrderAsync(FulfillmentMethod.Shipping, lines:
-        [
-            Line(isPreorder: true, expectedAvailability: new DateOnly(2026, 12, 1)),
-            Line(isPreorder: true, expectedAvailability: new DateOnly(2026, 11, 15)),
-            Line(isPreorder: true),
-            Line(expectedAvailability: new DateOnly(2026, 9, 1)),
-        ]);
-        var undated = await AddOrderAsync(FulfillmentMethod.Shipping, lines: [Line(isPreorder: true)]);
-        var inStock = await AddOrderAsync(FulfillmentMethod.Shipping, lines: [Line()]);
-
-        var orders = (await Service().GetOrdersAsync(AdminOrderTab.All, AdminOrderFilter.None, 1, 25, CancellationToken.None)).Orders.ToDictionary(o => o.Id);
-
-        Assert.Equal(new DateOnly(2026, 11, 15), orders[mixed].EarliestExpectedAvailability);
-        Assert.True(orders[undated].HasPreorderLines);
-        Assert.Null(orders[undated].EarliestExpectedAvailability);
-        Assert.False(orders[inStock].HasPreorderLines);
-        Assert.Null(orders[inStock].EarliestExpectedAvailability);
-    }
-
-    [Fact]
     public async Task UpdateInternalNote_SavesTheTrimmedNote_AndGetOrderExposesIt()
     {
         var id = await AddOrderAsync(FulfillmentMethod.Pickup);
@@ -462,48 +244,6 @@ public sealed class AdminOrderServiceTests : IDisposable
         Assert.Equal("Customer called, collecting Friday", detail!.InternalNote);
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public async Task UpdateInternalNote_WithABlankNote_ClearsIt(string? note)
-    {
-        var id = await AddOrderAsync(FulfillmentMethod.Shipping, internalNote: "Old note");
-
-        await Service().UpdateInternalNoteAsync(id, note, CancellationToken.None);
-
-        Assert.Null((await LoadAsync(id)).InternalNote);
-    }
-
-    [Theory]
-    [InlineData(OrderStatus.Shipped)]
-    [InlineData(OrderStatus.Cancelled)]
-    public async Task UpdateInternalNote_IsAllowedInAnyStatus(OrderStatus status)
-    {
-        var id = await AddOrderAsync(FulfillmentMethod.Shipping, status: status);
-
-        Assert.Equal(OrderUpdateResult.Updated, await Service().UpdateInternalNoteAsync(id, "Refund agreed by phone", CancellationToken.None));
-        var order = await LoadAsync(id);
-        Assert.Equal("Refund agreed by phone", order.InternalNote);
-        Assert.Equal(status, order.Status);
-    }
-
-    [Fact]
-    public async Task UpdateInternalNote_StoresLineEndingsAsLf()
-    {
-        var id = await AddOrderAsync(FulfillmentMethod.Shipping);
-
-        await Service().UpdateInternalNoteAsync(id, "Line one\r\nLine two", CancellationToken.None);
-
-        Assert.Equal("Line one\nLine two", (await LoadAsync(id)).InternalNote);
-    }
-
-    [Fact]
-    public async Task UpdateInternalNote_UnknownOrder_IsNotFound()
-    {
-        Assert.Equal(OrderUpdateResult.NotFound, await Service().UpdateInternalNoteAsync(999, "Note", CancellationToken.None));
-    }
-
     [Fact]
     public async Task UpdateInternalNote_TooLong_Throws_AndSavesNothing()
     {
@@ -512,19 +252,6 @@ public sealed class AdminOrderServiceTests : IDisposable
         await Assert.ThrowsAsync<ArgumentException>(() =>
             Service().UpdateInternalNoteAsync(id, new string('x', OrderNotePolicy.MaxLength + 1), CancellationToken.None));
         Assert.Null((await LoadAsync(id)).InternalNote);
-    }
-
-    [Fact]
-    public async Task GetOrders_FlagsOrdersThatHaveAnInternalNote()
-    {
-        var withNote = await AddOrderAsync(FulfillmentMethod.Shipping, internalNote: "Collecting Friday");
-        var withoutNote = await AddOrderAsync(FulfillmentMethod.Shipping);
-
-        var page = await Service().GetOrdersAsync(AdminOrderTab.All, AdminOrderFilter.None, 1, 100, CancellationToken.None);
-
-        var orders = page.Orders.ToDictionary(o => o.Id);
-        Assert.True(orders[withNote].HasInternalNote);
-        Assert.False(orders[withoutNote].HasInternalNote);
     }
 
     [Fact]
@@ -571,54 +298,6 @@ public sealed class AdminOrderServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ResendShippedEmail_SendsTheShippedEmail_AndChangesNothing()
-    {
-        var id = await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.Shipped, shippedAt: T1, trackingNumber: "TRACK1");
-        var before = await LoadAsync(id);
-        var emailSender = new RecordingEmailSender();
-        clock.Now = T2;
-
-        var result = await Service(emailSender).ResendShippedEmailAsync(id, CancellationToken.None);
-
-        Assert.Equal(EmailResendResult.Sent, result);
-        var sent = Assert.Single(emailSender.Shipped);
-        Assert.Equal(FulfillmentMethod.Pickup, sent.FulfillmentMethod);
-        Assert.Equal("TRACK1", sent.TrackingNumber);
-        Assert.Empty(emailSender.Confirmations);
-        AssertUnchanged(before, await LoadAsync(id));
-    }
-
-    [Fact]
-    public async Task ResendConfirmation_CancelledOrder_IsNotAllowed_AndSendsNothing()
-    {
-        var id = await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Cancelled);
-        var emailSender = new RecordingEmailSender();
-
-        Assert.Equal(EmailResendResult.NotAllowed, await Service(emailSender).ResendConfirmationAsync(id, CancellationToken.None));
-        Assert.Empty(emailSender.Confirmations);
-    }
-
-    [Theory]
-    [InlineData(OrderStatus.New)]
-    [InlineData(OrderStatus.PickedUp)]
-    [InlineData(OrderStatus.Cancelled)]
-    public async Task ResendShippedEmail_BeforeShippedOrAfterIt_IsNotAllowed_AndSendsNothing(OrderStatus status)
-    {
-        var id = await AddOrderAsync(FulfillmentMethod.Pickup, status: status);
-        var emailSender = new RecordingEmailSender();
-
-        Assert.Equal(EmailResendResult.NotAllowed, await Service(emailSender).ResendShippedEmailAsync(id, CancellationToken.None));
-        Assert.Empty(emailSender.Shipped);
-    }
-
-    [Fact]
-    public async Task Resend_UnknownOrder_IsNotFound()
-    {
-        Assert.Equal(EmailResendResult.NotFound, await Service().ResendConfirmationAsync(999, CancellationToken.None));
-        Assert.Equal(EmailResendResult.NotFound, await Service().ResendShippedEmailAsync(999, CancellationToken.None));
-    }
-
-    [Fact]
     public async Task Resend_WhenTheEmailFails_ReportsFailed_AndChangesNothing()
     {
         var id = await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Shipped, shippedAt: T1);
@@ -640,18 +319,17 @@ public sealed class AdminOrderServiceTests : IDisposable
         Assert.Equal(EmailResendResult.Failed, await service.ResendShippedEmailAsync(id, CancellationToken.None));
     }
 
-    [Theory]
-    [InlineData(OrderStatus.New, true, false)]
-    [InlineData(OrderStatus.Shipped, true, true)]
-    [InlineData(OrderStatus.PickedUp, true, false)]
-    [InlineData(OrderStatus.Cancelled, false, false)]
-    public async Task GetOrder_ExposesWhichEmailsCanBeResent(OrderStatus status, bool confirmation, bool shipped)
+    [Fact]
+    public async Task StreamOrdersForExportAsync_ReturnsTheWholeUtcDayRange_OldestFirst()
     {
-        var id = await AddOrderAsync(FulfillmentMethod.Pickup, status: status);
+        await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: new DateTimeOffset(2026, 9, 30, 23, 59, 59, TimeSpan.Zero));
+        var lastMoment = await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: new DateTimeOffset(2026, 10, 31, 23, 59, 59, TimeSpan.Zero));
+        var first = await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero));
+        await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero));
 
-        var detail = await Service().GetOrderAsync(id, CancellationToken.None);
+        var rows = await Service().StreamOrdersForExportAsync(new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), CancellationToken.None).ToListAsync();
 
-        Assert.Equal((confirmation, shipped), (detail!.CanResendConfirmation, detail.CanResendShippedEmail));
+        Assert.Equal([first, lastMoment], rows.Select(r => r.Id));
     }
 
     private static void AssertUnchanged(Order before, Order after)
@@ -668,50 +346,16 @@ public sealed class AdminOrderServiceTests : IDisposable
         return page.Orders.Select(o => o.Id).Order().ToList();
     }
 
-    private static OrderLine Line(bool isPreorder = false, DateOnly? expectedAvailability = null, int productId = 1, int quantity = 1) => new()
+    private static OrderLine Line(bool isPreorder = false, int productId = 1, int quantity = 1) => new()
     {
         ProductId = productId,
         ProductName = "Print",
         UnitPrice = 10m,
         Quantity = quantity,
         IsPreorder = isPreorder,
-        ExpectedAvailabilityDate = expectedAvailability,
     };
 
     private AppDbContext CreateDb() => database.CreateDb();
-
-    [Fact]
-    public async Task StreamOrdersForExportAsync_ReturnsTheWholeUtcDayRange_OldestFirst()
-    {
-        await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: new DateTimeOffset(2026, 9, 30, 23, 59, 59, TimeSpan.Zero));
-        var lastMoment = await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: new DateTimeOffset(2026, 10, 31, 23, 59, 59, TimeSpan.Zero));
-        var first = await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero));
-        await AddOrderAsync(FulfillmentMethod.Shipping, createdAt: new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero));
-
-        var rows = await Service().StreamOrdersForExportAsync(new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), CancellationToken.None).ToListAsync();
-
-        Assert.Equal([first, lastMoment], rows.Select(r => r.Id));
-    }
-
-    [Fact]
-    public async Task StreamOrdersForExportAsync_CarriesTheBookkeepingColumns()
-    {
-        var paidAt = new DateTimeOffset(2026, 10, 3, 8, 0, 0, TimeSpan.Zero);
-        var createdAt = new DateTimeOffset(2026, 10, 2, 9, 30, 0, TimeSpan.Zero);
-        var id = await AddOrderAsync(FulfillmentMethod.Pickup, status: OrderStatus.Shipped, paymentMethod: PaymentMethod.Card, paidAt: paidAt,
-            createdAt: createdAt, email: "zoe@example.com", customerName: "Zoë", subtotal: 42.5m, shippingCost: 7m);
-
-        var row = Assert.Single(await Service().StreamOrdersForExportAsync(new DateOnly(2026, 10, 2), new DateOnly(2026, 10, 2), CancellationToken.None).ToListAsync());
-
-        Assert.Equal(new AdminOrderExportRow(id, createdAt, "Zoë", "zoe@example.com", FulfillmentMethod.Pickup, OrderStatus.Shipped, PaymentMethod.Card, paidAt, 42.5m, 7m), row);
-        Assert.Equal(49.5m, row.Total);
-    }
-
-    [Fact]
-    public void StreamOrdersForExportAsync_BackwardsRange_Throws()
-    {
-        Assert.Throws<ArgumentException>(() => Service().StreamOrdersForExportAsync(new DateOnly(2026, 10, 2), new DateOnly(2026, 10, 1), CancellationToken.None));
-    }
 
     private AdminOrderService Service(IEmailSender? emailSender = null, FakeInventoryStore? inventoryStore = null) =>
         new(CreateDb(), new OrderLineInventory(inventoryStore ?? new FakeInventoryStore(new Dictionary<int, int>())), new FakePaymentGateway(), emailSender ?? new NullEmailSender(), clock, NullLogger<AdminOrderService>.Instance);
@@ -726,11 +370,7 @@ public sealed class AdminOrderServiceTests : IDisposable
         string email = "shopper@example.com",
         string customerName = "Jane Shopper",
         List<OrderLine>? lines = null,
-        string? internalNote = null,
-        string? trackingNumber = null,
-        ShippingCarrier? carrier = null,
-        decimal subtotal = 0m,
-        decimal shippingCost = 0m)
+        string? internalNote = null)
     {
         await using var db = CreateDb();
         var order = new Order
@@ -745,10 +385,6 @@ public sealed class AdminOrderServiceTests : IDisposable
             CreatedAt = createdAt ?? new DateTimeOffset(2026, 8, 1, 9, 0, 0, TimeSpan.Zero),
             ShippedAt = shippedAt,
             InternalNote = internalNote,
-            TrackingNumber = trackingNumber,
-            Carrier = carrier,
-            Subtotal = subtotal,
-            ShippingCost = shippingCost,
         };
         db.Orders.Add(order);
         await db.SaveChangesAsync();

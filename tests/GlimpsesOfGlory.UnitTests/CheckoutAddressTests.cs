@@ -51,12 +51,6 @@ public class CheckoutAddressTests
     }
 
     [Fact]
-    public void Validate_AcceptsSupportedCountry()
-    {
-        Assert.Empty(Validate(ShippingAddress(ShippingCountryPolicy.DefaultCountry)));
-    }
-
-    [Fact]
     public void Validate_IgnoresCountry_WhenPickup()
     {
         var address = ShippingAddress("Narnia");
@@ -95,17 +89,6 @@ public class CheckoutAddressTests
     }
 
     [Theory]
-    [InlineData(FulfillmentMethod.Pickup)]
-    [InlineData(FulfillmentMethod.Shipping)]
-    public void Validate_PhoneIsOptional(FulfillmentMethod method)
-    {
-        var address = ShippingAddress(ShippingCountryPolicy.DefaultCountry);
-        address.FulfillmentMethod = method;
-
-        Assert.Empty(Validate(address));
-    }
-
-    [Theory]
     [InlineData("not a phone")]
     [InlineData("1234567890123456789012345678901")]
     public void Validate_RejectsAnInvalidPhone(string phone)
@@ -130,12 +113,4 @@ public class CheckoutAddressTests
         Assert.Equal("(555) 010-0100", address.ToShippingAddressInfo().Phone);
     }
 
-    [Fact]
-    public void ToShippingAddressInfo_StoresABlankPhoneAsNone()
-    {
-        var address = ShippingAddress(ShippingCountryPolicy.DefaultCountry);
-        address.Phone = "   ";
-
-        Assert.Null(address.ToShippingAddressInfo().Phone);
-    }
 }

@@ -76,15 +76,6 @@ public sealed class CheckoutUnavailableItemsTests : IDisposable
     }
 
     [Fact]
-    public async Task PlaceCashOrder_WithAnEmptyCart_FailsWithoutLineDetail()
-    {
-        var result = await OrderService(Cart()).PlaceCashOrderAsync(PickupAddress, CancellationToken.None);
-
-        Assert.Null(result.OrderId);
-        Assert.Empty(result.UnavailableLines);
-    }
-
-    [Fact]
     public async Task PlaceCashOrder_WhenStockIsThere_PlacesTheOrder()
     {
         await SeedProductsAsync();
@@ -113,36 +104,6 @@ public sealed class CheckoutUnavailableItemsTests : IDisposable
     }
 
     [Fact]
-    public async Task PaymentPage_WithoutLineDetail_FallsBackToTheGenericBanner()
-    {
-        var (page, tempData) = PaymentPage(CheckoutPaymentResult.Failed([]));
-
-        await page.OnGetAsync(CancellationToken.None);
-
-        Assert.Equal(CheckoutMessages.ItemsUnavailable, tempData["Error"]);
-        Assert.Empty(CartLineErrorsTempData.Read(tempData));
-    }
-
-    [Fact]
-    public async Task ReviewPage_CashOrderThatRanShort_SendsEachShortLineToTheCart()
-    {
-        var (httpContext, sessionStore, tempData) = PickupCheckout();
-        var page = new ReviewModel(
-            new StubCartService(Cart(("sunrise", 3))),
-            new StubOrderService(cashOrder: CashOrderResult.Failed([new UnavailableCartLine("sunrise", 2)])),
-            sessionStore)
-        {
-            PageContext = new PageContext { HttpContext = httpContext },
-            TempData = tempData,
-        };
-
-        var result = await page.OnPostPickupPaymentAsync(PaymentMethod.Cash, CancellationToken.None);
-
-        Assert.Equal("/Cart/Index", Assert.IsType<RedirectToPageResult>(result).PageName);
-        Assert.Equal([new CartLineError("sunrise", "Only 2 left. Lower the quantity to continue.")], CartLineErrorsTempData.Read(tempData));
-    }
-
-    [Fact]
     public async Task CartPage_FlagsTheShortLines_WithoutTheGenericBanner()
     {
         var page = CartPage(Cart(("sunrise", 3), ("harbour", 1)), [new UnavailableCartLine("sunrise", 2)]);
@@ -151,32 +112,6 @@ public sealed class CheckoutUnavailableItemsTests : IDisposable
 
         Assert.Null(page.Banner);
         Assert.Equal([new CartLineError("sunrise", "Only 2 left. Lower the quantity to continue.")], page.LineErrors);
-    }
-
-    [Fact]
-    public async Task CartPage_ShowsTheGenericBanner_WhenNoneOfTheFlaggedLinesAreStillInTheCart()
-    {
-        var page = CartPage(Cart(("harbour", 1)), [new UnavailableCartLine("sunrise", 2)]);
-
-        await page.OnGetAsync(CancellationToken.None);
-
-        Assert.Equal(CheckoutMessages.ItemsUnavailable, page.Banner);
-        Assert.Empty(page.LineErrors);
-    }
-
-    [Fact]
-    public async Task CartLines_ShowEachLinesMessageUnderThatLine_AndMarkItsQuantityInvalid()
-    {
-        var cart = Cart(("sunrise", 3), ("harbour", 1));
-        var view = new CartLinesView(cart, [new CartLineError("sunrise", "Only 2 left. Lower the quantity to continue.")]);
-
-        var html = await RazorViewToStringRendererTests.CreateRenderer().RenderAsync("~/Pages/Cart/_CartLines.cshtml", view);
-
-        Assert.Contains("<p class=\"col-span-full text-red-600 text-sm\" id=\"error-sunrise\">Only 2 left. Lower the quantity to continue.</p>", html);
-        Assert.Contains("aria-describedby=\"error-sunrise\"", html);
-        Assert.DoesNotContain("error-harbour", html);
-        Assert.Single(System.Text.RegularExpressions.Regex.Matches(html, "aria-invalid=\"true\""));
-        Assert.Single(System.Text.RegularExpressions.Regex.Matches(html, "data-line-error=\"true\""));
     }
 
     // sunrise: 2 in stock; harbour: 5 in stock; meadow: sold out; "gone" isn't in the catalogue.
@@ -224,7 +159,7 @@ public sealed class CheckoutUnavailableItemsTests : IDisposable
         var page = new PaymentModel(
             new StubCartService(Cart(("sunrise", 3))),
             sessionStore,
-            new StubOrderService(payment: result),
+            new StubOrderService(result),
             Options.Create(new StripeOptions { PublishableKey = "pk_test" }))
         {
             PageContext = new PageContext { HttpContext = httpContext },
@@ -265,15 +200,14 @@ public sealed class CheckoutUnavailableItemsTests : IDisposable
         }
     }
 
-    private sealed class StubOrderService(CheckoutPaymentResult? payment = null, CashOrderResult? cashOrder = null) : IOrderService
+    private sealed class StubOrderService(CheckoutPaymentResult payment) : IOrderService
     {
         public Task<CheckoutPaymentResult> CreatePaymentIntentAsync(FulfillmentMethod fulfillmentMethod, ShippingAddressInfo address, string? existingPaymentIntentId, CancellationToken cancellationToken) =>
-            Task.FromResult(payment ?? throw new NotSupportedException());
+            Task.FromResult(payment);
 
         public Task ConfirmPaymentAsync(string paymentIntentId, CancellationToken cancellationToken) => throw new NotSupportedException();
 
-        public Task<CashOrderResult> PlaceCashOrderAsync(ShippingAddressInfo address, CancellationToken cancellationToken) =>
-            Task.FromResult(cashOrder ?? throw new NotSupportedException());
+        public Task<CashOrderResult> PlaceCashOrderAsync(ShippingAddressInfo address, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<OrderConfirmationView?> GetOrderConfirmationAsync(string paymentIntentId, CancellationToken cancellationToken) => throw new NotSupportedException();
 

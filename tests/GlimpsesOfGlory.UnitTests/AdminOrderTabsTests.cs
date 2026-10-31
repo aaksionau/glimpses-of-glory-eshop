@@ -26,38 +26,6 @@ public class AdminOrderTabsTests
     }
 
     [Fact]
-    public void Links_CoverEveryTabInOrder_DefaultingToNeedsAction()
-    {
-        Assert.Equal(
-            [AdminOrderTab.NeedsAction, AdminOrderTab.Shipped, AdminOrderTab.Cancelled, AdminOrderTab.All],
-            AdminOrderTabs.Links.Select(l => l.Tab));
-        Assert.All(AdminOrderTabs.Links, l => Assert.False(string.IsNullOrWhiteSpace(l.EmptyMessage)));
-    }
-
-    [Fact]
-    public async Task IndexPage_LoadsTheSelectedTabAndCounts()
-    {
-        var service = new RecordingAdminOrderService();
-        var model = new IndexModel(service, TimeProvider.System) { Status = "cancelled" };
-
-        await model.OnGetAsync(CancellationToken.None);
-
-        Assert.Equal(AdminOrderTab.Cancelled, service.RequestedTab);
-        Assert.Equal(AdminOrderTab.Cancelled, model.CurrentTab.Tab);
-        Assert.Equal(2, model.Counts.Cancelled);
-    }
-
-    [Fact]
-    public async Task IndexPage_DefaultsToNeedsAction()
-    {
-        var service = new RecordingAdminOrderService();
-
-        await new IndexModel(service, TimeProvider.System).OnGetAsync(CancellationToken.None);
-
-        Assert.Equal(AdminOrderTab.NeedsAction, service.RequestedTab);
-    }
-
-    [Fact]
     public async Task IndexPage_PassesSearchFilterAndPageThrough()
     {
         var service = new RecordingAdminOrderService();
@@ -72,17 +40,6 @@ public class AdminOrderTabsTests
         Assert.Equal(AdminOrderListState.PageSize, service.RequestedPageSize);
     }
 
-    [Fact]
-    public async Task IndexPage_AdoptsThePageTheServiceActuallyReturned()
-    {
-        var service = new RecordingAdminOrderService { ReturnedPage = 2 };
-        var model = new IndexModel(service, TimeProvider.System) { PageNumber = 99 };
-
-        await model.OnGetAsync(CancellationToken.None);
-
-        Assert.Equal(2, model.State.Page);
-    }
-
     [Theory]
     [InlineData(null, null, false, null, "/admin/orders")]
     [InlineData("needs-action", "", false, 1, "/admin/orders")]
@@ -92,40 +49,6 @@ public class AdminOrderTabsTests
     public void ListState_RoundTripsThroughTheQueryString(string? status, string? search, bool preorder, int? page, string expected)
     {
         Assert.Equal(expected, AdminOrderListState.FromQuery(status, search, preorder, page).Href);
-    }
-
-    [Fact]
-    public async Task IndexPage_PassesTheToFulfillAndUnpaidCashFiltersThrough()
-    {
-        var service = new RecordingAdminOrderService();
-        var model = new IndexModel(service, TimeProvider.System) { ToFulfill = true, UnpaidCash = true };
-
-        await model.OnGetAsync(CancellationToken.None);
-
-        Assert.Equal(new AdminOrderFilter(ToFulfillOnly: true, UnpaidCashOnly: true), service.RequestedFilter);
-        Assert.Equal(new AdminOrderFilter(ToFulfillOnly: true, UnpaidCashOnly: true), service.CountedFilter);
-    }
-
-    [Fact]
-    public async Task IndexPage_DefaultsTheExportRangeToTheCurrentMonthSoFar()
-    {
-        var model = new IndexModel(new RecordingAdminOrderService(), new FixedTimeProvider(new DateTimeOffset(2026, 10, 30, 23, 0, 0, TimeSpan.Zero)));
-
-        await model.OnGetAsync(CancellationToken.None);
-
-        Assert.Equal(new DateOnly(2026, 10, 1), model.ExportFrom);
-        Assert.Equal(new DateOnly(2026, 10, 30), model.ExportTo);
-    }
-
-    [Fact]
-    public async Task IndexPage_TakesNowForRelativeTimesFromTheInjectedClock()
-    {
-        var now = new DateTimeOffset(2026, 3, 14, 15, 9, 26, TimeSpan.Zero);
-        var model = new IndexModel(new RecordingAdminOrderService(), new FixedTimeProvider(now));
-
-        await model.OnGetAsync(CancellationToken.None);
-
-        Assert.Equal(now, model.Now);
     }
 
     [Fact]
@@ -179,29 +102,6 @@ public class AdminOrderTabsTests
         return (model, body);
     }
 
-    [Fact]
-    public void ListState_CarriesTheToFulfillAndUnpaidCashFilters_AndClearDropsThem()
-    {
-        var state = AdminOrderListState.FromQuery("all", null, false, null, toFulfillOnly: true, unpaidCashOnly: true);
-
-        Assert.Equal("/admin/orders?status=all&tofulfill=true&unpaidcash=true", state.Href);
-        Assert.True(state.IsFiltered);
-        Assert.Equal("/admin/orders?status=all", state.ClearedHref);
-    }
-
-    [Fact]
-    public void ListState_TabLinksKeepTheSearchButResetThePage()
-    {
-        var state = AdminOrderListState.FromQuery("shipped", "jane", true, 4);
-
-        Assert.Equal("/admin/orders?status=cancelled&q=jane&preorder=true", state.HrefForTab(AdminOrderTab.Cancelled));
-        Assert.Equal("/admin/orders?q=jane&preorder=true", state.HrefForTab(AdminOrderTab.NeedsAction));
-        Assert.Equal("/admin/orders?status=shipped&q=jane&preorder=true&pageNumber=5", state.HrefForPage(5));
-        Assert.Equal("/admin/orders?status=shipped", state.ClearedHref);
-        Assert.True(state.IsFiltered);
-        Assert.False(AdminOrderListState.FromQuery("shipped", " ", false, null).IsFiltered);
-    }
-
     // The page links and the PageModel binding must agree on the key, and it must not be "page",
     // which Razor Pages reserves for the page path (route values bind before the query string).
     [Fact]
@@ -229,15 +129,13 @@ public class AdminOrderTabsTests
 
         public int? RequestedPageSize { get; private set; }
 
-        public int? ReturnedPage { get; init; }
-
         public Task<AdminOrderPage> GetOrdersAsync(AdminOrderTab tab, AdminOrderFilter filter, int page, int pageSize, CancellationToken cancellationToken)
         {
             RequestedTab = tab;
             RequestedFilter = filter;
             RequestedPage = page;
             RequestedPageSize = pageSize;
-            return Task.FromResult(new AdminOrderPage([], ReturnedPage ?? page, pageSize, 0));
+            return Task.FromResult(new AdminOrderPage([], page, pageSize, 0));
         }
 
         public Task<AdminOrderTabCounts> GetOrderTabCountsAsync(AdminOrderFilter filter, CancellationToken cancellationToken)

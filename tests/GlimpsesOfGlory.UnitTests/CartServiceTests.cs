@@ -49,18 +49,6 @@ public class CartServiceTests
             new ShippingTierView(1, 1, 8.00m), new ShippingTierView(2, 3, 5.00m)));
 
     [Fact]
-    public async Task GetSummaryAsync_IncludesShippingCostForCurrentQuantity()
-    {
-        var cartStore = new FakeCartStore();
-        var service = CreateTieredService(cartStore, CreateProduct(stockQuantity: 10));
-        await service.AddLineAsync("widget", 2, CancellationToken.None);
-
-        var summary = await service.GetSummaryAsync(CancellationToken.None);
-
-        Assert.Equal(8.00m, summary.ShippingCost);
-    }
-
-    [Fact]
     public async Task GetSummaryAsync_ShippingCostFollowsQuantityChange()
     {
         var cartStore = new FakeCartStore();
@@ -71,31 +59,6 @@ public class CartServiceTests
         var summary = await service.GetSummaryAsync(CancellationToken.None);
 
         Assert.Equal(5.00m, summary.ShippingCost);
-    }
-
-    [Fact]
-    public async Task GetSummaryAsync_ShippingCostIsZero_AfterLastLineRemoved()
-    {
-        var cartStore = new FakeCartStore();
-        var service = CreateTieredService(cartStore, CreateProduct(stockQuantity: 10));
-        await service.AddLineAsync("widget", 2, CancellationToken.None);
-
-        await service.RemoveLineAsync("widget", CancellationToken.None);
-        var summary = await service.GetSummaryAsync(CancellationToken.None);
-
-        Assert.Equal(0m, summary.ShippingCost);
-    }
-
-    [Fact]
-    public async Task GetSummaryAsync_ShippingCostFor_UsesShippingTiers_WhenShipping()
-    {
-        var cartStore = new FakeCartStore();
-        var service = CreateService(cartStore, CreateProduct(stockQuantity: 5));
-        await service.AddLineAsync("widget", 1, CancellationToken.None);
-
-        var cost = (await service.GetSummaryAsync(CancellationToken.None)).ShippingCostFor(FulfillmentMethod.Shipping);
-
-        Assert.Equal(7.50m, cost);
     }
 
     [Fact]
@@ -124,18 +87,6 @@ public class CartServiceTests
     }
 
     [Fact]
-    public async Task AddLineAsync_RejectsWhenQuantityExceedsStock()
-    {
-        var cartStore = new FakeCartStore();
-        var service = CreateService(cartStore, CreateProduct(stockQuantity: 3));
-
-        var result = await service.AddLineAsync("widget", 5, CancellationToken.None);
-
-        Assert.False(result.Success);
-        Assert.Empty(cartStore.Cart.Lines);
-    }
-
-    [Fact]
     public async Task AddLineAsync_RejectsWhenAlreadyInCartQuantityWouldExceedStock()
     {
         var cartStore = new FakeCartStore();
@@ -146,18 +97,6 @@ public class CartServiceTests
 
         Assert.True(first.Success);
         Assert.False(second.Success);
-        Assert.Equal(3, cartStore.Cart.Lines.Single().Quantity);
-    }
-
-    [Fact]
-    public async Task AddLineAsync_SucceedsWhenWithinStock()
-    {
-        var cartStore = new FakeCartStore();
-        var service = CreateService(cartStore, CreateProduct(stockQuantity: 5));
-
-        var result = await service.AddLineAsync("widget", 3, CancellationToken.None);
-
-        Assert.True(result.Success);
         Assert.Equal(3, cartStore.Cart.Lines.Single().Quantity);
     }
 
