@@ -8,8 +8,8 @@ namespace GlimpsesOfGlory.Core.Services;
 // a crafted POST can't skip it, and the admin lists and dashboard filter on the same rules in SQL.
 public static class OrderLifecycle
 {
-    // What the admin can do to an order with these facts. The one place the detail page's actions
-    // (and the list rows' refund flag) are read off the rules below, so the two can't drift.
+    // What the admin can do to an order with these facts: the one place the detail page's actions
+    // are read off the rules below.
     public static AdminOrderActions Actions(OrderFacts facts) => new()
     {
         CanMarkShipped = MarkShipped.IsAllowed(facts),

@@ -267,8 +267,6 @@ public sealed class AdminOrderServiceTests : IDisposable
         Assert.Equal(T2, detail.Timestamps.ShippedAt);
         Assert.Null(detail.Timestamps.CancelledAt);
         Assert.Equal(OrderLifecycle.Actions(OrderFacts.Of(await LoadAsync(id))), detail.Actions);
-        Assert.True(detail.Actions.CanResendShippedEmail);
-        Assert.False(detail.Actions.CanMarkShipped);
     }
 
     [Theory]

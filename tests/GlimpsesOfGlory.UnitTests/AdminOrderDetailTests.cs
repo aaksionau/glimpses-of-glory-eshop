@@ -4,6 +4,7 @@ using GlimpsesOfGlory.Abstractions.Constants;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
+using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Web.Formatting;
 using GlimpsesOfGlory.Web.Helpers;
 using GlimpsesOfGlory.Web.Pages.Admin.Orders;
@@ -45,18 +46,13 @@ public class AdminOrderDetailTests
                 CreatedAt = new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero),
                 PaidAt = isPaid ? new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero) : null,
             },
-            Actions: new AdminOrderActions
+            Actions: OrderLifecycle.Actions(new OrderFacts
             {
-                CanMarkShipped = status == OrderStatus.New && fulfillmentMethod == FulfillmentMethod.Shipping,
-                CanMarkReadyForPickup = status == OrderStatus.New && fulfillmentMethod == FulfillmentMethod.Pickup,
-                CanMarkPickedUp = status == OrderStatus.ReadyForPickup,
-                CanMarkPaid = !isPaid && status != OrderStatus.Cancelled,
-                CanMarkCancelled = status == OrderStatus.New,
-                NeedsRefund = status == OrderStatus.Cancelled && paymentMethod == PaymentMethod.Card && isPaid,
-                CanResendConfirmation = status != OrderStatus.Cancelled,
-                CanResendShippedEmail = status == OrderStatus.Shipped,
-                CanResendReadyForPickupEmail = status == OrderStatus.ReadyForPickup,
-            });
+                Status = status,
+                FulfillmentMethod = fulfillmentMethod,
+                PaymentMethod = paymentMethod,
+                IsPaid = isPaid,
+            }));
 
     [Fact]
     public void Primary_NewUnpaidCashOrder_IsFulfilment_WithMarkPaidSecondary()
