@@ -34,6 +34,8 @@ src/
                   PreorderNoteFormatter, CheckoutMessages
     Helpers/      what fits no more specific kind: session stores, CheckoutStepGuard,
                   AdminOrderListState, OrderCsvExport, nav sections, ...
+    Endpoints/    minimal-API endpoints mapped from Program.cs: SeoEndpoints (robots.txt,
+                  sitemap.xml), StripeWebhookEndpoint (/webhooks/stripe)
     Dtos/ (CheckoutAddress.cs), Configuration/, Security/, Program.cs
 ```
 

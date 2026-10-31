@@ -19,3 +19,10 @@ Put it here only when the behavior under test depends on Postgres itself, for ex
 - the migrations themselves.
 
 If the SQLite tests would give the same answer as Postgres, the test belongs there.
+
+## HTTP tests through the real pipeline
+
+`EshopWebApplicationFactory` boots `Program.cs` (a `WebApplicationFactory<Program>`) against one
+test's database, with `IPaymentGateway` and `IEmailSender` replaced by in-memory fakes
+(`WebhookPaymentGateway`, `RecordingEmailSender`). Use it for tests that need routing, middleware
+or auth conventions, such as `EndpointTests`.
