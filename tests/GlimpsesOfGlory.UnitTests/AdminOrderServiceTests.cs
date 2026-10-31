@@ -238,6 +238,37 @@ public sealed class AdminOrderServiceTests : IDisposable
         Assert.Equal(all.Where(o => o.NeedsAction).Select(o => o.Id).Order(), needsAction);
     }
 
+    [Fact]
+    public async Task GetOrders_RefundFlag_AgreesWithTheDetailPage()
+    {
+        var cancelledPaidCard = await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Cancelled, paymentMethod: PaymentMethod.Card, paidAt: T1);
+        await AddOrderAsync(FulfillmentMethod.Shipping, status: OrderStatus.Cancelled);
+        await AddOrderAsync(FulfillmentMethod.Shipping, paymentMethod: PaymentMethod.Card, paidAt: T1);
+        var service = Service();
+
+        var rows = (await service.GetOrdersAsync(AdminOrderTab.All, AdminOrderFilter.None, 1, 50, CancellationToken.None)).Orders;
+
+        Assert.Equal([cancelledPaidCard], rows.Where(o => o.NeedsRefund).Select(o => o.Id));
+        foreach (var row in rows)
+        {
+            var detail = await service.GetOrderAsync(row.Id, CancellationToken.None);
+            Assert.Equal(row.NeedsRefund, detail!.Actions.NeedsRefund);
+        }
+    }
+
+    [Fact]
+    public async Task GetOrder_GroupsTheStepTimesAndTheLifecycleActions()
+    {
+        var id = await AddOrderAsync(FulfillmentMethod.Shipping, shippedAt: T2, status: OrderStatus.Shipped, paymentMethod: PaymentMethod.Card, paidAt: T1);
+
+        var detail = await Service().GetOrderAsync(id, CancellationToken.None);
+
+        Assert.Equal(T1, detail!.Timestamps.PaidAt);
+        Assert.Equal(T2, detail.Timestamps.ShippedAt);
+        Assert.Null(detail.Timestamps.CancelledAt);
+        Assert.Equal(OrderLifecycle.Actions(OrderFacts.Of(await LoadAsync(id))), detail.Actions);
+    }
+
     [Theory]
     [InlineData("42")]
     [InlineData("#42")]

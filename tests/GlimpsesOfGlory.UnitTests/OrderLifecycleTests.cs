@@ -1,3 +1,4 @@
+using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Core.Entities;
 using GlimpsesOfGlory.Core.Services;
@@ -178,6 +179,30 @@ public sealed class OrderLifecycleTests : IDisposable
         var order = NewOrder(OrderStatus.ReadyForPickup, FulfillmentMethod.Pickup, PaymentMethod.Cash, isPaid: true);
 
         Assert.Equal(Facts(OrderStatus.ReadyForPickup, FulfillmentMethod.Pickup, PaymentMethod.Cash, isPaid: true), OrderFacts.Of(order));
+    }
+
+    // Each flag must read the rule it's named after (CanMarkShipped -> MarkShipped, NeedsRefund ->
+    // NeedsRefund), over every combination of facts - so two flags can't be wired the wrong way round.
+    [Fact]
+    public void Actions_EachFlagReadsTheRuleItIsNamedAfter()
+    {
+        var flags = typeof(AdminOrderActions).GetProperties();
+        Assert.NotEmpty(flags);
+
+        foreach (var facts in
+            from status in Enum.GetValues<OrderStatus>()
+            from fulfillmentMethod in Enum.GetValues<FulfillmentMethod>()
+            from paymentMethod in Enum.GetValues<PaymentMethod>()
+            from isPaid in new[] { false, true }
+            select Facts(status, fulfillmentMethod, paymentMethod, isPaid))
+        {
+            var actions = OrderLifecycle.Actions(facts);
+            foreach (var flag in flags)
+            {
+                var rule = RulesByName.TryGetValue(flag.Name, out var named) ? named : RulesByName[flag.Name["Can".Length..]];
+                Assert.True(rule.IsSatisfiedBy(facts) == (bool)flag.GetValue(actions)!, $"{flag.Name} disagrees with its rule for {facts}");
+            }
+        }
     }
 
     public static TheoryData<string> Rules() => new(RulesByName.Keys);

@@ -9,7 +9,7 @@
     {
         <partial name="_Badge" model="OrderBadges.Pickup" />
     }
-    @if (Model.Order.NeedsRefund)
+    @if (Model.Order.Actions.NeedsRefund)
     {
         <partial name="_Badge" model="OrderBadges.RefundRequired" />
     }

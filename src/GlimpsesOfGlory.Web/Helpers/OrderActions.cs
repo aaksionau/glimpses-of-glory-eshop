@@ -12,15 +12,15 @@ public enum OrderAction
     MarkPaid,
 }
 
-// Decides which of the actions an order allows (the CanMark* flags) is shown as the single
-// primary "next step" button; the rest are secondary. Cancel is never primary - it's rendered
-// separately as a quieter destructive action.
+// Decides which of the actions an order allows (the CanMark* flags on AdminOrderActions) is shown
+// as the single primary "next step" button; the rest are secondary. Cancel is never primary - it's
+// rendered separately as a quieter destructive action.
 public static class OrderActions
 {
     // Fulfilment moves the order forward, so it outranks collecting cash.
-    public static OrderAction? Primary(AdminOrderDetail order) => Available(order).Cast<OrderAction?>().FirstOrDefault();
+    public static OrderAction? Primary(AdminOrderActions actions) => Available(actions).Cast<OrderAction?>().FirstOrDefault();
 
-    public static IReadOnlyList<OrderAction> Secondary(AdminOrderDetail order) => Available(order).Skip(1).ToList();
+    public static IReadOnlyList<OrderAction> Secondary(AdminOrderActions actions) => Available(actions).Skip(1).ToList();
 
     public static string Label(OrderAction action) => action switch
     {
@@ -30,24 +30,24 @@ public static class OrderActions
         _ => "Mark as paid",
     };
 
-    private static IEnumerable<OrderAction> Available(AdminOrderDetail order)
+    private static IEnumerable<OrderAction> Available(AdminOrderActions actions)
     {
-        if (order.CanMarkShipped)
+        if (actions.CanMarkShipped)
         {
             yield return OrderAction.MarkShipped;
         }
 
-        if (order.CanMarkReadyForPickup)
+        if (actions.CanMarkReadyForPickup)
         {
             yield return OrderAction.MarkReadyForPickup;
         }
 
-        if (order.CanMarkPickedUp)
+        if (actions.CanMarkPickedUp)
         {
             yield return OrderAction.MarkPickedUp;
         }
 
-        if (order.CanMarkPaid)
+        if (actions.CanMarkPaid)
         {
             yield return OrderAction.MarkPaid;
         }
@@ -63,21 +63,21 @@ public enum OrderResend
     ResendReadyForPickupEmail,
 }
 
-// Which of the resends an order allows (the CanResend* flags), in display order.
+// Which of the resends an order allows (the CanResend* flags on AdminOrderActions), in display order.
 public static class OrderResends
 {
-    public static IReadOnlyList<OrderResend> Available(AdminOrderDetail order)
+    public static IReadOnlyList<OrderResend> Available(AdminOrderActions actions)
     {
         var resends = new List<OrderResend>();
-        if (order.CanResendConfirmation)
+        if (actions.CanResendConfirmation)
         {
             resends.Add(OrderResend.ResendConfirmation);
         }
-        if (order.CanResendShippedEmail)
+        if (actions.CanResendShippedEmail)
         {
             resends.Add(OrderResend.ResendShippedEmail);
         }
-        if (order.CanResendReadyForPickupEmail)
+        if (actions.CanResendReadyForPickupEmail)
         {
             resends.Add(OrderResend.ResendReadyForPickupEmail);
         }

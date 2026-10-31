@@ -11,30 +11,30 @@ public static class OrderTimeline
 {
     public static IReadOnlyList<OrderTimelineStep> Steps(AdminOrderDetail order)
     {
-        var steps = new List<OrderTimelineStep> { Step("Placed", true, order.CreatedAt) };
+        var steps = new List<OrderTimelineStep> { Step("Placed", true, order.Timestamps.CreatedAt) };
         var isCancelled = order.Status == OrderStatus.Cancelled;
 
         // A cancelled order can't be paid any more, so an unpaid one has no Paid step left to show.
         if (order.IsPaid || !isCancelled)
         {
-            steps.Add(Step("Paid", order.IsPaid, order.PaidAt));
+            steps.Add(Step("Paid", order.IsPaid, order.Timestamps.PaidAt));
         }
 
         if (isCancelled)
         {
-            steps.Add(Step(FulfillmentLabels.Status(OrderStatus.Cancelled), true, order.CancelledAt));
+            steps.Add(Step(FulfillmentLabels.Status(OrderStatus.Cancelled), true, order.Timestamps.CancelledAt));
             return steps;
         }
 
         if (order.FulfillmentMethod == FulfillmentMethod.Pickup)
         {
             var isReady = order.Status is OrderStatus.ReadyForPickup or OrderStatus.PickedUp;
-            steps.Add(Step(FulfillmentLabels.Status(OrderStatus.ReadyForPickup), isReady, order.ReadyForPickupAt));
-            steps.Add(Step(FulfillmentLabels.Status(OrderStatus.PickedUp), order.Status == OrderStatus.PickedUp, order.PickedUpAt));
+            steps.Add(Step(FulfillmentLabels.Status(OrderStatus.ReadyForPickup), isReady, order.Timestamps.ReadyForPickupAt));
+            steps.Add(Step(FulfillmentLabels.Status(OrderStatus.PickedUp), order.Status == OrderStatus.PickedUp, order.Timestamps.PickedUpAt));
         }
         else
         {
-            steps.Add(Step(FulfillmentLabels.Status(OrderStatus.Shipped), order.Status == OrderStatus.Shipped, order.ShippedAt));
+            steps.Add(Step(FulfillmentLabels.Status(OrderStatus.Shipped), order.Status == OrderStatus.Shipped, order.Timestamps.ShippedAt));
         }
 
         return steps;

@@ -9,5 +9,5 @@
     {
         <p><a href="tel:@phone" class="hover:underline">@phone</a></p>
     }
-    <p class="text-sm text-gray-500">Placed @Model.Order.CreatedAt.ToString("MMMM d, yyyy")</p>
+    <p class="text-sm text-gray-500">Placed @Model.Order.Timestamps.CreatedAt.ToString("MMMM d, yyyy")</p>
 </section>
