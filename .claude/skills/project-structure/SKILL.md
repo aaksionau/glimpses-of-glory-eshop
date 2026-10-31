@@ -79,7 +79,7 @@ Entity mapping lives in `Core/EntityConfigurations/` as `IEntityTypeConfiguratio
 
 ## Adding a new feature
 
-1. Add entities/services/configuration to the relevant `Core/<Kind>/` folders — `Entities/`, `Services/`, `EntityConfigurations/`, `ValueObjects/`, `Options/`, `Extensions/` as needed.
+1. Add entities/services/configuration to the relevant `Core/<Kind>/` folders — `Entities/`, `Services/`, `EntityConfigurations/`, `ValueObjects/`, `Extensions/` as needed.
 2. Add only what must cross into `Web` to the matching `Abstractions/<Kind>/` folder (`Services/` for the interface, `Dtos/` for DTOs, `Enums/`, `Exceptions/`, `Constants/` as needed) — entities `Web` never touches stay in `Core` alone.
 3. If it talks to an external system, put the adapter in `Infrastructure/` behind the `Abstractions` interface (see above).
 4. Wire the new service into DI in `Program.cs`.

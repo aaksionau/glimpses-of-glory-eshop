@@ -46,21 +46,19 @@ public class ProjectBoundaryTests
     [Theory]
     [InlineData(InfrastructureNamespace)]
     [InlineData(StripeNamespace)]
-    public void CoreTypes_DoNotDependOn(string forbiddenNamespace)
-    {
-        AssertNoViolations(
-            DependentTypes(Types.InAssembly(CoreAssembly), forbiddenNamespace).Select(type => type.FullName),
+    public void CoreTypes_DoNotDependOn(string forbiddenNamespace) =>
+        AssertNoTypeInDependsOn(
+            CoreAssembly,
+            forbiddenNamespace,
             $"Core types must not depend on {forbiddenNamespace} (put the integration in " +
             $"{InfrastructureNamespace} behind an Abstractions interface)");
-    }
 
     [Fact]
-    public void InfrastructureTypes_DoNotDependOnCore()
-    {
-        AssertNoViolations(
-            DependentTypes(Types.InAssembly(InfrastructureAssembly), CoreNamespace).Select(type => type.FullName),
+    public void InfrastructureTypes_DoNotDependOnCore() =>
+        AssertNoTypeInDependsOn(
+            InfrastructureAssembly,
+            CoreNamespace,
             $"Infrastructure types must not depend on {CoreNamespace} (implement an Abstractions interface instead)");
-    }
 
     [Fact]
     public void WebTypes_ScannedByBoundaryRule_IncludePageModelsAndRazorViews()
@@ -98,12 +96,22 @@ public class ProjectBoundaryTests
     }
 
     [Fact]
-    public void CoreDependentTypes_TypeUsingDbContextOnlyInMethodBody_IsReported()
+    public void DependentTypesOtherThanProgram_TypeUsingDbContextOnlyInMethodBody_IsReported()
     {
         // Proves the rule reads method bodies: this type mentions AppDbContext nowhere in its signatures.
         var violators = DependentTypesOtherThanProgram(Types.InAssembly(typeof(ProjectBoundaryTests).Assembly), CoreNamespace);
 
         Assert.Contains(typeof(UsesDbContextInBody), violators);
+    }
+
+    [Fact]
+    public void DependentTypesOtherThanProgram_TypeInjectingAnInfrastructureType_IsReported()
+    {
+        // Guards the Web→Infrastructure and Core→Infrastructure rules against passing vacuously:
+        // the same namespace match flags a type that depends on an Infrastructure adapter.
+        var violators = DependentTypesOtherThanProgram(Types.InAssembly(typeof(ProjectBoundaryTests).Assembly), InfrastructureNamespace);
+
+        Assert.Contains(typeof(InjectsPaymentGateway), violators);
     }
 
     [Fact]
@@ -125,6 +133,9 @@ public class ProjectBoundaryTests
                 .Select(type => $"{type.FullName} -> {DescribeReferences(type, forbiddenAssembly)}"),
             $"Web types other than Program must not depend on {forbiddenNamespace} (inject an Abstractions interface instead)");
     }
+
+    private static void AssertNoTypeInDependsOn(Assembly assembly, string forbiddenNamespace, string rule) =>
+        AssertNoViolations(DependentTypes(Types.InAssembly(assembly), forbiddenNamespace).Select(type => type.FullName), rule);
 
     private static void AssertNoViolations(IEnumerable<string?> violations, string rule)
     {
