@@ -134,6 +134,16 @@ public class AdminOrderDetailTests
     }
 
     [Fact]
+    public void EveryOrderResend_HasAMatchingPageHandler()
+    {
+        // _OrderStatus posts to ?handler={resend}, so each enum member must name an OnPost{Resend}Async handler.
+        foreach (var resend in Enum.GetValues<OrderResend>())
+        {
+            Assert.NotNull(typeof(DetailsModel).GetMethod($"OnPost{resend}Async"));
+        }
+    }
+
+    [Fact]
     public async Task MarkShipped_WithInvalidTrackingNumber_SavesNothing()
     {
         var service = new FakeAdminOrderService(Order()) { AfterUpdate = Order(status: OrderStatus.Shipped) };

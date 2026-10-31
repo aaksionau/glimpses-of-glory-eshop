@@ -1,5 +1,4 @@
 using GlimpsesOfGlory.Abstractions.Dtos;
-using GlimpsesOfGlory.Abstractions.Enums;
 
 namespace GlimpsesOfGlory.Web.Helpers;
 
@@ -53,4 +52,42 @@ public static class OrderActions
             yield return OrderAction.MarkPaid;
         }
     }
+}
+
+// The customer emails the admin order page can resend. Member names double as the DetailsModel
+// page handler names (OnPost{Resend}Async) - a unit test pins that.
+public enum OrderResend
+{
+    ResendConfirmation,
+    ResendShippedEmail,
+    ResendReadyForPickupEmail,
+}
+
+// Which of the resends an order allows (the CanResend* flags), in display order.
+public static class OrderResends
+{
+    public static IReadOnlyList<OrderResend> Available(AdminOrderDetail order)
+    {
+        var resends = new List<OrderResend>();
+        if (order.CanResendConfirmation)
+        {
+            resends.Add(OrderResend.ResendConfirmation);
+        }
+        if (order.CanResendShippedEmail)
+        {
+            resends.Add(OrderResend.ResendShippedEmail);
+        }
+        if (order.CanResendReadyForPickupEmail)
+        {
+            resends.Add(OrderResend.ResendReadyForPickupEmail);
+        }
+        return resends;
+    }
+
+    public static string Label(OrderResend resend) => resend switch
+    {
+        OrderResend.ResendConfirmation => "Resend confirmation",
+        OrderResend.ResendShippedEmail => "Resend shipping email",
+        _ => "Resend ready-for-pickup email",
+    };
 }

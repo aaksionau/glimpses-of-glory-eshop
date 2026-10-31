@@ -202,23 +202,11 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
             return result;
         }
 
-        // Loaded after the update, so the email shows exactly what was committed.
-        var order = await LoadWithLinesAsync(id, cancellationToken);
-        if (order is null)
-        {
-            return OrderUpdateResult.Updated;
-        }
-        try
-        {
-            await emailSender.SendShippedNotificationAsync(order.ToShippedView(), cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            // The status change is already committed - a failed notification email
-            // shouldn't undo it. Log for manual follow-up instead.
-            logger.LogError(ex, "Failed to send shipping-notification email for order {OrderId}", order.Id);
-        }
-
+        await NotifyAsync(
+            id,
+            order => emailSender.SendShippedNotificationAsync(order.ToShippedView(), cancellationToken),
+            "shipping-notification",
+            cancellationToken);
         return OrderUpdateResult.Updated;
     }
 
@@ -231,22 +219,32 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
             return result;
         }
 
+        await NotifyAsync(
+            id,
+            order => emailSender.SendReadyForPickupNotificationAsync(order.ToReadyForPickupView(), cancellationToken),
+            "ready-for-pickup",
+            cancellationToken);
+        return OrderUpdateResult.Updated;
+    }
+
+    // Emails the buyer after a committed transition. The order is loaded after the update, so the
+    // email shows exactly what was committed. A failed send shouldn't undo the status change, so
+    // it's logged for manual follow-up instead.
+    private async Task NotifyAsync(int id, Func<Order, Task> send, string emailKind, CancellationToken cancellationToken)
+    {
         var order = await LoadWithLinesAsync(id, cancellationToken);
         if (order is null)
         {
-            return OrderUpdateResult.Updated;
+            return;
         }
         try
         {
-            await emailSender.SendReadyForPickupNotificationAsync(order.ToReadyForPickupView(), cancellationToken);
+            await send(order);
         }
         catch (Exception ex)
         {
-            // As for shipping: the status change stays committed and the failure is logged.
-            logger.LogError(ex, "Failed to send ready-for-pickup email for order {OrderId}", order.Id);
+            logger.LogError(ex, "Failed to send {EmailKind} email for order {OrderId}", emailKind, order.Id);
         }
-
-        return OrderUpdateResult.Updated;
     }
 
     public Task<OrderUpdateResult> MarkPickedUpAsync(int id, CancellationToken cancellationToken) =>

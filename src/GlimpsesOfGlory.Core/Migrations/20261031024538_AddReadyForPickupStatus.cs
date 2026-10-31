@@ -22,7 +22,7 @@ namespace GlimpsesOfGlory.Core.Migrations
             // timestamp - including orders already picked up, so their timeline keeps that step.
             migrationBuilder.Sql("""
                 UPDATE "Orders" SET "ReadyForPickupAt" = "ShippedAt", "ShippedAt" = NULL
-                WHERE "FulfillmentMethod" = 1;
+                WHERE "FulfillmentMethod" = 1 AND "ShippedAt" IS NOT NULL;
                 UPDATE "Orders" SET "Status" = 4
                 WHERE "FulfillmentMethod" = 1 AND "Status" = 1;
                 """);
