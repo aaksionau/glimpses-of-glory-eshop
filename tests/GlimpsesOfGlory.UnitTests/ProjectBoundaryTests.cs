@@ -10,8 +10,10 @@ namespace GlimpsesOfGlory.UnitTests;
 /// <summary>
 /// Enforces the project boundary rules (see the project-structure skill and docs/adr/0001):
 /// <list type="bullet">
-/// <item>Web→Core and Web→Infrastructure: only <c>Program</c> (the top-level statements in Program.cs) may
-/// depend on the <c>GlimpsesOfGlory.Core</c> or <c>GlimpsesOfGlory.Infrastructure</c> namespaces. Every other
+/// <item>Web→Core and Web→Infrastructure: only <c>Program</c> — the composition root, i.e. the top-level
+/// statements in Program.cs plus the per-area DI registration files <c>Program.&lt;Area&gt;.cs</c>, which all
+/// declare <c>partial class Program</c> — may depend on the <c>GlimpsesOfGlory.Core</c> or
+/// <c>GlimpsesOfGlory.Infrastructure</c> namespaces. Every other
 /// Web type — PageModels, helpers, Razor-compiled pages/views — must go through the interfaces and DTOs in
 /// <c>GlimpsesOfGlory.Abstractions</c>.</item>
 /// <item>Core stays integration-free: it must not depend on Infrastructure, nor on an integration SDK
@@ -42,6 +44,17 @@ public class ProjectBoundaryTests
     [Fact]
     public void WebTypes_OtherThanProgram_DoNotDependOnInfrastructure() =>
         AssertNoWebTypeOtherThanProgramDependsOn(InfrastructureNamespace, InfrastructureAssembly);
+
+    [Theory]
+    [InlineData(CoreNamespace)]
+    [InlineData(InfrastructureNamespace)]
+    public void WebTypes_DependingOnCoreOrInfrastructure_AreExactlyTheProgramCompositionRoot(string projectNamespace)
+    {
+        // The only exemption is the Program type itself. Its per-area registration files are partial
+        // declarations of it, so they compile into this one type; a registration helper declared as any
+        // other type (e.g. a static ServiceCollectionExtensions class) would show up here and fail.
+        Assert.Equal([typeof(Program)], DependentTypes(Types.InAssembly(WebAssembly), projectNamespace));
+    }
 
     [Theory]
     [InlineData(InfrastructureNamespace)]

@@ -1,18 +1,8 @@
-using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Core;
-using GlimpsesOfGlory.Core.Services;
-using GlimpsesOfGlory.Infrastructure.Options;
-using GlimpsesOfGlory.Infrastructure.Services;
-using GlimpsesOfGlory.Web.Configuration;
-using GlimpsesOfGlory.Web.Email;
 using GlimpsesOfGlory.Web.Endpoints;
-using GlimpsesOfGlory.Web.Helpers;
 using GlimpsesOfGlory.Web.Security;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Options;
 using System.Globalization;
 
 if (args is ["hash-password", var passwordToHash])
@@ -34,74 +24,18 @@ var builder = WebApplication.CreateBuilder(args);
 // Options bind from the "Sentry" config section; with no Sentry__Dsn set the SDK stays disabled.
 builder.WebHost.UseSentry();
 
-// Add services to the container.
-builder.Services.AddRazorPages(options =>
-{
-    options.Conventions.AuthorizeFolder("/Admin");
-    options.Conventions.AllowAnonymousToPage("/Admin/Login");
-});
+// Add services to the container. Each area's registrations live together in its own
+// Program.<Area>.cs file (partial class Program), the only Web code allowed to touch Core
+// and Infrastructure types — see the project-structure skill.
+var productPhotosPath = ResolveProductPhotosPath(builder);
 
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        options.LoginPath = "/Admin/Login";
-        options.LogoutPath = "/Admin/Logout";
-        options.ExpireTimeSpan = TimeSpan.FromDays(7);
-        options.SlidingExpiration = true;
-    });
-builder.Services.AddAuthorization();
-builder.Services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
-
-var connectionString = builder.Configuration.GetConnectionString("Default")
-    ?? throw new InvalidOperationException("Connection string 'Default' is not configured. Set ConnectionStrings__Default.");
-builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
-
-builder.Services.AddScoped<IProductCatalogService, ProductCatalogService>();
-builder.Services.AddScoped<IAdminProductService, AdminProductService>();
-builder.Services.AddScoped<IProductPhotoStorage, ProductPhotoStorage>();
-
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddDistributedMemoryCache();
-builder.Services.AddSession(options =>
-{
-    options.IdleTimeout = TimeSpan.FromDays(7);
-    options.Cookie.IsEssential = true;
-});
-
-builder.Services.AddScoped<ICartStore, SessionCartStore>();
-builder.Services.AddScoped<ICartService, CartService>();
-builder.Services.AddScoped<ICartRestoreService, CartRestoreService>();
-builder.Services.AddScoped<CheckoutSessionStore>();
-
-builder.Services.AddScoped<IShippingSettingsService, ShippingSettingsService>();
-
-builder.Services.Configure<StripeOptions>(builder.Configuration.GetSection("Stripe"));
-builder.Services.AddScoped<IPaymentGateway>(sp =>
-{
-    var options = sp.GetRequiredService<IOptions<StripeOptions>>().Value;
-    return new StripePaymentGateway(options.SecretKey, options.WebhookSecret);
-});
-builder.Services.AddScoped<IInventoryStore, EfInventoryStore>();
-builder.Services.AddScoped<OrderLineInventory>();
-builder.Services.AddScoped<IOrderService, OrderService>();
-builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddScoped<IAdminOrderService, AdminOrderService>();
-builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
-builder.Services.AddScoped<IAbandonedCheckoutService, AbandonedCheckoutService>();
-
-builder.Services.Configure<ResendOptions>(builder.Configuration.GetSection("Resend"));
-builder.Services.AddScoped<RazorViewToStringRenderer>();
-builder.Services.AddHttpClient<IEmailSender, ResendEmailSender>(client =>
-    client.BaseAddress = new Uri("https://api.resend.com/"));
-
-// Local-disk product photo storage. In production this path should be a
-// Dokploy-mounted persistent volume (set via ProductPhotos__StoragePath),
-// separate from wwwroot so uploaded photos survive redeploys.
-var configuredPhotosPath = builder.Configuration["ProductPhotos:StoragePath"];
-var productPhotosPath = Path.GetFullPath(
-    string.IsNullOrEmpty(configuredPhotosPath) ? "App_Data/product-photos" : configuredPhotosPath,
-    builder.Environment.ContentRootPath);
-builder.Services.AddSingleton(new ProductPhotoStorageOptions { StoragePath = productPhotosPath });
+AddWebPlatform(builder);
+AddDatabase(builder);
+AddCatalog(builder, productPhotosPath);
+AddCart(builder);
+AddCheckout(builder);
+AddAdmin(builder);
+AddEmail(builder);
 
 var app = builder.Build();
 

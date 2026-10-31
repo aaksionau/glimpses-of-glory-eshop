@@ -16,6 +16,9 @@ public sealed class EshopWebApplicationFactory(TestDatabase database) : WebAppli
 
     internal RecordingEmailSender EmailSender { get; } = new();
 
+    // Program.cs's own registrations, captured before the fakes below replace any of them.
+    internal IReadOnlyList<ServiceDescriptor> AppRegistrations { get; private set; } = [];
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("ConnectionStrings:Default", database.ConnectionString);
@@ -25,6 +28,7 @@ public sealed class EshopWebApplicationFactory(TestDatabase database) : WebAppli
 
         builder.ConfigureServices(services =>
         {
+            AppRegistrations = [.. services];
             services.RemoveAll<IPaymentGateway>();
             services.AddSingleton<IPaymentGateway>(PaymentGateway);
             services.RemoveAll<IEmailSender>();
