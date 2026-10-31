@@ -224,7 +224,11 @@ public class AdminOrderDetailTests
         [
             new OrderConfirmationLine("Ceramic Mug", 12.50m, 2, false, null),
             new OrderConfirmationLine("Linen Apron", 30.00m, 1, true, new DateOnly(2026, 11, 15)),
-        ]) with { InternalNote = "Customer is a friend - add a freebie", TrackingNumber = "1Z999" };
+        ]) with
+        {
+            InternalNote = "Customer is a friend - add a freebie",
+            TrackingNumber = "1Z999",
+        };
 
         var html = await RenderSlipAsync(order);
 
