@@ -1,10 +1,11 @@
-using GlimpsesOfGlory.Core.Options;
+using GlimpsesOfGlory.Abstractions.Services;
+using GlimpsesOfGlory.Infrastructure.Options;
 
-namespace GlimpsesOfGlory.Core.Services;
+namespace GlimpsesOfGlory.Infrastructure.Services;
 
 // Writes admin-uploaded product photos to the same local-disk volume the
 // storefront serves from (see Program.cs's /product-photos static file mapping).
-public sealed class ProductPhotoStorage(ProductPhotoStorageOptions options)
+public sealed class ProductPhotoStorage(ProductPhotoStorageOptions options) : IProductPhotoStorage
 {
     public async Task<string> SaveAsync(Stream content, string originalFileName, CancellationToken cancellationToken)
     {

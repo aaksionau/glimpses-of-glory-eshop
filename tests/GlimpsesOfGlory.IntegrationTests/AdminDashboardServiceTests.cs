@@ -2,9 +2,10 @@ using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Core.Entities;
-using GlimpsesOfGlory.Core.Options;
 using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Core.ValueObjects;
+using GlimpsesOfGlory.Infrastructure.Options;
+using GlimpsesOfGlory.Infrastructure.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace GlimpsesOfGlory.IntegrationTests;

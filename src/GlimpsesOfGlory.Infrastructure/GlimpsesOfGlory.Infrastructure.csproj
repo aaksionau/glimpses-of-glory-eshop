@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Adapters to the outside world (payment provider, file storage, ...) behind Abstractions
+       interfaces. References Abstractions only - never Core - so domain code can't reach an
+       integration and an integration can't reach the domain (see docs/adr/0001). -->
+  <ItemGroup>
+    <ProjectReference Include="..\GlimpsesOfGlory.Abstractions\GlimpsesOfGlory.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Stripe.net" Version="52.2.0" />
+  </ItemGroup>
+
+</Project>

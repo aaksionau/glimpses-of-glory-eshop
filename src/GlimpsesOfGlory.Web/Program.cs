@@ -1,7 +1,8 @@
 using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Core;
-using GlimpsesOfGlory.Core.Options;
 using GlimpsesOfGlory.Core.Services;
+using GlimpsesOfGlory.Infrastructure.Options;
+using GlimpsesOfGlory.Infrastructure.Services;
 using GlimpsesOfGlory.Web.Configuration;
 using GlimpsesOfGlory.Web.Email;
 using GlimpsesOfGlory.Web.Endpoints;
@@ -57,7 +58,7 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connect
 
 builder.Services.AddScoped<IProductCatalogService, ProductCatalogService>();
 builder.Services.AddScoped<IAdminProductService, AdminProductService>();
-builder.Services.AddScoped<ProductPhotoStorage>();
+builder.Services.AddScoped<IProductPhotoStorage, ProductPhotoStorage>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDistributedMemoryCache();

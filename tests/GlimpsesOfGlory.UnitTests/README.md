@@ -2,8 +2,8 @@
 
 Fast tests that need **no database and no Docker**: pure logic (`ShippingCalculator`,
 `OrderLifecycle` rules in memory, CSV export), PageModels driven with stubbed services,
-Razor email/view rendering, the Stripe and Resend adapters, and the Web→Core boundary rule
-(`WebCoreBoundaryTests`).
+Razor email/view rendering, the Stripe and Resend adapters, and the project boundary rules — Web→Core,
+Web→Infrastructure, Core↛Infrastructure, Infrastructure↛Core (`ProjectBoundaryTests`).
 
 ## Here or in the integration tests?
 

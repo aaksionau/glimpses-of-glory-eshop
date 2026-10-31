@@ -1,4 +1,4 @@
-namespace GlimpsesOfGlory.Core.Options;
+namespace GlimpsesOfGlory.Infrastructure.Options;
 
 public sealed class ProductPhotoStorageOptions
 {

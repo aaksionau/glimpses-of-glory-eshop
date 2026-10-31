@@ -12,6 +12,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 WORKDIR /src
 COPY src/GlimpsesOfGlory.Abstractions/GlimpsesOfGlory.Abstractions.csproj src/GlimpsesOfGlory.Abstractions/
 COPY src/GlimpsesOfGlory.Core/GlimpsesOfGlory.Core.csproj src/GlimpsesOfGlory.Core/
+COPY src/GlimpsesOfGlory.Infrastructure/GlimpsesOfGlory.Infrastructure.csproj src/GlimpsesOfGlory.Infrastructure/
 COPY src/GlimpsesOfGlory.Web/GlimpsesOfGlory.Web.csproj src/GlimpsesOfGlory.Web/
 RUN dotnet restore src/GlimpsesOfGlory.Web/GlimpsesOfGlory.Web.csproj
 

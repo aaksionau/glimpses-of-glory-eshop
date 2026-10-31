@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GlimpsesOfGlory.Core.Services;
 
-public sealed class AdminProductService(AppDbContext db, ProductPhotoStorage photoStorage) : IAdminProductService
+public sealed class AdminProductService(AppDbContext db, IProductPhotoStorage photoStorage) : IAdminProductService
 {
     public async Task<IReadOnlyList<AdminProductSummary>> GetProductsAsync(bool lowStockOnly, CancellationToken cancellationToken)
     {

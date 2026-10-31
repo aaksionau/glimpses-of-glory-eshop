@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\GlimpsesOfGlory.Core\GlimpsesOfGlory.Core.csproj" />
+    <ProjectReference Include="..\GlimpsesOfGlory.Infrastructure\GlimpsesOfGlory.Infrastructure.csproj" />
     <ProjectReference Include="..\GlimpsesOfGlory.Abstractions\GlimpsesOfGlory.Abstractions.csproj" />
   </ItemGroup>
 

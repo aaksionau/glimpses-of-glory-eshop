@@ -4,7 +4,7 @@ using GlimpsesOfGlory.Abstractions.Exceptions;
 using GlimpsesOfGlory.Abstractions.Services;
 using Stripe;
 
-namespace GlimpsesOfGlory.Core.Services;
+namespace GlimpsesOfGlory.Infrastructure.Services;
 
 public sealed class StripePaymentGateway : IPaymentGateway
 {

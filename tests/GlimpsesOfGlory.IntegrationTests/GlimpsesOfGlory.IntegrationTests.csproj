@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\GlimpsesOfGlory.Core\GlimpsesOfGlory.Core.csproj" />
+    <ProjectReference Include="..\..\src\GlimpsesOfGlory.Infrastructure\GlimpsesOfGlory.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\GlimpsesOfGlory.Web\GlimpsesOfGlory.Web.csproj" />
   </ItemGroup>
 
