@@ -46,3 +46,7 @@ Test doubles shared with the unit tests live in `tests/TestSupport/` (namespace
 test's database, with `IPaymentGateway` and `IEmailSender` replaced by in-memory fakes
 (`FakePaymentGateway`, `RecordingEmailSender`). Use it for tests that need routing, middleware
 or auth conventions, such as `EndpointTests`.
+
+`ServiceRegistrationTests` uses the factory's `AppRegistrations` (Program's own registrations,
+captured before the fakes replace any) to pin every app-owned service's lifetime and to check
+the composed container resolves each one. Adding or changing a registration means updating it.
