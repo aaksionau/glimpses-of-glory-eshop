@@ -98,10 +98,8 @@ public sealed class OrderService(
         {
             await transaction.RollbackAsync(cancellationToken);
             // Payment succeeded but stock ran out before confirmation - only possible if stock
-            // changed between PaymentIntent creation and webhook delivery. No order is created and
-            // the PendingCheckout stays put so the details remain recoverable; the error log is what
-            // tells someone to follow up (refund). Returning normally keeps the webhook at 200 so
-            // Stripe doesn't retry into the same shortage.
+            // changed between PaymentIntent creation and webhook delivery. The PendingCheckout is kept
+            // for the refund, and returning normally keeps the webhook at 200 so Stripe doesn't retry.
             var shortLines = await DescribeShortLinesAsync(pendingCheckout.Lines, cancellationToken);
             logger.LogError(
                 "Payment {PaymentIntentId} from {Email} succeeded but no order was created because stock ran out: {ShortLines}. Manual follow-up (refund) needed",
@@ -282,8 +280,9 @@ public sealed class OrderService(
             .ToDictionaryAsync(p => p.Id, p => p.StockQuantity, cancellationToken);
 
         var shortLines = stockLines
-            .Where(l => stock.GetValueOrDefault(l.ProductId) < l.Quantity)
-            .Select(l => $"{l.ProductName} (product {l.ProductId}): wanted {l.Quantity}, {Math.Max(0, stock.GetValueOrDefault(l.ProductId))} left")
+            .Select(l => (line: l, left: Math.Max(0, stock.GetValueOrDefault(l.ProductId))))
+            .Where(x => x.left < x.line.Quantity)
+            .Select(x => $"{x.line.ProductName} (product {x.line.ProductId}): wanted {x.line.Quantity}, {x.left} left")
             .ToList();
 
         // Empty if stock came back between the failed reservation and this re-read.
