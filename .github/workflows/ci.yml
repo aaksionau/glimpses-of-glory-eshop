@@ -36,21 +36,18 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.NUGET_PACKAGES }}
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.*.props', 'dotnet-tools.json') }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.*.props') }}
           restore-keys: |
             nuget-${{ runner.os }}-
 
-      - name: Restore local tools
-        run: dotnet tool restore
-
       - name: Restore
         run: dotnet restore ${{ env.SOLUTION }}
+
+      - name: Check formatting
+        run: dotnet format ${{ env.SOLUTION }} --verify-no-changes --no-restore --verbosity normal
 
       - name: Build
         run: dotnet build ${{ env.SOLUTION }} --no-restore --configuration Release
 
       - name: Test
         run: dotnet test ${{ env.SOLUTION }} --no-build --configuration Release --verbosity normal
-
-      - name: Check formatting
-        run: dotnet format ${{ env.SOLUTION }} --verify-no-changes --no-restore --verbosity normal
