@@ -194,15 +194,6 @@ public sealed class CheckoutUnavailableItemsTests(PostgresFixture postgres) : IA
 
     private static TempDataDictionary TempData(HttpContext httpContext) => new(httpContext, new NullTempDataProvider());
 
-    private sealed class NullTempDataProvider : ITempDataProvider
-    {
-        public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
-
-        public void SaveTempData(HttpContext context, IDictionary<string, object> values)
-        {
-        }
-    }
-
     private sealed class StubOrderService(CheckoutPaymentResult payment) : IOrderService
     {
         public Task<CheckoutPaymentResult> CreatePaymentIntentAsync(FulfillmentMethod fulfillmentMethod, ShippingAddressInfo address, string? existingPaymentIntentId, CancellationToken cancellationToken) =>

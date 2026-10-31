@@ -37,8 +37,8 @@ public async Task DisposeAsync() => await database.DisposeAsync();
 Postgres' quoted identifiers (`UPDATE "Products" SET "StockQuantity" = ...`).
 
 Test doubles shared with the unit tests live in `tests/TestSupport/` (namespace
-`GlimpsesOfGlory.TestSupport`); doubles only this project uses (`FirstQueryRendezvous`,
-`FailingRestockInventoryStore`) live here.
+`GlimpsesOfGlory.TestSupport`); doubles only this project uses (`FakePaymentGateway`,
+`FixedTimeProvider`, `NullEmailSender`, `RecordingEmailSender`, `RecordingLogger`, ...) live here.
 
 ## HTTP tests through the real pipeline
 

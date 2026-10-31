@@ -185,13 +185,13 @@ public sealed class OrderLifecycleTests
     {
         var flags = typeof(AdminOrderActions).GetProperties();
         Assert.NotEmpty(flags);
+        var rules = OrderLifecycleRules.ByName;
 
         foreach (var facts in OrderLifecycleRules.AllFacts())
         {
             var actions = OrderLifecycle.Actions(facts);
             foreach (var flag in flags)
             {
-                var rules = OrderLifecycleRules.ByName;
                 var rule = rules.TryGetValue(flag.Name, out var named) ? named : rules[flag.Name["Can".Length..]];
                 Assert.True(rule.IsSatisfiedBy(facts) == (bool)flag.GetValue(actions)!, $"{flag.Name} disagrees with its rule for {facts}");
             }

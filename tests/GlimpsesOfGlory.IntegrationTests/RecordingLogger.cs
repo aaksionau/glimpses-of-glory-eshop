@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace GlimpsesOfGlory.TestSupport;
+namespace GlimpsesOfGlory.IntegrationTests;
 
 // Records each log entry so a test can assert on what was logged and at what level.
 public sealed class RecordingLogger<T> : ILogger<T>

@@ -18,8 +18,7 @@
   </ItemGroup>
 
   <!-- Test doubles shared with GlimpsesOfGlory.UnitTests live once, in tests/TestSupport, and are compiled
-       into both projects. Each test builds its own instances, so mutable ones
-       (FakePaymentGateway.NextWebhookResult) are never shared between tests. -->
+       into both projects. Doubles only this project uses live in it. -->
   <ItemGroup>
     <Compile Include="../TestSupport/*.cs" Link="TestSupport/%(Filename)%(Extension)" />
     <Using Include="GlimpsesOfGlory.TestSupport" />

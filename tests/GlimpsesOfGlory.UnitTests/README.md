@@ -15,7 +15,7 @@ query test always means it passes on the provider production uses.
 ## Shared test doubles
 
 Fakes and helpers used by both test projects (`FakeCartStore`, `FakeInventoryStore`,
-`FakePaymentGateway`, `FixedTimeProvider`, `TestRazorRenderer`, …) live once in
+`InMemorySession`, `NullTempDataProvider`, `TestRazorRenderer`, …) live once in
 `tests/TestSupport/` and are compiled into both projects (see the `.csproj`), under the
-`GlimpsesOfGlory.TestSupport` namespace. Add new shared doubles there; keep doubles only one
-test class needs as private nested classes in that test.
+`GlimpsesOfGlory.TestSupport` namespace. Move a double there once both projects need it, rather
+than copying it; keep doubles only one test class needs as private nested classes in that test.
