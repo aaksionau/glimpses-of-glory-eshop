@@ -56,7 +56,7 @@ public sealed class PostgresFixture : IAsyncLifetime
 
 // Every test class joins this collection, so they share the one container (and run one at a time).
 [CollectionDefinition(Name)]
-public sealed class PostgresCollection : ICollectionFixture<PostgresFixture>
+public sealed class PostgresCollectionDefinition : ICollectionFixture<PostgresFixture>
 {
     public const string Name = "Postgres";
 }

@@ -8,4 +8,7 @@ public sealed record ProductDetail(
     int StockQuantity,
     bool IsPreorder,
     DateOnly? ExpectedAvailabilityDate,
-    IReadOnlyList<string> PhotoFileNames);
+    IReadOnlyList<string> PhotoFileNames)
+{
+    public string? FirstPhotoFileName => PhotoFileNames is [var first, ..] ? first : null;
+}
