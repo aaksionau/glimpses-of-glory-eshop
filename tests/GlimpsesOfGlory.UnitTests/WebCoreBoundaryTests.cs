@@ -38,7 +38,7 @@ public class WebCoreBoundaryTests
         // Guards against the boundary test passing vacuously because it saw no (or the wrong) types.
         var webTypes = Types.InAssembly(WebAssembly).GetTypes().ToList();
 
-        Assert.Contains(webTypes, type => type == typeof(PrivacyModel));
+        Assert.Contains(typeof(PrivacyModel), webTypes);
         Assert.Contains(webTypes, type => type.IsSubclassOf(typeof(Page)));
     }
 
