@@ -1,0 +1,53 @@
+@page "/admin/abandoned-checkouts"
+@model GlimpsesOfGlory.Web.Pages.Admin.AbandonedCheckouts.IndexModel
+@using GlimpsesOfGlory.Abstractions.Enums
+@using GlimpsesOfGlory.Web.Helpers
+@{
+    ViewData["Title"] = "Abandoned checkouts";
+}
+
+<p class="mb-4 text-sm text-gray-600">
+    Shoppers who reached card payment more than an hour ago, within the last 30 days, and haven't placed an order since.
+</p>
+
+<div class="overflow-x-auto">
+    @if (Model.Checkouts.Count == 0)
+    {
+        <p>No abandoned checkouts right now.</p>
+    }
+    else
+    {
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="border-b border-black/20 text-sm text-gray-500">
+                    <th scope="col" class="py-2 pl-3 pr-2">Email</th>
+                    <th scope="col" class="py-2 pr-2">Items</th>
+                    <th scope="col" class="py-2 pr-4 text-right">Total</th>
+                    <th scope="col" class="py-2 pr-2">Fulfillment</th>
+                    <th scope="col" class="py-2 pr-2">Abandoned</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var checkout in Model.Checkouts)
+                {
+                    <tr class="border-b border-black/10 align-top">
+                        <td class="py-2 pl-3 pr-2">@checkout.Email</td>
+                        <td class="py-2 pr-2">
+                            <ul class="text-sm">
+                                @foreach (var line in checkout.Lines)
+                                {
+                                    <li>@line.ProductName &times; @line.Quantity</li>
+                                }
+                            </ul>
+                        </td>
+                        <td class="py-2 pr-4 text-right tabular-nums">@checkout.Total.ToString("C")</td>
+                        <td class="py-2 pr-2 text-sm">@(checkout.FulfillmentMethod == FulfillmentMethod.Pickup ? "Pickup" : "Shipping")</td>
+                        <td class="py-2 pr-2 whitespace-nowrap text-sm">
+                            <time datetime="@checkout.CreatedAt.ToString("o")" title="@RelativeTime.FullTimestamp(checkout.CreatedAt)">@RelativeTime.Format(checkout.CreatedAt, Model.Now)</time>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
