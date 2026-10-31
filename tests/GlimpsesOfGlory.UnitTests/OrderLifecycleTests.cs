@@ -187,21 +187,15 @@ public sealed class OrderLifecycleTests : IDisposable
         Assert.Equal(inMemory, inSql);
     }
 
-    private static readonly Dictionary<string, OrderRule> RulesByName = new()
-    {
-        [nameof(OrderLifecycle.MarkShipped)] = OrderLifecycle.MarkShipped.Guard,
-        [nameof(OrderLifecycle.MarkPickedUp)] = OrderLifecycle.MarkPickedUp.Guard,
-        [nameof(OrderLifecycle.MarkCancelled)] = OrderLifecycle.MarkCancelled.Guard,
-        [nameof(OrderLifecycle.MarkPaid)] = OrderLifecycle.MarkPaid.Guard,
-        [nameof(OrderLifecycle.CanResendConfirmation)] = OrderLifecycle.CanResendConfirmation,
-        [nameof(OrderLifecycle.CanResendShippedEmail)] = OrderLifecycle.CanResendShippedEmail,
-        [nameof(OrderLifecycle.NeedsRefund)] = OrderLifecycle.NeedsRefund,
-        [nameof(OrderLifecycle.ToFulfill)] = OrderLifecycle.ToFulfill,
-        [nameof(OrderLifecycle.UnpaidCash)] = OrderLifecycle.UnpaidCash,
-        [nameof(OrderLifecycle.NeedsAction)] = OrderLifecycle.NeedsAction,
-        [nameof(OrderLifecycle.ShippedOrCollected)] = OrderLifecycle.ShippedOrCollected,
-        [nameof(OrderLifecycle.Cancelled)] = OrderLifecycle.Cancelled,
-    };
+    // Read off OrderLifecycle itself, so a newly declared rule or transition can't skip the check above.
+    private static readonly Dictionary<string, OrderRule> RulesByName = typeof(OrderLifecycle)
+        .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+        .ToDictionary(f => f.Name, f => f.GetValue(null) switch
+        {
+            OrderRule rule => rule,
+            OrderTransition transition => transition.Guard,
+            var other => throw new InvalidOperationException($"Unexpected OrderLifecycle member {f.Name}: {other}"),
+        });
 
     private static OrderFacts Facts(
         OrderStatus status,

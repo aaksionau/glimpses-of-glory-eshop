@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using GlimpsesOfGlory.Core.Entities;
+using Microsoft.EntityFrameworkCore.Query;
 
 namespace GlimpsesOfGlory.Core.Services;
 
@@ -30,12 +31,7 @@ public sealed class OrderRule
     private OrderRule Combine(OrderRule other, Func<Expression, Expression, BinaryExpression> combine)
     {
         var facts = Predicate.Parameters[0];
-        var otherBody = new ParameterSwap(other.Predicate.Parameters[0], facts).Visit(other.Predicate.Body);
+        var otherBody = ReplacingExpressionVisitor.Replace(other.Predicate.Parameters[0], facts, other.Predicate.Body);
         return new(Expression.Lambda<Func<OrderFacts, bool>>(combine(Predicate.Body, otherBody), facts));
-    }
-
-    private sealed class ParameterSwap(ParameterExpression from, ParameterExpression to) : ExpressionVisitor
-    {
-        protected override Expression VisitParameter(ParameterExpression node) => node == from ? to : node;
     }
 }

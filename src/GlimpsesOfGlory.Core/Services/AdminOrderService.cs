@@ -24,29 +24,52 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
         page = Math.Clamp(page, 1, lastPage);
 
         // Id breaks CreatedAt ties so an order can't appear on two pages, or on none.
-        var items = await orders
+        var rows = await orders
             .OrderByDescending(o => o.CreatedAt)
             .ThenByDescending(o => o.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(OrderFacts.Project((o, facts) => new AdminOrderSummary(
-                o.Id,
-                o.ShippingAddress.FullName,
-                o.Email,
-                o.Lines.Sum(l => l.Quantity),
-                o.Total,
-                o.Status,
-                o.FulfillmentMethod,
-                o.PaidAt != null,
-                o.Lines.Any(l => l.IsPreorder),
-                o.Lines.Where(l => l.IsPreorder).Min(l => l.ExpectedAvailabilityDate),
-                OrderLifecycle.NeedsRefund.IsSatisfiedBy(facts),
-                OrderLifecycle.NeedsAction.IsSatisfiedBy(facts),
-                o.InternalNote != null,
-                o.CreatedAt)))
+            .Select(o => new
+            {
+                Summary = new AdminOrderSummary(
+                    o.Id,
+                    o.ShippingAddress.FullName,
+                    o.Email,
+                    o.Lines.Sum(l => l.Quantity),
+                    o.Total,
+                    o.Status,
+                    o.FulfillmentMethod,
+                    o.PaidAt != null,
+                    o.Lines.Any(l => l.IsPreorder),
+                    o.Lines.Where(l => l.IsPreorder).Min(l => l.ExpectedAvailabilityDate),
+                    false,
+                    false,
+                    o.InternalNote != null,
+                    o.CreatedAt),
+                o.PaymentMethod,
+            })
             .ToListAsync(cancellationToken);
 
+        // The lifecycle flags are filled in from the page's rows, so the rules run in memory only.
+        var items = rows.Select(r => WithLifecycleFlags(r.Summary, r.PaymentMethod)).ToList();
+
         return new AdminOrderPage(items, page, pageSize, totalCount);
+    }
+
+    private static AdminOrderSummary WithLifecycleFlags(AdminOrderSummary summary, PaymentMethod paymentMethod)
+    {
+        var facts = new OrderFacts
+        {
+            Status = summary.Status,
+            FulfillmentMethod = summary.FulfillmentMethod,
+            PaymentMethod = paymentMethod,
+            IsPaid = summary.IsPaid,
+        };
+        return summary with
+        {
+            NeedsRefund = OrderLifecycle.NeedsRefund.IsSatisfiedBy(facts),
+            NeedsAction = OrderLifecycle.NeedsAction.IsSatisfiedBy(facts),
+        };
     }
 
     // One COUNT query per tab; the DbContext can't run them concurrently.
@@ -166,29 +189,25 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
             throw new ArgumentOutOfRangeException(nameof(carrier), carrier, null);
         }
 
-        // Loaded up front because the shipping email needs the full order and its lines.
-        var order = await LoadWithLinesAsync(id, cancellationToken);
-        if (order is null)
-        {
-            return OrderUpdateResult.NotFound;
-        }
-
         // Guarded on the status the transition is checked against, so a double-click (or two
         // admins at once) only ships - and emails the buyer - once.
         var tracking = string.IsNullOrWhiteSpace(trackingNumber) ? null : trackingNumber.Trim();
         // A carrier without a tracking number has nothing to link to, so it isn't recorded.
         ShippingCarrier? shippedWith = tracking is null ? null : carrier;
-        var result = await TransitionAsync(id, OrderFacts.Of(order), OrderLifecycle.MarkShipped, setters => setters
+        var result = await TransitionAsync(id, OrderLifecycle.MarkShipped, cancellationToken, setters => setters
             .SetProperty(o => o.TrackingNumber, tracking)
-            .SetProperty(o => o.Carrier, shippedWith), cancellationToken);
+            .SetProperty(o => o.Carrier, shippedWith));
         if (result != OrderUpdateResult.Updated)
         {
             return result;
         }
 
-        order.Status = OrderStatus.Shipped;
-        order.TrackingNumber = tracking;
-        order.Carrier = shippedWith;
+        // Loaded after the update, so the email shows exactly what was committed.
+        var order = await LoadWithLinesAsync(id, cancellationToken);
+        if (order is null)
+        {
+            return OrderUpdateResult.Updated;
+        }
         try
         {
             await emailSender.SendShippedNotificationAsync(order.ToShippedView(), cancellationToken);
@@ -299,23 +318,19 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
             .Include(o => o.Lines)
             .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
 
-    private async Task<OrderUpdateResult> TransitionAsync(int id, OrderTransition transition, CancellationToken cancellationToken)
+    // Checks the transition against the order's current facts, then applies it only if the order
+    // is still in that status, so a concurrent change (another tab, another admin) can't be
+    // overridden. alsoSet adds the action's own columns to the same guarded update.
+    private async Task<OrderUpdateResult> TransitionAsync(int id, OrderTransition transition, CancellationToken cancellationToken, Action<UpdateSettersBuilder<Order>>? alsoSet = null)
     {
         var facts = await db.Orders
             .Where(o => o.Id == id)
             .Select(OrderFacts.FromOrder)
             .FirstOrDefaultAsync(cancellationToken);
-
-        return facts is null
-            ? OrderUpdateResult.NotFound
-            : await TransitionAsync(id, facts, transition, alsoSet: null, cancellationToken);
-    }
-
-    // Checks the transition against the facts the caller loaded, then applies it only if the order
-    // is still in that status, so a concurrent change (another tab, another admin) can't be
-    // overridden. alsoSet adds the action's own columns to the same guarded update.
-    private async Task<OrderUpdateResult> TransitionAsync(int id, OrderFacts facts, OrderTransition transition, Action<UpdateSettersBuilder<Order>>? alsoSet, CancellationToken cancellationToken)
-    {
+        if (facts is null)
+        {
+            return OrderUpdateResult.NotFound;
+        }
         if (!transition.IsAllowed(facts))
         {
             return OrderUpdateResult.InvalidTransition;
