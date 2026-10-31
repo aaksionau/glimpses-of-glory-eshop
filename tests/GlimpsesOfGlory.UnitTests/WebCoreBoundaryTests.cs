@@ -56,7 +56,7 @@ public class WebCoreBoundaryTests
         // and can't be referenced from Web, so they're skipped.
         var outsiders = typeof(AppDbContext).Assembly.GetTypes()
             .Where(type => type.Namespace is not null && !OutermostType(type).Name.StartsWith('<'))
-            .Where(type => type.Namespace != CoreNamespace && !type.Namespace.StartsWith(CoreNamespace + "."))
+            .Where(type => type.Namespace != CoreNamespace && !type.Namespace!.StartsWith(CoreNamespace + ".", StringComparison.Ordinal))
             .Select(type => type.FullName)
             .ToList();
 

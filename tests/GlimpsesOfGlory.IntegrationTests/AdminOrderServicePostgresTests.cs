@@ -13,7 +13,7 @@ namespace GlimpsesOfGlory.IntegrationTests;
 
 // AdminOrderService against real Postgres: the paths whose correctness depends on how Postgres
 // locks rows, runs transactions, translates string functions and stores timestamptz.
-[Collection(PostgresCollection.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class AdminOrderServicePostgresTests(PostgresFixture postgres) : IAsyncLifetime
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 31, 12, 0, 0, TimeSpan.Zero);
@@ -162,7 +162,7 @@ public sealed class AdminOrderServicePostgresTests(PostgresFixture postgres) : I
         Assert.Equal([first, lastMoment], rows.Select(r => r.Id));
     }
 
-    private AdminOrderService Service(AppDbContext db, IEmailSender? emailSender = null, IInventoryStore? inventoryStore = null) =>
+    private static AdminOrderService Service(AppDbContext db, IEmailSender? emailSender = null, IInventoryStore? inventoryStore = null) =>
         new(db, new OrderLineInventory(inventoryStore ?? new EfInventoryStore(db)), new FakePaymentGateway(), emailSender ?? new NullEmailSender(), new FixedTimeProvider(Now), NullLogger<AdminOrderService>.Instance);
 
     private async Task<List<int>> SearchAsync(string search)

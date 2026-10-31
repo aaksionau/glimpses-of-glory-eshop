@@ -1,0 +1,6 @@
+root = true
+
+# EF Core scaffolds the migrations (`dotnet ef migrations add`); treat them as generated so
+# analyzers don't ask for hand edits to code that is regenerated, never maintained by hand.
+[src/GlimpsesOfGlory.Core/Migrations/*.cs]
+generated_code = true

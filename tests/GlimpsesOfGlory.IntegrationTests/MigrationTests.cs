@@ -4,7 +4,7 @@ namespace GlimpsesOfGlory.IntegrationTests;
 
 // The fixture builds the schema with MigrateAsync, so a migration that fails on Postgres already
 // fails the whole suite; this pins down that every migration really was applied.
-[Collection(PostgresCollection.Name)]
+[Collection(PostgresCollectionDefinition.Name)]
 public sealed class MigrationTests(PostgresFixture postgres)
 {
     [Fact]

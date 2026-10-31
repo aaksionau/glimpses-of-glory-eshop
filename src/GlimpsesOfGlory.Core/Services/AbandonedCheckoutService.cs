@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace GlimpsesOfGlory.Core.Services;
 
-public sealed class AbandonedCheckoutService(AppDbContext db, IEmailSender emailSender, TimeProvider timeProvider, ILogger<AbandonedCheckoutService> logger) : IAbandonedCheckoutService
+public sealed partial class AbandonedCheckoutService(AppDbContext db, IEmailSender emailSender, TimeProvider timeProvider, ILogger<AbandonedCheckoutService> logger) : IAbandonedCheckoutService
 {
     private const int RestoreTokenBytes = 32;
 
@@ -57,7 +57,7 @@ public sealed class AbandonedCheckoutService(AppDbContext db, IEmailSender email
 
         var sent = await BestEffortEmail.TrySendAsync(
             () => emailSender.SendAbandonedCheckoutReminderAsync(reminder, cancellationToken),
-            ex => logger.LogError(ex, "Failed to send abandoned-checkout reminder for pending checkout {PendingCheckoutId}", id),
+            ex => LogReminderEmailFailed(logger, ex, id),
             cancellationToken);
         if (!sent)
         {
@@ -72,4 +72,7 @@ public sealed class AbandonedCheckoutService(AppDbContext db, IEmailSender email
                 .SetProperty(p => p.RestoreToken, token), cancellationToken);
         return ReminderSendResult.Sent;
     }
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to send abandoned-checkout reminder for pending checkout {PendingCheckoutId}")]
+    private static partial void LogReminderEmailFailed(ILogger logger, Exception exception, int pendingCheckoutId);
 }

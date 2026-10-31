@@ -193,7 +193,7 @@ public sealed class OrderLifecycleTests : IDisposable
             from status in Enum.GetValues<OrderStatus>()
             from fulfillmentMethod in Enum.GetValues<FulfillmentMethod>()
             from paymentMethod in Enum.GetValues<PaymentMethod>()
-            from isPaid in new[] { false, true }
+            from isPaid in BothPaidStates
             select Facts(status, fulfillmentMethod, paymentMethod, isPaid))
         {
             var actions = OrderLifecycle.Actions(facts);
@@ -220,7 +220,7 @@ public sealed class OrderLifecycleTests : IDisposable
                 from status in Enum.GetValues<OrderStatus>()
                 from fulfillmentMethod in Enum.GetValues<FulfillmentMethod>()
                 from paymentMethod in Enum.GetValues<PaymentMethod>()
-                from isPaid in new[] { false, true }
+                from isPaid in BothPaidStates
                 select NewOrder(status, fulfillmentMethod, paymentMethod, isPaid));
             await seed.SaveChangesAsync();
         }
@@ -234,6 +234,8 @@ public sealed class OrderLifecycleTests : IDisposable
     }
 
     // Read off OrderLifecycle itself, so a newly declared rule or transition can't skip the check above.
+    private static readonly bool[] BothPaidStates = [false, true];
+
     private static readonly Dictionary<string, OrderRule> RulesByName = typeof(OrderLifecycle)
         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
         .ToDictionary(f => f.Name, f => f.GetValue(null) switch

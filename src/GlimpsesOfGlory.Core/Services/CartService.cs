@@ -59,7 +59,7 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
             return stockError;
         }
 
-        cart.SetLineQuantity(slug, product.Name, product.Price, product.PhotoFileNames.FirstOrDefault(), newQuantity, product.IsPreorder, product.ExpectedAvailabilityDate);
+        cart.SetLineQuantity(slug, product.Name, product.Price, product.PhotoFileNames is [var photo, ..] ? photo : null, newQuantity, product.IsPreorder, product.ExpectedAvailabilityDate);
         await cartStore.SaveCartAsync(cart, cancellationToken);
         return CartOperationResult.Ok();
     }
@@ -89,7 +89,7 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
             return stockError;
         }
 
-        cart.SetLineQuantity(slug, product.Name, product.Price, product.PhotoFileNames.FirstOrDefault(), quantity, product.IsPreorder, product.ExpectedAvailabilityDate);
+        cart.SetLineQuantity(slug, product.Name, product.Price, product.PhotoFileNames is [var photo, ..] ? photo : null, quantity, product.IsPreorder, product.ExpectedAvailabilityDate);
         await cartStore.SaveCartAsync(cart, cancellationToken);
         return CartOperationResult.Ok();
     }

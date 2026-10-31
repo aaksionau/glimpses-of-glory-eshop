@@ -16,9 +16,6 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
     <!-- Compressed static-asset variants serve empty bodies under `dotnet run` on
          the current SDK (net10.0 preview). Disabling avoids that until it's fixed
          upstream; a reverse proxy in front of Dokploy can still gzip responses. -->

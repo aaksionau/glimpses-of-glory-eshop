@@ -11,7 +11,7 @@ using System.Linq.Expressions;
 
 namespace GlimpsesOfGlory.Core.Services;
 
-public sealed class OrderService(
+public sealed partial class OrderService(
     AppDbContext dbContext,
     ICartService cartService,
     IPaymentGateway paymentGateway,
@@ -101,12 +101,7 @@ public sealed class OrderService(
             // changed between PaymentIntent creation and webhook delivery. The PendingCheckout is kept
             // for the refund, and returning normally keeps the webhook at 200 so Stripe doesn't retry.
             var (shortLines, rereadFailure) = await DescribeShortLinesAsync(pendingCheckout.Lines, cancellationToken);
-            logger.LogError(
-                rereadFailure,
-                "Payment {PaymentIntentId} from {Email} succeeded but no order was created because stock ran out: {ShortLines}. Manual follow-up (refund) needed",
-                paymentIntentId,
-                pendingCheckout.Email,
-                shortLines);
+            LogStockRanOutAfterPayment(logger, rereadFailure, paymentIntentId, pendingCheckout.Email, shortLines);
             return;
         }
 
@@ -314,11 +309,17 @@ public sealed class OrderService(
     }
 
     // Sent after the order and stock decrement are committed.
-    private Task SendConfirmationEmailAsync(Order order, CancellationToken cancellationToken) =>
-        BestEffortEmail.TrySendAsync(
+    private async Task SendConfirmationEmailAsync(Order order, CancellationToken cancellationToken) =>
+        await BestEffortEmail.TrySendAsync(
             () => emailSender.SendOrderConfirmationAsync(order.ToConfirmationView(), cancellationToken),
-            ex => logger.LogError(ex, "Failed to send order confirmation email for order {OrderId}", order.Id),
+            ex => LogConfirmationEmailFailed(logger, ex, order.Id),
             cancellationToken);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Payment {PaymentIntentId} from {Email} succeeded but no order was created because stock ran out: {ShortLines}. Manual follow-up (refund) needed")]
+    private static partial void LogStockRanOutAfterPayment(ILogger logger, Exception? exception, string paymentIntentId, string email, string shortLines);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to send order confirmation email for order {OrderId}")]
+    private static partial void LogConfirmationEmailFailed(ILogger logger, Exception exception, int orderId);
 
     private static OrderLine ToOrderLine(ICheckoutLine line) => new()
     {

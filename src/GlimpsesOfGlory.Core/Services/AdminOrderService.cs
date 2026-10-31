@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace GlimpsesOfGlory.Core.Services;
 
-public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderLineInventory, IPaymentGateway paymentGateway, IEmailSender emailSender, TimeProvider timeProvider, ILogger<AdminOrderService> logger) : IAdminOrderService
+public sealed partial class AdminOrderService(AppDbContext db, OrderLineInventory orderLineInventory, IPaymentGateway paymentGateway, IEmailSender emailSender, TimeProvider timeProvider, ILogger<AdminOrderService> logger) : IAdminOrderService
 {
     public async Task<AdminOrderPage> GetOrdersAsync(AdminOrderTab tab, AdminOrderFilter filter, int page, int pageSize, CancellationToken cancellationToken)
     {
@@ -115,10 +115,13 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
 
         // Lower-cased on both sides so the match is case-insensitive on Postgres too.
         var lowered = term.ToLowerInvariant();
+        // EF translates ToLower()/Contains(string) to SQL; the culture/StringComparison overloads the analyzers want aren't translatable.
+#pragma warning disable CA1304, CA1311, CA1862
         return orders.Where(o =>
             o.Id == orderId
             || o.Email.ToLower().Contains(lowered)
             || o.ShippingAddress.FullName.ToLower().Contains(lowered));
+#pragma warning restore CA1304, CA1311, CA1862
     }
 
     private static IQueryable<Order> InTab(IQueryable<Order> orders, AdminOrderTab tab) => tab switch
@@ -130,16 +133,16 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
         _ => throw new ArgumentOutOfRangeException(nameof(tab), tab, null),
     };
 
-    public IAsyncEnumerable<AdminOrderExportRow> StreamOrdersForExportAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
+    public IAsyncEnumerable<AdminOrderExportRow> StreamOrdersForExportAsync(DateOnly firstDay, DateOnly lastDay, CancellationToken cancellationToken)
     {
-        if (to < from)
+        if (lastDay < firstDay)
         {
-            throw new ArgumentException("The export range must not end before it starts.", nameof(to));
+            throw new ArgumentException("The export range must not end before it starts.", nameof(lastDay));
         }
 
-        // Half-open [from, day after to) in UTC, so every moment of the last day is included.
-        var start = new DateTimeOffset(from.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
-        var end = new DateTimeOffset(to.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        // Half-open [firstDay, day after lastDay) in UTC, so every moment of the last day is included.
+        var start = new DateTimeOffset(firstDay.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        var end = new DateTimeOffset(lastDay.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
 
         return StreamOrdersCreatedBetweenAsync(start, end, cancellationToken);
     }
@@ -238,7 +241,7 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
         }
         await BestEffortEmail.TrySendAsync(
             () => send(order),
-            ex => logger.LogError(ex, "Failed to send {EmailKind} email for order {OrderId}", emailKind, order.Id),
+            ex => LogEmailFailed(logger, ex, emailKind, order.Id),
             cancellationToken);
     }
 
@@ -328,7 +331,7 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
 
         var sent = await BestEffortEmail.TrySendAsync(
             () => send(order),
-            ex => logger.LogError(ex, "Failed to resend {EmailKind} email for order {OrderId}", emailKind, order.Id),
+            ex => LogEmailResendFailed(logger, ex, emailKind, order.Id),
             cancellationToken);
         return sent ? EmailResendResult.Sent : EmailResendResult.Failed;
     }
@@ -398,4 +401,10 @@ public sealed class AdminOrderService(AppDbContext db, OrderLineInventory orderL
             },
             OrderLifecycle.Actions(OrderFacts.Of(order)));
     }
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to send {EmailKind} email for order {OrderId}")]
+    private static partial void LogEmailFailed(ILogger logger, Exception exception, string emailKind, int orderId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to resend {EmailKind} email for order {OrderId}")]
+    private static partial void LogEmailResendFailed(ILogger logger, Exception exception, string emailKind, int orderId);
 }

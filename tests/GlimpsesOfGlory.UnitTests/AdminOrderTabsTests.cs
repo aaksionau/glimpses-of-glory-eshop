@@ -1,3 +1,4 @@
+using System.Globalization;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
@@ -77,7 +78,7 @@ public class AdminOrderTabsTests
     public async Task IndexPage_Export_WithAMissingOrBackwardsRange_ShowsAnErrorInsteadOfExporting(string? from, string? to)
     {
         var service = new RecordingAdminOrderService();
-        var (model, body) = ExportPage(service, from is null ? null : DateOnly.Parse(from), to is null ? null : DateOnly.Parse(to));
+        var (model, body) = ExportPage(service, from is null ? null : DateOnly.Parse(from, CultureInfo.InvariantCulture), to is null ? null : DateOnly.Parse(to, CultureInfo.InvariantCulture));
 
         var result = await model.OnGetExportAsync(CancellationToken.None);
 
@@ -148,9 +149,9 @@ public class AdminOrderTabsTests
 
         public List<AdminOrderExportRow> ExportRows { get; init; } = [];
 
-        public IAsyncEnumerable<AdminOrderExportRow> StreamOrdersForExportAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
+        public IAsyncEnumerable<AdminOrderExportRow> StreamOrdersForExportAsync(DateOnly firstDay, DateOnly lastDay, CancellationToken cancellationToken)
         {
-            ExportedRange = (from, to);
+            ExportedRange = (firstDay, lastDay);
             return ExportRows.ToAsyncEnumerable();
         }
 
