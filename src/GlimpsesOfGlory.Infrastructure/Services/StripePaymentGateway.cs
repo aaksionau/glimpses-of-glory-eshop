@@ -33,7 +33,9 @@ public sealed class StripePaymentGateway : IPaymentGateway
             Amount = ToSmallestCurrencyUnit(amount),
             Currency = Currency,
             ReceiptEmail = receiptEmail,
-            AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions { Enabled = true },
+            // Card only (Apple Pay / Google Pay still show, since they're card wallets); this
+            // overrides whatever extra methods are switched on in the Stripe dashboard.
+            PaymentMethodTypes = ["card"],
         };
 
         var paymentIntent = await _paymentIntentService.CreateAsync(options, cancellationToken: cancellationToken);
