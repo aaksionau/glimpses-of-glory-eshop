@@ -10,6 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup Label="Data access">
+    <PackageVersion Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="10.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
@@ -35,6 +36,10 @@
          and .Pkcs 9.0.0, which have known vulnerabilities (NU1902/NU1903; 10.0.0-10.0.12 too).
          Pin both to a patched version; with transitive pinning the pins apply in every project
          whose graph contains them, so no project needs a direct reference. -->
+    <!-- Microsoft.AspNetCore.DataProtection.EntityFrameworkCore 10.0.0 transitively pulls in
+         Microsoft.AspNetCore.DataProtection 10.0.0, which has a critical vulnerability
+         (NU1904, GHSA-9mv3-2cwr-p262). -->
+    <PackageVersion Include="Microsoft.AspNetCore.DataProtection" Version="10.0.14" />
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.14" />
   </ItemGroup>
