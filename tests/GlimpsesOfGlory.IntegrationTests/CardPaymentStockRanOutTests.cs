@@ -107,7 +107,7 @@ public sealed class CardPaymentStockRanOutTests(PostgresFixture postgres) : IAsy
         var db = database.CreateDb();
         return new(
             db,
-            new StubCartService(new CartSummary([], 0m, 0m)),
+            new CheckoutPricer(db, new StubCartService(new CartSummary([], 0m, 0m))),
             new FakePaymentGateway(),
             new OrderLineInventory(new EfInventoryStore(db)),
             new NullEmailSender(),

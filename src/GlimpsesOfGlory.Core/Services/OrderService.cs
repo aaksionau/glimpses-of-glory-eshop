@@ -13,7 +13,7 @@ namespace GlimpsesOfGlory.Core.Services;
 
 public sealed partial class OrderService(
     AppDbContext dbContext,
-    ICartService cartService,
+    CheckoutPricer checkoutPricer,
     IPaymentGateway paymentGateway,
     OrderLineInventory orderLineInventory,
     IEmailSender emailSender,
@@ -22,58 +22,68 @@ public sealed partial class OrderService(
 {
     public async Task<CheckoutPaymentResult> CreatePaymentIntentAsync(FulfillmentMethod fulfillmentMethod, ShippingAddressInfo address, string? existingPaymentIntentId, CancellationToken cancellationToken)
     {
-        var pricing = await PriceCartAsync(fulfillmentMethod, cancellationToken);
+        var pricing = await checkoutPricer.PriceAsync(fulfillmentMethod, cancellationToken);
         if (pricing.Priced is not { } priced)
         {
             return CheckoutPaymentResult.Failed(pricing.UnavailableLines);
         }
 
-        var existingPendingCheckout = existingPaymentIntentId is null
+        var pendingCheckout = existingPaymentIntentId is null
             ? null
             : await dbContext.PendingCheckouts
                 .Include(p => p.Lines)
                 .FirstOrDefaultAsync(p => p.StripePaymentIntentId == existingPaymentIntentId, cancellationToken);
+        var paymentIntent = pendingCheckout is null
+            ? null
+            : await TryUpdatePaymentIntentAsync(pendingCheckout.StripePaymentIntentId, priced, address.Email, cancellationToken);
 
-        if (existingPendingCheckout is not null)
+        if (paymentIntent is null || pendingCheckout is null)
         {
-            try
+            // Nothing to reuse: drop the stale checkout, if any, and start a fresh PaymentIntent.
+            if (pendingCheckout is not null)
             {
-                var updatedPaymentIntent = await paymentGateway.UpdatePaymentIntentAsync(existingPaymentIntentId!, priced.Total, address.Email, cancellationToken);
-
-                existingPendingCheckout.Email = address.Email;
-                existingPendingCheckout.FulfillmentMethod = fulfillmentMethod;
-                existingPendingCheckout.ShippingAddress = ShippingAddress.FromInfo(address);
-                existingPendingCheckout.Subtotal = priced.Subtotal;
-                existingPendingCheckout.ShippingCost = priced.ShippingCost;
-                dbContext.PendingCheckoutLines.RemoveRange(existingPendingCheckout.Lines);
-                existingPendingCheckout.Lines = priced.Lines;
-
-                await dbContext.SaveChangesAsync(cancellationToken);
-                return CheckoutPaymentResult.Ready(new CheckoutPaymentSetup(updatedPaymentIntent.PaymentIntentId, updatedPaymentIntent.ClientSecret, priced.Cart));
+                dbContext.PendingCheckouts.Remove(pendingCheckout);
             }
-            catch (PaymentIntentUnavailableException)
+            paymentIntent = await paymentGateway.CreatePaymentIntentAsync(priced.Total, address.Email, cancellationToken);
+            pendingCheckout = new PendingCheckout
             {
-                // The previous PaymentIntent can no longer be updated (already paid, canceled,
-                // or expired) - fall through and start a fresh one below.
-                dbContext.PendingCheckouts.Remove(existingPendingCheckout);
-            }
+                StripePaymentIntentId = paymentIntent.PaymentIntentId,
+                Email = address.Email,
+                ShippingAddress = ShippingAddress.FromInfo(address),
+            };
+            dbContext.PendingCheckouts.Add(pendingCheckout);
         }
 
-        var paymentIntent = await paymentGateway.CreatePaymentIntentAsync(priced.Total, address.Email, cancellationToken);
-
-        dbContext.PendingCheckouts.Add(new PendingCheckout
-        {
-            StripePaymentIntentId = paymentIntent.PaymentIntentId,
-            Email = address.Email,
-            FulfillmentMethod = fulfillmentMethod,
-            ShippingAddress = ShippingAddress.FromInfo(address),
-            Subtotal = priced.Subtotal,
-            ShippingCost = priced.ShippingCost,
-            Lines = priced.Lines,
-        });
+        SnapshotCheckout(pendingCheckout, priced, address);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return CheckoutPaymentResult.Ready(new CheckoutPaymentSetup(paymentIntent.PaymentIntentId, paymentIntent.ClientSecret, priced.Cart));
+    }
+
+    // Null when the previous PaymentIntent can no longer be updated (already paid, canceled, or
+    // expired), so the caller starts a fresh one.
+    private async Task<PaymentIntentSetup?> TryUpdatePaymentIntentAsync(string paymentIntentId, PricedCart priced, string email, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await paymentGateway.UpdatePaymentIntentAsync(paymentIntentId, priced.Total, email, cancellationToken);
+        }
+        catch (PaymentIntentUnavailableException)
+        {
+            return null;
+        }
+    }
+
+    // Records what the webhook will turn into an order, replacing any earlier snapshot's lines.
+    private void SnapshotCheckout(PendingCheckout pendingCheckout, PricedCart priced, ShippingAddressInfo address)
+    {
+        pendingCheckout.Email = address.Email;
+        pendingCheckout.FulfillmentMethod = priced.FulfillmentMethod;
+        pendingCheckout.ShippingAddress = ShippingAddress.FromInfo(address);
+        pendingCheckout.Subtotal = priced.Subtotal;
+        pendingCheckout.ShippingCost = priced.ShippingCost;
+        dbContext.PendingCheckoutLines.RemoveRange(pendingCheckout.Lines);
+        pendingCheckout.Lines = priced.Lines;
     }
 
     public async Task ConfirmPaymentAsync(string paymentIntentId, CancellationToken cancellationToken)
@@ -146,7 +156,7 @@ public sealed partial class OrderService(
     public async Task<CashOrderResult> PlaceCashOrderAsync(ShippingAddressInfo address, CancellationToken cancellationToken)
     {
         // Cash is only offered for local pickup.
-        var pricing = await PriceCartAsync(FulfillmentMethod.Pickup, cancellationToken);
+        var pricing = await checkoutPricer.PriceAsync(FulfillmentMethod.Pickup, cancellationToken);
         if (pricing.Priced is not { } priced)
         {
             return CashOrderResult.Failed(pricing.UnavailableLines);
@@ -160,8 +170,7 @@ public sealed partial class OrderService(
             // Another order took the stock between pricing and reserving: re-read it (outside the
             // rolled-back transaction) to say which lines are now short. If stock came back in the
             // meantime the list is empty and the cart falls back to the generic banner.
-            var products = await LoadProductsAsync(priced.Cart, cancellationToken);
-            return CashOrderResult.Failed(FindUnavailableLines(priced.Cart, products));
+            return CashOrderResult.Failed(await checkoutPricer.FindUnavailableLinesAsync(priced.Cart, cancellationToken));
         }
 
         var order = new Order
@@ -199,113 +208,25 @@ public sealed partial class OrderService(
         return order is null ? null : order.ToConfirmationView();
     }
 
-    // Priced is null when the cart is empty or can't be fulfilled as it stands; UnavailableLines
-    // then lists the lines that are short (none for an empty cart). Priced.Cart is the session
-    // cart with its lines repriced from the catalogue, for showing what's charged.
-    private async Task<CartPricing> PriceCartAsync(FulfillmentMethod fulfillmentMethod, CancellationToken cancellationToken)
-    {
-        var cart = await cartService.GetSummaryAsync(cancellationToken);
-        if (cart.Lines.Count == 0)
-        {
-            return new CartPricing(null, []);
-        }
-
-        // Re-derives prices/stock from the DB rather than trusting the session-cached cart,
-        // since that's what the shopper is actually about to be charged.
-        var products = await LoadProductsAsync(cart, cancellationToken);
-        var unavailableLines = FindUnavailableLines(cart, products);
-        if (unavailableLines.Count > 0)
-        {
-            return new CartPricing(null, unavailableLines);
-        }
-
-        var lines = cart.Lines.Select(line =>
-        {
-            var product = products[line.ProductSlug];
-            return new PendingCheckoutLine
-            {
-                ProductId = product.Id,
-                ProductName = product.Name,
-                UnitPrice = product.Price,
-                Quantity = line.Quantity,
-                IsPreorder = product.IsPreorder,
-                ExpectedAvailabilityDate = product.ExpectedAvailabilityDate,
-            };
-        }).ToList();
-
-        // Shipping only depends on item quantity (and fulfillment method), which the
-        // session-cached cart already has correct - only prices/stock need re-deriving
-        // from the DB above.
-        var subtotal = lines.Sum(l => l.UnitPrice * l.Quantity);
-        // The lines keep the cart's line order, so they pair up by index.
-        var repricedCart = cart with
-        {
-            Lines = cart.Lines.Select((l, i) => l with { ProductName = lines[i].ProductName, UnitPrice = lines[i].UnitPrice }).ToList(),
-            Subtotal = subtotal,
-        };
-        return new CartPricing(new PricedCart(lines, repricedCart, fulfillmentMethod), []);
-    }
-
-    // Untracked, so a re-read after a rolled-back reservation sees the database's current stock.
-    private async Task<Dictionary<string, Product>> LoadProductsAsync(CartSummary cart, CancellationToken cancellationToken)
-    {
-        var slugs = cart.Lines.Select(l => l.ProductSlug).ToList();
-        return await dbContext.Products
-            .AsNoTracking()
-            .Where(p => slugs.Contains(p.Slug))
-            .ToDictionaryAsync(p => p.Slug, cancellationToken);
-    }
-
-    // The cart lines whose product is gone or can no longer fulfil the requested quantity.
-    private static List<UnavailableCartLine> FindUnavailableLines(CartSummary cart, Dictionary<string, Product> products) =>
-        cart.Lines
-            .Select(line => (line, product: products.GetValueOrDefault(line.ProductSlug)))
-            .Where(x => x.product is null || !x.product.CanFulfill(x.line.Quantity))
-            .Select(x => new UnavailableCartLine(x.line.ProductSlug, Math.Max(0, x.product?.StockQuantity ?? 0)))
-            .ToList();
-
-    // Re-reads stock (untracked, outside the rolled-back transaction) to say which in-stock lines
-    // of a paid checkout couldn't be reserved, e.g. "Sunrise (product 3): wanted 2, 1 left". Lines for
-    // the same product are summed, as the reservation consumed them together. Never throws: a failed
-    // re-read is returned so the paid-but-orderless error is still logged and the webhook stays at 200.
+    // Says which in-stock lines of a paid checkout couldn't be reserved, e.g. "Sunrise (product 3):
+    // wanted 2, 1 left". Never throws: a failed stock re-read is returned so the paid-but-orderless
+    // error is still logged and the webhook stays at 200.
     private async Task<(string ShortLines, Exception? RereadFailure)> DescribeShortLinesAsync(
         IEnumerable<PendingCheckoutLine> lines, CancellationToken cancellationToken)
     {
         try
         {
-            var wanted = lines
-                .Where(l => !l.IsPreorder)
-                .GroupBy(l => l.ProductId)
-                .Select(g => (ProductId: g.Key, Name: g.First().ProductName, Quantity: g.Sum(l => l.Quantity)))
-                .ToList();
-            var productIds = wanted.Select(w => w.ProductId).ToList();
-            var products = await dbContext.Products
-                .AsNoTracking()
-                .Where(p => productIds.Contains(p.Id))
-                .ToDictionaryAsync(p => p.Id, cancellationToken);
-
-            var shortLines = wanted
-                .Select(w => (wanted: w, product: products.GetValueOrDefault(w.ProductId)))
-                .Where(x => x.product is null || !x.product.CanFulfill(x.wanted.Quantity))
-                .Select(x => $"{x.wanted.Name} (product {x.wanted.ProductId}): wanted {x.wanted.Quantity}, {Math.Max(0, x.product?.StockQuantity ?? 0)} left")
-                .ToList();
+            var shortfalls = await checkoutPricer.FindShortfallsAsync(lines, cancellationToken);
 
             // Empty if stock came back between the failed reservation and this re-read.
-            return (shortLines.Count == 0 ? "none short on re-read" : string.Join("; ", shortLines), null);
+            return shortfalls.Count == 0
+                ? ("none short on re-read", null)
+                : (string.Join("; ", shortfalls.Select(s => $"{s.ProductName} (product {s.ProductId}): wanted {s.Wanted}, {s.Left} left")), null);
         }
         catch (Exception ex)
         {
             return ("unknown (stock re-read failed)", ex);
         }
-    }
-
-    private sealed record CartPricing(PricedCart? Priced, IReadOnlyList<UnavailableCartLine> UnavailableLines);
-
-    private sealed record PricedCart(List<PendingCheckoutLine> Lines, CartSummary Cart, FulfillmentMethod FulfillmentMethod)
-    {
-        public decimal Subtotal => Cart.Subtotal;
-        public decimal ShippingCost => Cart.ShippingCostFor(FulfillmentMethod);
-        public decimal Total => Cart.TotalFor(FulfillmentMethod);
     }
 
     // Sent after the order and stock decrement are committed.

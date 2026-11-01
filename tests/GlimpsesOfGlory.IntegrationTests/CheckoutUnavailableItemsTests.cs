@@ -133,7 +133,7 @@ public sealed class CheckoutUnavailableItemsTests(PostgresFixture postgres) : IA
     private static OrderService OrderService(AppDbContext db, CartSummary cart) =>
         new(
             db,
-            new StubCartService(cart),
+            new CheckoutPricer(db, new StubCartService(cart)),
             new FakePaymentGateway(),
             new OrderLineInventory(new EfInventoryStore(db)),
             new NullEmailSender(),
