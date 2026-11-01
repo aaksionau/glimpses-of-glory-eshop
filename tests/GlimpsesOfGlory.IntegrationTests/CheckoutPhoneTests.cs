@@ -61,7 +61,7 @@ public sealed class CheckoutPhoneTests(PostgresFixture postgres) : IAsyncLifetim
         var cart = new CartSummary([new CartLineView("sunrise", "Sunrise", null, 20m, 1, false, null)], 20m, 8m);
         return new(
             db,
-            new StubCartService(cart),
+            new CheckoutPricer(db, new StubCartService(cart)),
             new FakePaymentGateway(),
             new OrderLineInventory(new EfInventoryStore(db)),
             new NullEmailSender(),

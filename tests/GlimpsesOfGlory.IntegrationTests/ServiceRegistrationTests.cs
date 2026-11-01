@@ -34,6 +34,7 @@ public sealed class ServiceRegistrationTests(PostgresFixture postgres) : IAsyncL
         string[] expected =
         [
             "AppDbContext: Scoped",
+            "CheckoutPricer: Scoped",
             "CheckoutSessionStore: Scoped",
             "DbContextOptions<AppDbContext>: Scoped",
             "IAbandonedCheckoutService: Scoped",

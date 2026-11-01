@@ -23,6 +23,7 @@ public partial class Program
         });
         builder.Services.AddScoped<IInventoryStore, EfInventoryStore>();
         builder.Services.AddScoped<OrderLineInventory>();
+        builder.Services.AddScoped<CheckoutPricer>();
         builder.Services.AddScoped<IOrderService, OrderService>();
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddScoped<IAbandonedCheckoutService, AbandonedCheckoutService>();
