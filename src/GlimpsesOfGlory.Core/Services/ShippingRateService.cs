@@ -1,5 +1,6 @@
+using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Services;
-using GlimpsesOfGlory.Core.EntityConfigurations;
+using GlimpsesOfGlory.Core.Entities;
 using GlimpsesOfGlory.Core.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,16 +9,17 @@ namespace GlimpsesOfGlory.Core.Services;
 // Reads rates per call (nothing cached) so admin edits take effect immediately.
 public sealed class ShippingRateService(AppDbContext db) : IShippingRateService
 {
-    public async Task<ShippingRateView> GetDefaultRateAsync(CancellationToken cancellationToken)
-    {
-        var rate = await LoadDefaultRateAsync(cancellationToken);
-        return new ShippingRateView(rate.FirstItem, rate.AdditionalItem);
-    }
+    public Task<ShippingRate> GetDefaultRateAsync(CancellationToken cancellationToken) =>
+        db.ShippingSettings
+            .AsNoTracking()
+            .Where(s => s.Id == ShippingSetting.DefaultId)
+            .Select(s => new ShippingRate(s.FirstItemAmount, s.AdditionalItemAmount))
+            .SingleAsync(cancellationToken);
 
-    public async Task UpdateDefaultRateAsync(ShippingRateView rate, CancellationToken cancellationToken)
+    public async Task UpdateDefaultRateAsync(ShippingRate rate, CancellationToken cancellationToken)
     {
         await db.ShippingSettings
-            .Where(s => s.Id == ShippingSettingConfiguration.DefaultId)
+            .Where(s => s.Id == ShippingSetting.DefaultId)
             .ExecuteUpdateAsync(
                 setters => setters
                     .SetProperty(s => s.FirstItemAmount, rate.FirstItemAmount)
@@ -33,27 +35,19 @@ public sealed class ShippingRateService(AppDbContext db) : IShippingRateService
             return 0m;
         }
 
-        var defaultRate = await LoadDefaultRateAsync(cancellationToken);
         var slugs = lines.Select(l => l.ProductSlug).ToList();
-        var productRates = await db.Products
+        var ownRates = await db.Products
             .AsNoTracking()
-            .Where(p => slugs.Contains(p.Slug))
-            .Select(p => new { p.Slug, p.ShippingFirstItemAmount, p.ShippingAdditionalItemAmount })
-            .ToDictionaryAsync(
-                p => p.Slug,
-                p => p.ShippingFirstItemAmount is { } first && p.ShippingAdditionalItemAmount is { } additional
-                    ? new ShippingRate(first, additional)
-                    : defaultRate,
-                cancellationToken);
+            .Where(p => slugs.Contains(p.Slug) && p.ShippingRate != null)
+            .Select(p => new { p.Slug, Rate = p.ShippingRate! })
+            .ToDictionaryAsync(p => p.Slug, p => p.Rate, cancellationToken);
+
+        // The default is only read when some line needs it.
+        var defaultRate = lines.All(l => ownRates.ContainsKey(l.ProductSlug))
+            ? null
+            : await GetDefaultRateAsync(cancellationToken);
 
         return ShippingCalculator.Calculate(
-            lines.Select(l => new ShippingItem(productRates.GetValueOrDefault(l.ProductSlug, defaultRate), l.Quantity)));
+            lines.Select(l => new ShippingItem(ownRates.GetValueOrDefault(l.ProductSlug) ?? defaultRate!, l.Quantity)));
     }
-
-    private async Task<ShippingRate> LoadDefaultRateAsync(CancellationToken cancellationToken) =>
-        await db.ShippingSettings
-            .AsNoTracking()
-            .Where(s => s.Id == ShippingSettingConfiguration.DefaultId)
-            .Select(s => new ShippingRate(s.FirstItemAmount, s.AdditionalItemAmount))
-            .SingleAsync(cancellationToken);
 }

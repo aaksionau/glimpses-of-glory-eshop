@@ -7,7 +7,5 @@ public sealed record ProductEditRequest(
     int StockQuantity,
     bool IsPreorder,
     DateOnly? ExpectedAvailabilityDate,
-    ProductShippingRate? ShippingRate);
-
-// A product's own shipping rate; a null rate means the product ships at the store default.
-public sealed record ProductShippingRate(decimal FirstItemAmount, decimal AdditionalItemAmount);
+    // Null: the product ships at the store default rate.
+    ShippingRate? ShippingRate);

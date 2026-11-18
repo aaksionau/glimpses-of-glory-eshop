@@ -1,3 +1,4 @@
+using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Core.Services;
 using GlimpsesOfGlory.Core.ValueObjects;
 
@@ -5,8 +6,8 @@ namespace GlimpsesOfGlory.UnitTests;
 
 public class ShippingCalculatorTests
 {
-    private static readonly ShippingRate Poster = new(FirstItem: 5.00m, AdditionalItem: 1.00m);
-    private static readonly ShippingRate Mug = new(FirstItem: 8.00m, AdditionalItem: 3.00m);
+    private static readonly ShippingRate Poster = new(FirstItemAmount: 5.00m, AdditionalItemAmount: 1.00m);
+    private static readonly ShippingRate Mug = new(FirstItemAmount: 8.00m, AdditionalItemAmount: 3.00m);
 
     [Fact]
     public void Calculate_IsZero_ForNoItems()
@@ -50,8 +51,8 @@ public class ShippingCalculatorTests
     [Fact]
     public void Calculate_TieOnFirstItemRate_OpensWithTheHigherAdditionalRate()
     {
-        var cheapExtra = new ShippingRate(FirstItem: 6.00m, AdditionalItem: 0.50m);
-        var dearExtra = new ShippingRate(FirstItem: 6.00m, AdditionalItem: 4.00m);
+        var cheapExtra = new ShippingRate(FirstItemAmount: 6.00m, AdditionalItemAmount: 0.50m);
+        var dearExtra = new ShippingRate(FirstItemAmount: 6.00m, AdditionalItemAmount: 4.00m);
 
         // dearExtra opens ($6) so it doesn't pay its $4; cheapExtra pays $0.50.
         var cost = ShippingCalculator.Calculate([new ShippingItem(cheapExtra, 1), new ShippingItem(dearExtra, 1)]);

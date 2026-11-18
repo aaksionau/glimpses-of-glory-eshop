@@ -2,6 +2,7 @@ using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Core.Services;
+using GlimpsesOfGlory.Core.ValueObjects;
 
 namespace GlimpsesOfGlory.UnitTests;
 
@@ -19,20 +20,17 @@ public class CartServiceTests
             => throw new NotSupportedException();
     }
 
-    // Quotes every unit at the store default: FirstItem for the first, AdditionalItem for each other.
+    // Quotes every product at the same rate, through the real calculator.
     private sealed class FakeShippingRateService(decimal firstItem = 7.50m, decimal additionalItem = 0m) : IShippingRateService
     {
-        public Task<ShippingRateView> GetDefaultRateAsync(CancellationToken cancellationToken)
-            => Task.FromResult(new ShippingRateView(firstItem, additionalItem));
+        private readonly ShippingRate rate = new(firstItem, additionalItem);
 
-        public Task UpdateDefaultRateAsync(ShippingRateView rate, CancellationToken cancellationToken)
-            => Task.CompletedTask;
+        public Task<ShippingRate> GetDefaultRateAsync(CancellationToken cancellationToken) => Task.FromResult(rate);
 
-        public Task<decimal> QuoteAsync(IReadOnlyCollection<ShippingQuoteLine> lines, CancellationToken cancellationToken)
-        {
-            var quantity = lines.Sum(l => l.Quantity);
-            return Task.FromResult(quantity <= 0 ? 0m : firstItem + additionalItem * (quantity - 1));
-        }
+        public Task UpdateDefaultRateAsync(ShippingRate rate, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task<decimal> QuoteAsync(IReadOnlyCollection<ShippingQuoteLine> lines, CancellationToken cancellationToken) =>
+            Task.FromResult(ShippingCalculator.Calculate(lines.Select(l => new ShippingItem(rate, l.Quantity))));
     }
 
     private static ProductDetail CreateProduct(int stockQuantity) =>

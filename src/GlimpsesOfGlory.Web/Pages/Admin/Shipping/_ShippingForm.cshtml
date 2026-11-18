@@ -9,20 +9,9 @@
     <form hx-post="/admin/shipping" hx-target="#shipping-form" hx-swap="outerHTML" asp-antiforgery="true" class="flex flex-col gap-4">
         <div asp-validation-summary="ModelOnly" class="text-red-600"></div>
 
-        <fieldset class="border border-black/10 rounded p-4">
+        <fieldset class="border border-black/10 rounded p-4 flex flex-col gap-2">
             <legend class="px-1 text-sm font-medium">Default rate</legend>
-
-            <label class="block mb-2">
-                <span class="block mb-1 text-sm">First item</span>
-                <input asp-for="DefaultRate.FirstItemAmount" type="number" step="0.01" min="0" required class="w-full border border-black/20 rounded px-3 py-2" />
-                <span asp-validation-for="DefaultRate.FirstItemAmount" class="text-red-600 text-sm"></span>
-            </label>
-
-            <label class="block">
-                <span class="block mb-1 text-sm">Each additional item</span>
-                <input asp-for="DefaultRate.AdditionalItemAmount" type="number" step="0.01" min="0" required class="w-full border border-black/20 rounded px-3 py-2" />
-                <span asp-validation-for="DefaultRate.AdditionalItemAmount" class="text-red-600 text-sm"></span>
-            </label>
+            <partial name="_ShippingRateFields" for="DefaultRate" />
         </fieldset>
 
         <button type="submit" class="bg-black text-white px-6 py-3 rounded-lg font-semibold mt-2">Save shipping rate</button>

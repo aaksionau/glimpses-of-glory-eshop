@@ -10,8 +10,11 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
     {
         builder.HasIndex(p => p.Slug).IsUnique();
         builder.Property(p => p.Price).HasPrecision(10, 2);
-        builder.Property(p => p.ShippingFirstItemAmount).HasPrecision(10, 2);
-        builder.Property(p => p.ShippingAdditionalItemAmount).HasPrecision(10, 2);
+        builder.ComplexProperty(p => p.ShippingRate, rate =>
+        {
+            rate.Property(r => r.FirstItemAmount).HasColumnName("ShippingFirstItemAmount").HasPrecision(10, 2);
+            rate.Property(r => r.AdditionalItemAmount).HasColumnName("ShippingAdditionalItemAmount").HasPrecision(10, 2);
+        });
     }
 }
 

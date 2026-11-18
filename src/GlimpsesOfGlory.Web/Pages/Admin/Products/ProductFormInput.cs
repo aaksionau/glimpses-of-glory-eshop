@@ -1,9 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Web.Pages.Admin.Shipping;
 
 namespace GlimpsesOfGlory.Web.Pages.Admin.Products;
 
-public sealed class ProductFormInput : IValidatableObject
+public sealed class ProductFormInput
 {
     [Required(ErrorMessage = "Name is required.")]
     [StringLength(200)]
@@ -23,14 +24,10 @@ public sealed class ProductFormInput : IValidatableObject
 
     public DateOnly? ExpectedAvailabilityDate { get; set; }
 
-    // Off: the product ships at the store default rate (/admin/shipping).
+    // Off: the product ships at the store default rate (/admin/shipping) and Shipping is ignored.
     public bool HasCustomShipping { get; set; }
 
-    [Range(0, 100000, ErrorMessage = "Shipping can't be negative.")]
-    public decimal? ShippingFirstItemAmount { get; set; }
-
-    [Range(0, 100000, ErrorMessage = "Shipping can't be negative.")]
-    public decimal? ShippingAdditionalItemAmount { get; set; }
+    public ShippingRateInput Shipping { get; set; } = new();
 
     public static ProductFormInput From(AdminProductDetail product) => new()
     {
@@ -41,8 +38,7 @@ public sealed class ProductFormInput : IValidatableObject
         IsPreorder = product.IsPreorder,
         ExpectedAvailabilityDate = product.ExpectedAvailabilityDate,
         HasCustomShipping = product.ShippingRate is not null,
-        ShippingFirstItemAmount = product.ShippingRate?.FirstItemAmount,
-        ShippingAdditionalItemAmount = product.ShippingRate?.AdditionalItemAmount,
+        Shipping = product.ShippingRate is { } rate ? ShippingRateInput.From(rate) : new(),
     };
 
     public ProductEditRequest ToRequest() => new(
@@ -52,23 +48,5 @@ public sealed class ProductFormInput : IValidatableObject
         StockQuantity,
         IsPreorder,
         ExpectedAvailabilityDate,
-        HasCustomShipping ? new ProductShippingRate(ShippingFirstItemAmount!.Value, ShippingAdditionalItemAmount!.Value) : null);
-
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        if (!HasCustomShipping)
-        {
-            yield break;
-        }
-
-        if (ShippingFirstItemAmount is null)
-        {
-            yield return new ValidationResult("Enter the first-item shipping rate.", [nameof(ShippingFirstItemAmount)]);
-        }
-
-        if (ShippingAdditionalItemAmount is null)
-        {
-            yield return new ValidationResult("Enter the additional-item shipping rate.", [nameof(ShippingAdditionalItemAmount)]);
-        }
-    }
+        HasCustomShipping ? Shipping.ToRate() : null);
 }

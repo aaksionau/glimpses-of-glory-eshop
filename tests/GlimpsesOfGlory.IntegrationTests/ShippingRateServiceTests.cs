@@ -1,6 +1,9 @@
+using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Core.Entities;
 using GlimpsesOfGlory.Core.Services;
+using GlimpsesOfGlory.Infrastructure.Options;
+using GlimpsesOfGlory.Infrastructure.Services;
 
 namespace GlimpsesOfGlory.IntegrationTests;
 
@@ -19,15 +22,15 @@ public sealed class ShippingRateServiceTests(PostgresFixture postgres) : IAsyncL
     {
         var rate = await Service().GetDefaultRateAsync(CancellationToken.None);
 
-        Assert.Equal(new ShippingRateView(5.00m, 1.00m), rate);
+        Assert.Equal(new ShippingRate(5.00m, 1.00m), rate);
     }
 
     [Fact]
     public async Task UpdateDefaultRate_IsReadBack()
     {
-        await Service().UpdateDefaultRateAsync(new ShippingRateView(6.50m, 2.25m), CancellationToken.None);
+        await Service().UpdateDefaultRateAsync(new ShippingRate(6.50m, 2.25m), CancellationToken.None);
 
-        Assert.Equal(new ShippingRateView(6.50m, 2.25m), await Service().GetDefaultRateAsync(CancellationToken.None));
+        Assert.Equal(new ShippingRate(6.50m, 2.25m), await Service().GetDefaultRateAsync(CancellationToken.None));
     }
 
     [Fact]
@@ -44,7 +47,7 @@ public sealed class ShippingRateServiceTests(PostgresFixture postgres) : IAsyncL
     public async Task Quote_MixesOwnRatesAndTheDefault()
     {
         await AddProductAsync("card");
-        await AddProductAsync("mug", firstItem: 8.00m, additionalItem: 3.00m);
+        await AddProductAsync("mug", new ShippingRate(8.00m, 3.00m));
 
         var cost = await Service().QuoteAsync(
             [new ShippingQuoteLine("card", 2), new ShippingQuoteLine("mug", 1)],
@@ -67,9 +70,27 @@ public sealed class ShippingRateServiceTests(PostgresFixture postgres) : IAsyncL
         Assert.Equal(0m, await Service().QuoteAsync([], CancellationToken.None));
     }
 
+    [Fact]
+    public async Task ProductRate_SetAndClearedFromAdmin_IsUsedThenDropsToTheDefault()
+    {
+        var admin = new AdminProductService(database.CreateDb(), new ProductPhotoStorage(new ProductPhotoStorageOptions { StoragePath = Path.GetTempPath() }));
+        var id = await admin.CreateProductAsync(
+            new ProductEditRequest("Mug", "Mug", 10m, 5, false, null, new ShippingRate(8.00m, 3.00m)),
+            CancellationToken.None);
+        var created = (await admin.GetProductAsync(id, CancellationToken.None))!;
+        var slug = created.Slug;
+        Assert.Equal(new ShippingRate(8.00m, 3.00m), created.ShippingRate);
+        Assert.Equal(11.00m, await Service().QuoteAsync([new ShippingQuoteLine(slug, 2)], CancellationToken.None));
+
+        await admin.UpdateProductAsync(id, new ProductEditRequest("Mug", "Mug", 10m, 5, false, null, null), CancellationToken.None);
+
+        Assert.Null((await admin.GetProductAsync(id, CancellationToken.None))!.ShippingRate);
+        Assert.Equal(6.00m, await Service().QuoteAsync([new ShippingQuoteLine(slug, 2)], CancellationToken.None));
+    }
+
     private ShippingRateService Service() => new(database.CreateDb());
 
-    private async Task AddProductAsync(string slug, decimal? firstItem = null, decimal? additionalItem = null)
+    private async Task AddProductAsync(string slug, ShippingRate? shippingRate = null)
     {
         await using var db = database.CreateDb();
         db.Products.Add(new Product
@@ -79,8 +100,7 @@ public sealed class ShippingRateServiceTests(PostgresFixture postgres) : IAsyncL
             Description = slug,
             Price = 10m,
             StockQuantity = 10,
-            ShippingFirstItemAmount = firstItem,
-            ShippingAdditionalItemAmount = additionalItem,
+            ShippingRate = shippingRate,
         });
         await db.SaveChangesAsync();
     }

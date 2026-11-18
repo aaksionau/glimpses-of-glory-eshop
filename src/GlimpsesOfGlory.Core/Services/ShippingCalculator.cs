@@ -18,12 +18,8 @@ public static class ShippingCalculator
             return 0m;
         }
 
-        var opener = shipped
-            .OrderByDescending(i => i.Rate.FirstItem)
-            .ThenByDescending(i => i.Rate.AdditionalItem)
-            .First();
-
-        var allAdditional = shipped.Sum(i => i.Rate.AdditionalItem * i.Quantity);
-        return opener.Rate.FirstItem + allAdditional - opener.Rate.AdditionalItem;
+        var opener = shipped.MaxBy(i => (i.Rate.FirstItemAmount, i.Rate.AdditionalItemAmount))!;
+        var allAdditional = shipped.Sum(i => i.Rate.AdditionalItemAmount * i.Quantity);
+        return opener.Rate.FirstItemAmount + allAdditional - opener.Rate.AdditionalItemAmount;
     }
 }

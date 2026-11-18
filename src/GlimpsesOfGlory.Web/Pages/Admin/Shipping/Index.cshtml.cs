@@ -25,9 +25,7 @@ public class IndexModel(IShippingRateService shippingRateService) : PageModel
             return Partial("_ShippingForm", this);
         }
 
-        await shippingRateService.UpdateDefaultRateAsync(
-            new ShippingRateView(DefaultRate.FirstItemAmount, DefaultRate.AdditionalItemAmount),
-            cancellationToken);
+        await shippingRateService.UpdateDefaultRateAsync(DefaultRate.ToRate(), cancellationToken);
 
         SavedMessage = "Default shipping rate updated.";
         await LoadDefaultRateAsync(cancellationToken);
@@ -36,7 +34,6 @@ public class IndexModel(IShippingRateService shippingRateService) : PageModel
 
     private async Task LoadDefaultRateAsync(CancellationToken cancellationToken)
     {
-        var rate = await shippingRateService.GetDefaultRateAsync(cancellationToken);
-        DefaultRate = new ShippingRateInput { FirstItemAmount = rate.FirstItemAmount, AdditionalItemAmount = rate.AdditionalItemAmount };
+        DefaultRate = ShippingRateInput.From(await shippingRateService.GetDefaultRateAsync(cancellationToken));
     }
 }
