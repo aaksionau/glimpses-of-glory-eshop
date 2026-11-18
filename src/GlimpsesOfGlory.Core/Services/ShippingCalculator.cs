@@ -2,30 +2,28 @@ using GlimpsesOfGlory.Core.ValueObjects;
 
 namespace GlimpsesOfGlory.Core.Services;
 
-// Pure domain service: tiers are supplied by the caller (config/DB-backed),
+// Pure domain service: rates are resolved by the caller (per product, or the store default),
 // no I/O happens here.
-public sealed class ShippingCalculator
+//
+// One parcel: the item with the highest first-item rate pays that rate, and every other unit
+// in the cart pays its product's additional-item rate. On a tie for the highest first-item rate,
+// the product with the higher additional rate opens the parcel, so the shopper pays the least.
+public static class ShippingCalculator
 {
-    private readonly IReadOnlyList<ShippingTier> tiersDescending;
-
-    public ShippingCalculator(IReadOnlyList<ShippingTier> tiers)
+    public static decimal Calculate(IEnumerable<ShippingItem> items)
     {
-        if (tiers.Count == 0)
-        {
-            throw new ArgumentException("At least one shipping tier is required.", nameof(tiers));
-        }
-
-        tiersDescending = [.. tiers.OrderByDescending(t => t.MinQuantity)];
-    }
-
-    public decimal Calculate(int totalQuantity)
-    {
-        if (totalQuantity <= 0)
+        var shipped = items.Where(i => i.Quantity > 0).ToList();
+        if (shipped.Count == 0)
         {
             return 0m;
         }
 
-        var tier = tiersDescending.FirstOrDefault(t => totalQuantity >= t.MinQuantity) ?? tiersDescending[^1];
-        return tier.Amount;
+        var opener = shipped
+            .OrderByDescending(i => i.Rate.FirstItem)
+            .ThenByDescending(i => i.Rate.AdditionalItem)
+            .First();
+
+        var allAdditional = shipped.Sum(i => i.Rate.AdditionalItem * i.Quantity);
+        return opener.Rate.FirstItem + allAdditional - opener.Rate.AdditionalItem;
     }
 }

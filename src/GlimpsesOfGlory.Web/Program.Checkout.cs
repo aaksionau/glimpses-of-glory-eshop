@@ -13,7 +13,7 @@ public partial class Program
     {
         builder.Services.AddScoped<CheckoutSessionStore>();
 
-        builder.Services.AddScoped<IShippingSettingsService, ShippingSettingsService>();
+        builder.Services.AddScoped<IShippingRateService, ShippingRateService>();
 
         builder.Services.Configure<StripeOptions>(builder.Configuration.GetSection("Stripe"));
         builder.Services.AddScoped<IPaymentGateway>(sp =>

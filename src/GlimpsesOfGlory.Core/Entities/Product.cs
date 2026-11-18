@@ -12,6 +12,10 @@ public sealed class Product
     public bool IsPreorder { get; set; }
     public DateOnly? ExpectedAvailabilityDate { get; set; }
     public int PreorderedQuantity { get; set; }
+
+    // The product's own shipping rate; both null means it ships at the store default rate.
+    public decimal? ShippingFirstItemAmount { get; set; }
+    public decimal? ShippingAdditionalItemAmount { get; set; }
     public List<ProductPhoto> Photos { get; set; } = [];
 
     // Preorder lines have no stock ceiling to check against.

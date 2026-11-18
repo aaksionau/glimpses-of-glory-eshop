@@ -42,9 +42,8 @@ public sealed class CheckoutPricer(AppDbContext dbContext, ICartService cartServ
             };
         }).ToList();
 
-        // Shipping only depends on item quantity (and fulfillment method), which the
-        // session-cached cart already has correct - only prices/stock need re-deriving
-        // from the DB above.
+        // Shipping was already quoted from the DB's current rates by the cart service (it reads
+        // each product's rate per call), so only prices/stock need re-deriving above.
         var subtotal = lines.Sum(l => l.UnitPrice * l.Quantity);
         // The lines keep the cart's line order, so they pair up by index.
         var repricedCart = cart with

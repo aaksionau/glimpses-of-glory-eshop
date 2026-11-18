@@ -11,6 +11,7 @@ public sealed record AdminProductDetail(
     bool IsPreorder,
     DateOnly? ExpectedAvailabilityDate,
     int PreorderedQuantity,
+    ProductShippingRate? ShippingRate,
     IReadOnlyList<AdminProductPhoto> Photos);
 
 public sealed record AdminProductPhoto(int Id, string FileName, int DisplayOrder);

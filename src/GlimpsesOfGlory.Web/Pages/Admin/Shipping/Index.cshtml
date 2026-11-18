@@ -4,8 +4,10 @@
     ViewData["Title"] = "Shipping rates";
 }
 
-<p class="text-gray-700 text-sm mb-4">
-    The tier whose minimum quantity is highest (and no more than the cart's total item count) is applied.
+<p class="text-gray-700 text-sm mb-4 max-w-md">
+    Each product ships at its own rate (set on the product's page), or at this default if it has none.
+    An order pays the highest first-item rate among its products once, plus each product's
+    additional-item rate for every other item.
 </p>
 
 <partial name="_ShippingForm" model="Model" />

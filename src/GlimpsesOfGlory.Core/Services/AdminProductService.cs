@@ -45,6 +45,9 @@ public sealed class AdminProductService(AppDbContext db, IProductPhotoStorage ph
                 p.IsPreorder,
                 p.ExpectedAvailabilityDate,
                 p.PreorderedQuantity,
+                p.ShippingFirstItemAmount != null && p.ShippingAdditionalItemAmount != null
+                    ? new ProductShippingRate(p.ShippingFirstItemAmount.Value, p.ShippingAdditionalItemAmount.Value)
+                    : null,
                 p.Photos
                     .OrderBy(photo => photo.DisplayOrder)
                     .Select(photo => new AdminProductPhoto(photo.Id, photo.FileName, photo.DisplayOrder))
@@ -66,6 +69,8 @@ public sealed class AdminProductService(AppDbContext db, IProductPhotoStorage ph
             StockQuantity = request.StockQuantity,
             IsPreorder = request.IsPreorder,
             ExpectedAvailabilityDate = request.ExpectedAvailabilityDate,
+            ShippingFirstItemAmount = request.ShippingRate?.FirstItemAmount,
+            ShippingAdditionalItemAmount = request.ShippingRate?.AdditionalItemAmount,
         };
 
         db.Products.Add(product);
@@ -85,7 +90,9 @@ public sealed class AdminProductService(AppDbContext db, IProductPhotoStorage ph
                     .SetProperty(p => p.Price, request.Price)
                     .SetProperty(p => p.StockQuantity, request.StockQuantity)
                     .SetProperty(p => p.IsPreorder, request.IsPreorder)
-                    .SetProperty(p => p.ExpectedAvailabilityDate, request.ExpectedAvailabilityDate),
+                    .SetProperty(p => p.ExpectedAvailabilityDate, request.ExpectedAvailabilityDate)
+                    .SetProperty(p => p.ShippingFirstItemAmount, request.ShippingRate == null ? null : request.ShippingRate.FirstItemAmount)
+                    .SetProperty(p => p.ShippingAdditionalItemAmount, request.ShippingRate == null ? null : request.ShippingRate.AdditionalItemAmount),
                 cancellationToken);
 
         return rows > 0;

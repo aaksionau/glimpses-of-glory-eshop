@@ -246,6 +246,14 @@ namespace GlimpsesOfGlory.Core.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
 
+                    b.Property<decimal?>("ShippingAdditionalItemAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<decimal?>("ShippingFirstItemAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasColumnType("text");
@@ -286,7 +294,7 @@ namespace GlimpsesOfGlory.Core.Migrations
                     b.ToTable("ProductPhotos");
                 });
 
-            modelBuilder.Entity("GlimpsesOfGlory.Core.Entities.ShippingTierSetting", b =>
+            modelBuilder.Entity("GlimpsesOfGlory.Core.Entities.ShippingSetting", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -294,29 +302,24 @@ namespace GlimpsesOfGlory.Core.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<decimal>("Amount")
+                    b.Property<decimal>("AdditionalItemAmount")
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
 
-                    b.Property<int>("MinQuantity")
-                        .HasColumnType("integer");
+                    b.Property<decimal>("FirstItemAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("ShippingTiers");
+                    b.ToTable("ShippingSettings");
 
                     b.HasData(
                         new
                         {
                             Id = 1,
-                            Amount = 5.00m,
-                            MinQuantity = 1
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Amount = 9.00m,
-                            MinQuantity = 5
+                            AdditionalItemAmount = 1.00m,
+                            FirstItemAmount = 5.00m
                         });
                 });
 

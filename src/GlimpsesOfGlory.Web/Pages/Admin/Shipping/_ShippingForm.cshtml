@@ -9,26 +9,22 @@
     <form hx-post="/admin/shipping" hx-target="#shipping-form" hx-swap="outerHTML" asp-antiforgery="true" class="flex flex-col gap-4">
         <div asp-validation-summary="ModelOnly" class="text-red-600"></div>
 
-        @for (var i = 0; i < Model.Tiers.Count; i++)
-        {
-            <fieldset class="border border-black/10 rounded p-4">
-                <legend class="px-1 text-sm font-medium">Tier @(i + 1)</legend>
-                <input type="hidden" asp-for="Tiers[i].Id" />
+        <fieldset class="border border-black/10 rounded p-4">
+            <legend class="px-1 text-sm font-medium">Default rate</legend>
 
-                <label class="block mb-2">
-                    <span class="block mb-1 text-sm">Minimum quantity</span>
-                    <input asp-for="Tiers[i].MinQuantity" type="number" min="0" required class="w-full border border-black/20 rounded px-3 py-2" />
-                    <span asp-validation-for="Tiers[i].MinQuantity" class="text-red-600 text-sm"></span>
-                </label>
+            <label class="block mb-2">
+                <span class="block mb-1 text-sm">First item</span>
+                <input asp-for="DefaultRate.FirstItemAmount" type="number" step="0.01" min="0" required class="w-full border border-black/20 rounded px-3 py-2" />
+                <span asp-validation-for="DefaultRate.FirstItemAmount" class="text-red-600 text-sm"></span>
+            </label>
 
-                <label class="block">
-                    <span class="block mb-1 text-sm">Amount</span>
-                    <input asp-for="Tiers[i].Amount" type="number" step="0.01" min="0" required class="w-full border border-black/20 rounded px-3 py-2" />
-                    <span asp-validation-for="Tiers[i].Amount" class="text-red-600 text-sm"></span>
-                </label>
-            </fieldset>
-        }
+            <label class="block">
+                <span class="block mb-1 text-sm">Each additional item</span>
+                <input asp-for="DefaultRate.AdditionalItemAmount" type="number" step="0.01" min="0" required class="w-full border border-black/20 rounded px-3 py-2" />
+                <span asp-validation-for="DefaultRate.AdditionalItemAmount" class="text-red-600 text-sm"></span>
+            </label>
+        </fieldset>
 
-        <button type="submit" class="bg-black text-white px-6 py-3 rounded-lg font-semibold mt-2">Save shipping rates</button>
+        <button type="submit" class="bg-black text-white px-6 py-3 rounded-lg font-semibold mt-2">Save shipping rate</button>
     </form>
 </div>
