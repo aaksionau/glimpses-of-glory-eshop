@@ -8,7 +8,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 {
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductPhoto> ProductPhotos => Set<ProductPhoto>();
-    public DbSet<ShippingTierSetting> ShippingTiers => Set<ShippingTierSetting>();
+    public DbSet<ShippingSetting> ShippingSettings => Set<ShippingSetting>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderLine> OrderLines => Set<OrderLine>();
     public DbSet<PendingCheckout> PendingCheckouts => Set<PendingCheckout>();

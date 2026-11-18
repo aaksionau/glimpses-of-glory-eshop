@@ -4,16 +4,16 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace GlimpsesOfGlory.Web.Pages.Admin.Shipping;
 
-public class IndexModel(IShippingSettingsService shippingSettingsService) : PageModel
+public class IndexModel(IShippingRateService shippingRateService) : PageModel
 {
     [BindProperty]
-    public List<ShippingTierInput> Tiers { get; set; } = [];
+    public ShippingRateInput DefaultRate { get; set; } = new();
 
     public string? SavedMessage { get; private set; }
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
-        await LoadTiersAsync(cancellationToken);
+        await LoadDefaultRateAsync(cancellationToken);
     }
 
     // Swaps just the #shipping-form fragment (hx-target) so saving never triggers
@@ -25,22 +25,15 @@ public class IndexModel(IShippingSettingsService shippingSettingsService) : Page
             return Partial("_ShippingForm", this);
         }
 
-        var updates = Tiers
-            .Select(t => new ShippingTierUpdate(t.Id, t.MinQuantity, t.Amount))
-            .ToList();
-        await shippingSettingsService.UpdateTiersAsync(updates, cancellationToken);
+        await shippingRateService.UpdateDefaultRateAsync(DefaultRate.ToRate(), cancellationToken);
 
-        SavedMessage = "Shipping rates updated.";
-        await LoadTiersAsync(cancellationToken);
+        SavedMessage = "Default shipping rate updated.";
+        await LoadDefaultRateAsync(cancellationToken);
         return Partial("_ShippingForm", this);
     }
 
-    private async Task LoadTiersAsync(CancellationToken cancellationToken)
+    private async Task LoadDefaultRateAsync(CancellationToken cancellationToken)
     {
-        var tiers = await shippingSettingsService.GetTiersAsync(cancellationToken);
-        Tiers = tiers
-            .OrderBy(t => t.MinQuantity)
-            .Select(t => new ShippingTierInput { Id = t.Id, MinQuantity = t.MinQuantity, Amount = t.Amount })
-            .ToList();
+        DefaultRate = ShippingRateInput.From(await shippingRateService.GetDefaultRateAsync(cancellationToken));
     }
 }

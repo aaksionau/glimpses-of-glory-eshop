@@ -1,3 +1,5 @@
+using GlimpsesOfGlory.Abstractions.Dtos;
+
 namespace GlimpsesOfGlory.Core.Entities;
 
 public sealed class Product
@@ -12,6 +14,9 @@ public sealed class Product
     public bool IsPreorder { get; set; }
     public DateOnly? ExpectedAvailabilityDate { get; set; }
     public int PreorderedQuantity { get; set; }
+
+    // The product's own shipping rate; null means it ships at the store default rate.
+    public ShippingRate? ShippingRate { get; set; }
     public List<ProductPhoto> Photos { get; set; } = [];
 
     // Preorder lines have no stock ceiling to check against.

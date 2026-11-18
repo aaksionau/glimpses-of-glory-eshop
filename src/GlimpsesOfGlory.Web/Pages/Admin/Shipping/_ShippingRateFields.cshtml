@@ -1,0 +1,17 @@
+@model GlimpsesOfGlory.Web.Pages.Admin.Shipping.ShippingRateInput
+@*
+    The first-item / each-additional-item inputs. Render with <partial name="..." for="SomeRate" /> so the
+    field names carry the parent's prefix.
+*@
+
+<label class="block">
+    <span class="block mb-1 text-sm font-medium">First item</span>
+    <input asp-for="FirstItemAmount" type="number" step="0.01" min="0" required class="w-full border border-black/20 rounded px-3 py-2" />
+    <span asp-validation-for="FirstItemAmount" class="text-red-600 text-sm"></span>
+</label>
+
+<label class="block">
+    <span class="block mb-1 text-sm font-medium">Each additional item</span>
+    <input asp-for="AdditionalItemAmount" type="number" step="0.01" min="0" required class="w-full border border-black/20 rounded px-3 py-2" />
+    <span asp-validation-for="AdditionalItemAmount" class="text-red-600 text-sm"></span>
+</label>

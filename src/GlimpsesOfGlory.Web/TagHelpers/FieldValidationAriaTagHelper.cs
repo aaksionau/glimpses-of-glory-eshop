@@ -25,7 +25,7 @@ public sealed class FieldValidationAriaTagHelper(IHtmlGenerator generator) : Tag
 
     public override void Process(TagHelperContext context, TagHelperOutput output)
     {
-        // A hidden input is never shown or focused, so there's nothing to mark (e.g. admin's Tiers[i].Id).
+        // A hidden input is never shown or focused, so there's nothing to mark (e.g. an entity Id).
         if (context.AllAttributes.TryGetAttribute("type", out var type)
             && string.Equals(type.Value?.ToString(), "hidden", StringComparison.OrdinalIgnoreCase))
         {

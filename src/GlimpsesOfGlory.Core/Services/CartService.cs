@@ -1,11 +1,10 @@
 using GlimpsesOfGlory.Abstractions.Constants;
 using GlimpsesOfGlory.Abstractions.Dtos;
 using GlimpsesOfGlory.Abstractions.Services;
-using GlimpsesOfGlory.Core.ValueObjects;
 
 namespace GlimpsesOfGlory.Core.Services;
 
-public sealed class CartService(ICartStore cartStore, IProductCatalogService productCatalogService, IShippingSettingsService shippingSettingsService) : ICartService
+public sealed class CartService(ICartStore cartStore, IProductCatalogService productCatalogService, IShippingRateService shippingRateService) : ICartService
 {
     public async Task<CartSummary> GetSummaryAsync(CancellationToken cancellationToken)
     {
@@ -19,22 +18,12 @@ public sealed class CartService(ICartStore cartStore, IProductCatalogService pro
         return new CartSummary(lines, cart.Subtotal, shippingCost);
     }
 
-    private async Task<decimal> CalculateShippingCostAsync(Cart cart, CancellationToken cancellationToken)
-    {
-        // An empty cart ships nothing; skip the tier lookup (GetSummaryAsync runs on
-        // every cart page view).
-        if (cart.TotalQuantity <= 0)
-        {
-            return 0m;
-        }
-
-        // Built per call (not injected as a singleton) so admin edits to shipping
-        // tiers (#11) take effect immediately without a redeploy.
-        var tiers = await shippingSettingsService.GetTiersAsync(cancellationToken);
-        var shippingCalculator = new ShippingCalculator(
-            tiers.Select(t => new ShippingTier(t.MinQuantity, t.Amount)).ToList());
-        return shippingCalculator.Calculate(cart.TotalQuantity);
-    }
+    // Each product's rate is read from the catalogue per call, so admin edits to shipping rates
+    // take effect immediately without a redeploy.
+    private Task<decimal> CalculateShippingCostAsync(Cart cart, CancellationToken cancellationToken) =>
+        shippingRateService.QuoteAsync(
+            cart.Lines.Select(l => new ShippingQuoteLine(l.ProductSlug, l.Quantity)).ToList(),
+            cancellationToken);
 
     public async Task<CartOperationResult> AddLineAsync(string slug, int quantity, CancellationToken cancellationToken)
     {

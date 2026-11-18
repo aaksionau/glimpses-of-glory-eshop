@@ -11,8 +11,8 @@ public sealed record CartLineView(
     bool IsPreorder,
     DateOnly? ExpectedAvailabilityDate);
 
-// ShippingCost is what shipping to an address costs for the cart's current quantity
-// (from the admin shipping tiers); ShippingCostFor applies the chosen fulfillment
+// ShippingCost is what shipping the cart to an address costs
+// (each product's shipping rate, or the store default); ShippingCostFor applies the chosen fulfillment
 // method (local pickup is always free), and TotalFor adds it to the subtotal.
 public sealed record CartSummary(IReadOnlyList<CartLineView> Lines, decimal Subtotal, decimal ShippingCost)
 {

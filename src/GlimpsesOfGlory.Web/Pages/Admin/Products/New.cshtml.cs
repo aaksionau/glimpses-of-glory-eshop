@@ -21,7 +21,7 @@ public class NewModel(IAdminProductService adminProductService) : PageModel
             return Page();
         }
 
-        var request = new ProductEditRequest(Input.Name, Input.Description, Input.Price, Input.StockQuantity, Input.IsPreorder, Input.ExpectedAvailabilityDate);
+        var request = Input.ToRequest();
         var id = await adminProductService.CreateProductAsync(request, cancellationToken);
 
         return RedirectToPage("/Admin/Products/Edit", new { id });

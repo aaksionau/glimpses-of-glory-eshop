@@ -73,7 +73,7 @@ public class EditModel(IAdminProductService adminProductService) : PageModel
             return Partial("_ProductForm", this);
         }
 
-        var request = new ProductEditRequest(Input.Name, Input.Description, Input.Price, Input.StockQuantity, Input.IsPreorder, Input.ExpectedAvailabilityDate);
+        var request = Input.ToRequest();
         var updated = await adminProductService.UpdateProductAsync(id, request, cancellationToken);
         if (!updated)
         {
@@ -159,15 +159,7 @@ public class EditModel(IAdminProductService adminProductService) : PageModel
     private void LoadFrom(AdminProductDetail product)
     {
         LoadSavedState(product);
-        Input = new ProductFormInput
-        {
-            Name = product.Name,
-            Description = product.Description,
-            Price = product.Price,
-            StockQuantity = product.StockQuantity,
-            IsPreorder = product.IsPreorder,
-            ExpectedAvailabilityDate = product.ExpectedAvailabilityDate,
-        };
+        Input = ProductFormInput.From(product);
     }
 
     private void LoadSavedState(AdminProductDetail product)

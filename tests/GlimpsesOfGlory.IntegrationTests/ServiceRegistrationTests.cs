@@ -55,7 +55,7 @@ public sealed class ServiceRegistrationTests(PostgresFixture postgres) : IAsyncL
             "IPaymentGateway: Scoped",
             "IProductCatalogService: Scoped",
             "IProductPhotoStorage: Scoped",
-            "IShippingSettingsService: Scoped",
+            "IShippingRateService: Scoped",
             "OrderLineInventory: Scoped",
             "ProductPhotoStorageOptions: Singleton",
             "RazorViewToStringRenderer: Scoped",

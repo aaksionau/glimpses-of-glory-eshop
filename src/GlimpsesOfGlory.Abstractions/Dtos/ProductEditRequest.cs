@@ -6,4 +6,6 @@ public sealed record ProductEditRequest(
     decimal Price,
     int StockQuantity,
     bool IsPreorder,
-    DateOnly? ExpectedAvailabilityDate);
+    DateOnly? ExpectedAvailabilityDate,
+    // Null: the product ships at the store default rate.
+    ShippingRate? ShippingRate);

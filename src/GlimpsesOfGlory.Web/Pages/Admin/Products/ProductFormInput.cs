@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Web.Pages.Admin.Shipping;
 
 namespace GlimpsesOfGlory.Web.Pages.Admin.Products;
 
@@ -21,4 +23,30 @@ public sealed class ProductFormInput
     public bool IsPreorder { get; set; }
 
     public DateOnly? ExpectedAvailabilityDate { get; set; }
+
+    // Off: the product ships at the store default rate (/admin/shipping) and Shipping is ignored.
+    public bool HasCustomShipping { get; set; }
+
+    public ShippingRateInput Shipping { get; set; } = new();
+
+    public static ProductFormInput From(AdminProductDetail product) => new()
+    {
+        Name = product.Name,
+        Description = product.Description,
+        Price = product.Price,
+        StockQuantity = product.StockQuantity,
+        IsPreorder = product.IsPreorder,
+        ExpectedAvailabilityDate = product.ExpectedAvailabilityDate,
+        HasCustomShipping = product.ShippingRate is not null,
+        Shipping = product.ShippingRate is { } rate ? ShippingRateInput.From(rate) : new(),
+    };
+
+    public ProductEditRequest ToRequest() => new(
+        Name,
+        Description,
+        Price,
+        StockQuantity,
+        IsPreorder,
+        ExpectedAvailabilityDate,
+        HasCustomShipping ? Shipping.ToRate() : null);
 }

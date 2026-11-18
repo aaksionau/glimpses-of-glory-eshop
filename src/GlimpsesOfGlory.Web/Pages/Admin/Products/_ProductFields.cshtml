@@ -38,3 +38,15 @@
         <span asp-validation-for="ExpectedAvailabilityDate" class="text-red-600 text-sm"></span>
     </label>
 </div>
+
+<div x-data="{ hasCustomShipping: @(Model.HasCustomShipping ? "true" : "false") }">
+    <label class="flex items-center gap-2">
+        <input asp-for="HasCustomShipping" type="checkbox" x-model="hasCustomShipping" class="w-4 h-4" />
+        <span class="font-medium">Custom shipping rate</span>
+    </label>
+    <p class="text-sm text-gray-700 mt-1" x-show="!hasCustomShipping">Ships at the <a href="/admin/shipping" class="underline">store default rate</a>.</p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2" x-show="hasCustomShipping" x-cloak>
+        <partial name="/Pages/Admin/Shipping/_ShippingRateFields.cshtml" for="Shipping" />
+    </div>
+</div>
