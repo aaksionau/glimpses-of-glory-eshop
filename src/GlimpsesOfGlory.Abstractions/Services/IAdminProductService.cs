@@ -1,4 +1,5 @@
 using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Enums;
 
 namespace GlimpsesOfGlory.Abstractions.Services;
 
@@ -12,7 +13,7 @@ public interface IAdminProductService
 
     Task<int> CreateProductAsync(ProductEditRequest request, CancellationToken cancellationToken);
 
-    Task<bool> UpdateProductAsync(int id, ProductEditRequest request, CancellationToken cancellationToken);
+    Task<ProductUpdateResult> UpdateProductAsync(int id, ProductEditRequest request, CancellationToken cancellationToken);
 
     Task<bool> SetActiveAsync(int id, bool isActive, CancellationToken cancellationToken);
 

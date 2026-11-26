@@ -1,4 +1,5 @@
 using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
 using GlimpsesOfGlory.Core.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -76,22 +77,41 @@ public sealed class AdminProductService(AppDbContext db, IProductPhotoStorage ph
         return product.Id;
     }
 
-    public async Task<bool> UpdateProductAsync(int id, ProductEditRequest request, CancellationToken cancellationToken)
+    public async Task<ProductUpdateResult> UpdateProductAsync(int id, ProductEditRequest request, CancellationToken cancellationToken)
     {
+        // The form's stock goes stale as orders come in, so an untouched stock field mustn't put the
+        // old number back; a changed one only lands if nothing moved stock since the form was loaded.
+        var loaded = request.StockQuantityWhenLoaded;
+        var writeStock = loaded != request.StockQuantity;
+        var stockMustStillBe = writeStock ? loaded : null;
+
         var rows = await db.Products
-            .Where(p => p.Id == id)
+            .Where(p => p.Id == id && (stockMustStillBe == null || p.StockQuantity == stockMustStillBe))
             .ExecuteUpdateAsync(
-                setters => setters
-                    .SetProperty(p => p.Name, request.Name)
-                    .SetProperty(p => p.Description, request.Description)
-                    .SetProperty(p => p.Price, request.Price)
-                    .SetProperty(p => p.StockQuantity, request.StockQuantity)
-                    .SetProperty(p => p.IsPreorder, request.IsPreorder)
-                    .SetProperty(p => p.ExpectedAvailabilityDate, request.ExpectedAvailabilityDate)
-                    .SetProperty(p => p.ShippingRate, request.ShippingRate),
+                setters =>
+                {
+                    setters
+                        .SetProperty(p => p.Name, request.Name)
+                        .SetProperty(p => p.Description, request.Description)
+                        .SetProperty(p => p.Price, request.Price)
+                        .SetProperty(p => p.IsPreorder, request.IsPreorder)
+                        .SetProperty(p => p.ExpectedAvailabilityDate, request.ExpectedAvailabilityDate)
+                        .SetProperty(p => p.ShippingRate, request.ShippingRate);
+                    if (writeStock)
+                    {
+                        setters.SetProperty(p => p.StockQuantity, request.StockQuantity);
+                    }
+                },
                 cancellationToken);
 
-        return rows > 0;
+        if (rows > 0)
+        {
+            return ProductUpdateResult.Updated;
+        }
+
+        return await db.Products.AnyAsync(p => p.Id == id, cancellationToken)
+            ? ProductUpdateResult.StockChanged
+            : ProductUpdateResult.NotFound;
     }
 
     public async Task<bool> SetActiveAsync(int id, bool isActive, CancellationToken cancellationToken)

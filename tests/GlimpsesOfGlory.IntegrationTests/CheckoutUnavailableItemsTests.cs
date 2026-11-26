@@ -87,6 +87,9 @@ public sealed class CheckoutUnavailableItemsTests(PostgresFixture postgres) : IA
 
         Assert.NotNull(result.OrderId);
         Assert.Empty(result.UnavailableLines);
+        await using var check = database.CreateDb();
+        Assert.Equal(0, check.Products.Single(p => p.Slug == "sunrise").StockQuantity);
+        Assert.Equal(4, check.Products.Single(p => p.Slug == "harbour").StockQuantity);
     }
 
     [Fact]
