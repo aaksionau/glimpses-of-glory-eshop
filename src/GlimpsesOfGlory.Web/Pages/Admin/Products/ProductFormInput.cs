@@ -20,6 +20,9 @@ public sealed class ProductFormInput
     [Range(0, 100000, ErrorMessage = "Stock quantity can't be negative.")]
     public int StockQuantity { get; set; }
 
+    // Edit form only (a hidden field): the stock the form was loaded with, so saving doesn't put a stale number back.
+    public int? StockQuantityWhenLoaded { get; set; }
+
     public bool IsPreorder { get; set; }
 
     public DateOnly? ExpectedAvailabilityDate { get; set; }
@@ -35,6 +38,7 @@ public sealed class ProductFormInput
         Description = product.Description,
         Price = product.Price,
         StockQuantity = product.StockQuantity,
+        StockQuantityWhenLoaded = product.StockQuantity,
         IsPreorder = product.IsPreorder,
         ExpectedAvailabilityDate = product.ExpectedAvailabilityDate,
         HasCustomShipping = product.ShippingRate is not null,
@@ -48,5 +52,6 @@ public sealed class ProductFormInput
         StockQuantity,
         IsPreorder,
         ExpectedAvailabilityDate,
-        HasCustomShipping ? Shipping.ToRate() : null);
+        HasCustomShipping ? Shipping.ToRate() : null,
+        StockQuantityWhenLoaded);
 }

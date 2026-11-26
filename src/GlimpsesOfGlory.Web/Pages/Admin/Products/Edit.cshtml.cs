@@ -1,4 +1,5 @@
 using GlimpsesOfGlory.Abstractions.Dtos;
+using GlimpsesOfGlory.Abstractions.Enums;
 using GlimpsesOfGlory.Abstractions.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -73,9 +74,8 @@ public class EditModel(IAdminProductService adminProductService) : PageModel
             return Partial("_ProductForm", this);
         }
 
-        var request = Input.ToRequest();
-        var updated = await adminProductService.UpdateProductAsync(id, request, cancellationToken);
-        if (!updated)
+        var result = await adminProductService.UpdateProductAsync(id, Input.ToRequest(), cancellationToken);
+        if (result == ProductUpdateResult.NotFound)
         {
             return NotFound();
         }
@@ -86,6 +86,22 @@ public class EditModel(IAdminProductService adminProductService) : PageModel
             return NotFound();
         }
 
+        if (result == ProductUpdateResult.StockChanged)
+        {
+            // Keep the admin's other edits in the form, but show the current stock so they can redo their change against it.
+            LoadSavedState(product);
+            ModelState.Remove($"{nameof(Input)}.{nameof(Input.StockQuantity)}");
+            ModelState.Remove($"{nameof(Input)}.{nameof(Input.StockQuantityWhenLoaded)}");
+            Input.StockQuantity = product.StockQuantity;
+            Input.StockQuantityWhenLoaded = product.StockQuantity;
+            ModelState.AddModelError(string.Empty, $"Nothing was saved: stock changed to {product.StockQuantity} since you opened this page (an order may have come in). Check the stock and save again.");
+            IsHtmxUpdate = true;
+            return Partial("_ProductForm", this);
+        }
+
+        // Tag helpers render posted values over the model's, so drop them to show what was saved,
+        // including the new stock the next save will be checked against.
+        ModelState.Clear();
         LoadFrom(product);
         SavedMessage = "Changes saved.";
         IsHtmxUpdate = true;

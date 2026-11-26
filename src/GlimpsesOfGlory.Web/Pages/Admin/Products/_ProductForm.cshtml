@@ -9,6 +9,7 @@
           x-data="{ dirty: @(ViewData.ModelState.IsValid ? "false" : "true") }" x-on:input="dirty = true" x-on:change="dirty = true">
         <div asp-validation-summary="ModelOnly" class="text-red-600"></div>
 
+        <input type="hidden" asp-for="Input.StockQuantityWhenLoaded" />
         <partial name="_ProductFields" for="Input" />
 
         <div class="mt-2 flex flex-wrap items-center gap-3">
