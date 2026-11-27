@@ -34,7 +34,7 @@
     }
     else
     {
-        <partial name="_ProductGrid" model="Model.FeaturedProducts" />
+        <partial name="_ProductGrid" model="Model.FeaturedProducts" view-data="@(new ViewDataDictionary(ViewData) { ["CenterGrid"] = true })" />
 
         <div class="mt-10 text-center">
             <a asp-page="/Products/Index" class="inline-block rounded-full border border-ink px-6 py-3 font-semibold transition-colors hover:bg-ink hover:text-white">
